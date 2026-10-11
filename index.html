@@ -537,7 +537,7 @@ function openSellerWhatsapp(id){
   if(!phone)return alert("Este cliente não possui celular válido.");
   const seller=currentUser.nome||"Vendedor";
   const firstName=(lead.nome||"").trim().split(/\s+/)[0]||"";
-  const msg="Olá, "+firstName+"! Tudo bem? Aqui é o "+seller+", da Volkswagen. Estou retomando nosso contato para falar sobre a compra do seu Volkswagen zero km. Queria saber se ainda posso te ajudar com alguma condição, modelo ou simulação. Fico à disposição!";
+  const msg="Olá, "+firstName+"! Tudo bem? Aqui é o "+seller+", da Volkswagen. Passando para me apresentar e também para retomar nossa conversa. Quando puder, me chama por aqui para continuarmos falando sobre o seu próximo Volkswagen. Será um prazer te atender!";
   window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener")
 }
 function openManagerWhatsapp(id){
