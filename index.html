@@ -27,8 +27,7 @@
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.hero-leader{width:100%}.grid{grid-template-columns:1fr}.kpis,.smart{grid-template-columns:repeat(2,1fr)}.seller{grid-template-columns:42px 70px 1fr 70px}.seller .btn{grid-column:3/5}.agenda-item{grid-template-columns:1fr}}@media(max-width:520px){.kpis,.smart{grid-template-columns:1fr 1fr}.hero-leader img{width:104px;height:104px}.two{grid-template-columns:1fr}}
 
 .client-phone-wrap{position:relative;display:inline-flex;align-items:center;gap:7px}
-.client-phone-actions{display:inline-flex;gap:6px;opacity:0;transform:translateY(2px);pointer-events:none;transition:.18s}
-td:hover .client-phone-actions,.client-phone-wrap:focus-within .client-phone-actions{opacity:1;transform:none;pointer-events:auto}
+.client-phone-actions{display:inline-flex;gap:6px;opacity:1;transform:none;pointer-events:auto}
 .icon-btn{border:1px solid var(--line);background:#122238;color:#e5eef8;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:800;cursor:pointer}
 .icon-btn:hover{border-color:#38bdf8}
 .icon-btn.wa{border-color:rgba(34,197,94,.45);color:#86efac}
@@ -523,7 +522,7 @@ function renderPerformance(){const mc=metricClients();document.getElementById("p
 function renderAgenda(){const a=clients.filter(c=>c.proximoFollowup&&!["Vendido","Perdido"].includes(status(c))).sort((x,y)=>x.proximoFollowup-y.proximoFollowup).slice(0,20);document.getElementById("agenda").innerHTML=a.length?a.map(c=>{const s=sellers.find(x=>x.id===c.vendedorId),d=new Date(c.proximoFollowup),late=c.proximoFollowup<Date.now();return '<div class="agenda-item"><div class="agenda-time">'+d.toLocaleDateString("pt-BR")+' • '+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div><strong>'+esc(c.nome)+'</strong><div class="desc">'+esc(s?s.nome:"-")+' • '+esc(c.telefone||"Sem telefone")+'</div>'+(late?'<div class="warn">⚠️ Follow-up atrasado</div>':'')+'</div><span class="tag">'+esc(status(c))+'</span></div>'}).join(""):'<div class="empty">Nenhum follow-up agendado.</div>'}
 function dtLocal(ts){if(!ts)return"";const d=new Date(Number(ts)),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
 
-function managerClientActionsAllowed(){return currentUser&&["super_admin","network_admin","manager"].includes(currentUser.rawRole)}
+function managerClientActionsAllowed(){return isManager()}
 function sellerNameById(id){const s=sellers.find(x=>x.id===String(id));return s?s.nome:"Vendedor"}
 function whatsappNumber(v){
   const n=normalizePhone(v);
@@ -587,14 +586,14 @@ function renderClients(){
     const s=sellers.find(x=>x.id===c.vendedorId);
     const phone=esc(c.telefone||"-");
     const phoneHtml=canManage&&c.telefone
-      ? '<div class="client-phone-wrap"><span>'+phone+'</span><span class="client-phone-actions"><button class="icon-btn wa" title="Chamar no WhatsApp como gestor" onclick="openManagerWhatsapp(\''+c.id+'\')">WhatsApp</button></span></div>'
+      ? '<div class="client-phone-wrap"><span>'+phone+'</span><span class="client-phone-actions"><button class="icon-btn wa" title="Abrir WhatsApp com mensagem do gestor" onclick="openManagerWhatsapp(\''+c.id+'\')">💬 WhatsApp</button></span></div>'
       : phone;
     const actions=canManage
-      ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">Excluir</button></div>'
+      ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">🔁 Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">🗑 Excluir</button></div>'
       : '-';
     return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong>'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+phoneHtml+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+["Contatado","Confirmado","Compareceu","Vendido","Perdido"].map(x=>'<option '+(status(c)===x?"selected":"")+'>'+x+'</option>').join("")+'</select></td><td>'+actions+'</td></tr>'
   }).join("");
-  document.getElementById("clients").innerHTML='<table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>'
+  document.getElementById("clients").innerHTML=(canManage?'<div class="desc" style="margin:0 0 10px">Gestor: use WhatsApp para acompanhar o atendimento, ou as ações para transferir/excluir clientes.</div>':'')+'<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
 }
 function renderDaily(){const m={};metricClients().filter(c=>c.dataContato).forEach(c=>{const d=new Date(c.dataContato),k=d.toISOString().slice(0,10);m[k]=(m[k]||0)+1});const days=Object.keys(m).sort().reverse().slice(0,10);document.getElementById("daily").innerHTML=days.length?days.map(k=>{const[a,b,c]=k.split("-");return '<div class="day"><span>'+c+'/'+b+'/'+a+'</span><strong>'+m[k]+'</strong><span>clientes contatados</span></div>'}).join(""):'<div class="day"><span>Contatos por dia</span><strong>0</strong></div>'}
 function fillSellers(){clientSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("")}
