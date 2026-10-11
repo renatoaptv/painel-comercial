@@ -25,6 +25,7 @@
 .login-screen{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 20% 0%,rgba(59,130,246,.22),transparent 28%),radial-gradient(circle at 90% 15%,rgba(34,197,94,.12),transparent 25%),#07111f}.login-card{width:min(94%,430px);padding:28px;border-radius:26px;background:#0f1b2d;border:1px solid var(--line);box-shadow:var(--shadow)}.login-card h1{font-size:28px;margin-bottom:7px}.login-card p{color:var(--muted);font-size:13px;margin-bottom:20px}.login-brand{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(59,130,246,.12);color:#93c5fd;font-size:10px;font-weight:900;margin-bottom:12px}.app-hidden{display:none!important}.user-chip{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.05)}.user-chip b{display:block;font-size:11px}.user-chip span{display:block;color:var(--muted);font-size:9px}.manager-only{display:none}.manager-on .manager-only{display:inline-flex}.login-error{color:#fca5a5;font-size:11px;min-height:16px;margin-top:8px}
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.hero-leader{width:100%}.grid{grid-template-columns:1fr}.kpis,.smart{grid-template-columns:repeat(2,1fr)}.seller{grid-template-columns:42px 70px 1fr 70px}.seller .btn{grid-column:3/5}.agenda-item{grid-template-columns:1fr}}@media(max-width:520px){.kpis,.smart{grid-template-columns:1fr 1fr}.hero-leader img{width:104px;height:104px}.two{grid-template-columns:1fr}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="login-screen" id="loginScreen">
@@ -113,6 +114,9 @@
 <div class="celebrate" id="celebrate"><div class="celebrate-box"><img id="celebratePhoto"><h2>🎉 VENDA!</h2><p id="celebrateText"></p><button class="btn" style="margin-top:18px" onclick="closeCelebrate()">Continuar</button></div></div>
 
 <script>
+const SUPABASE_URL="https://tlzshlerpspgpjaqskdg.supabase.co";
+const SUPABASE_KEY="sb_publishable_LQRp4_juiOoAobJmNqU1rQ_YCt84lEQ";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const SELLERS_KEY="ranking_vendedores_v5",CLIENTS_KEY="ranking_clientes_v5",USERS_KEY="ranking_usuarios_v1",SESSION_KEY="ranking_sessao_v1";
 const POINTS={Contatado:1,Confirmado:3,Compareceu:5,Vendido:15,Perdido:0};
 const DEFAULT_SELLERS=[
@@ -131,17 +135,87 @@ function fallback(name){const t=(name||"?").trim().split(/\s+/).slice(0,2).map(x
 function save(){localStorage.setItem(SELLERS_KEY,JSON.stringify(sellers));localStorage.setItem(CLIENTS_KEY,JSON.stringify(clients))}
 function saveUsers(){localStorage.setItem(USERS_KEY,JSON.stringify(users))}
 async function hashPass(v){const b=new TextEncoder().encode(String(v||""));const h=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,"0")).join("")}
-function isManager(){return currentUser&&currentUser.role==="gestor"}
+function isManager(){return currentUser&&["super_admin","network_admin","manager"].includes(currentUser.rawRole||currentUser.role)}
 function mySellerId(){return currentUser&&currentUser.role==="vendedor"?Number(currentUser.sellerId):null}
-function initAuth(){const sid=Number(localStorage.getItem(SESSION_KEY)||0);currentUser=users.find(u=>u.id===sid)||null;if(currentUser){showApp();return}showLogin()}
-function showLogin(){loginScreen.style.display="flex";app.classList.add("app-hidden");const first=!users.length;loginTitle.textContent=first?"Configurar gestor":"Entrar";loginSubtitle.textContent=first?"Crie o primeiro acesso do gestor.":"Acesse o painel com seu usuário.";setupNameField.style.display=first?"block":"none";loginButton.textContent=first?"Criar acesso do gestor":"Entrar";loginError.textContent="";loginEmail.value="";loginPassword.value=""}
-async function handleLogin(){loginError.textContent="";const email=loginEmail.value.trim().toLowerCase(),senha=loginPassword.value;if(!email||!senha){loginError.textContent="Informe e-mail e senha.";return}if(!users.length){const nome=setupName.value.trim();if(!nome){loginError.textContent="Informe o nome do gestor.";return}if(senha.length<6){loginError.textContent="Use uma senha com pelo menos 6 caracteres.";return}users=[{id:Date.now(),nome,email,role:"gestor",sellerId:null,senhaHash:await hashPass(senha),ativo:true}];saveUsers();currentUser=users[0];localStorage.setItem(SESSION_KEY,String(currentUser.id));showApp();return}const u=users.find(x=>x.email===email&&x.ativo!==false);if(!u||u.senhaHash!==await hashPass(senha)){loginError.textContent="E-mail ou senha incorretos.";return}currentUser=u;localStorage.setItem(SESSION_KEY,String(u.id));showApp()}
+async function initAuth(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    const ok=await loadCurrentProfile();
+    if(ok){showApp();return}
+  }
+  showLogin()
+}
+function showLogin(){loginScreen.style.display="flex";app.classList.add("app-hidden");loginTitle.textContent="Entrar";loginSubtitle.textContent="Acesse o painel com seu usuário.";setupNameField.style.display="none";loginButton.textContent="Entrar";loginError.textContent="";loginEmail.value="";loginPassword.value=""}
+async function handleLogin(){
+  loginError.textContent="";
+  const email=loginEmail.value.trim().toLowerCase(),senha=loginPassword.value;
+  if(!email||!senha){loginError.textContent="Informe e-mail e senha.";return}
+  const {data,error}=await sb.auth.signInWithPassword({email,password:senha});
+  if(error||!data.user){loginError.textContent="E-mail ou senha incorretos.";return}
+  const ok=await loadCurrentProfile();
+  if(!ok){await sb.auth.signOut();loginError.textContent="Usuário sem perfil ativo no sistema.";return}
+  showApp()
+}
+async function loadCurrentProfile(){
+  const {data:{user}}=await sb.auth.getUser();
+  if(!user)return false;
+  const {data,error}=await sb.from("profiles").select("*").eq("id",user.id).single();
+  if(error||!data||data.active===false)return false;
+  currentUser={
+    id:data.id,
+    nome:data.full_name,
+    email:data.email||user.email,
+    role:data.role==="seller"?"vendedor":"gestor",
+    rawRole:data.role,
+    sellerId:data.role==="seller"?data.id:null,
+    organization_id:data.organization_id,
+    store_id:data.store_id
+  };
+  return true
+}
 function showApp(){loginScreen.style.display="none";app.classList.remove("app-hidden");document.body.classList.toggle("manager-on",isManager());sessionName.textContent=currentUser.nome;sessionRole.textContent=isManager()?"GESTOR":"VENDEDOR";renderAll()}
-function logout(){localStorage.removeItem(SESSION_KEY);currentUser=null;showLogin()}
-function openUsers(){if(!isManager())return;renderUsers();usersModal.classList.add("show")}
-function renderUsers(){const rows=users.map(u=>{const s=sellers.find(x=>x.id===Number(u.sellerId));return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><div><strong>'+esc(u.nome)+'</strong><div class="desc">'+esc(u.email)+' • '+(u.role==="gestor"?"Gestor":("Vendedor • "+esc(s?s.nome:"Sem vínculo")))+'</div></div>'+(u.id===currentUser.id?'<span class="tag">Você</span>':'<button class="btn secondary" onclick="toggleUser('+u.id+')">'+(u.ativo===false?"Ativar":"Desativar")+'</button>')+'</div>'}).join("");usersList.innerHTML=rows||'<div class="empty">Nenhum usuário.</div>';newUserSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("");toggleUserSeller()}
+async function logout(){await sb.auth.signOut();currentUser=null;showLogin()}
+async function openUsers(){if(!isManager())return;await loadUsersFromCloud();renderUsers();usersModal.classList.add("show")}
+async function loadUsersFromCloud(){
+  const {data,error}=await sb.from("profiles").select("*").eq("organization_id",currentUser.organization_id).order("created_at");
+  if(!error&&data)users=data.map(u=>({
+    id:u.id,nome:u.full_name,email:u.email||"",role:u.role==="seller"?"vendedor":"gestor",
+    rawRole:u.role,sellerId:u.id,ativo:u.active!==false
+  }));
+}
+function renderUsers(){const rows=users.map(u=>{return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><div><strong>'+esc(u.nome)+'</strong><div class="desc">'+esc(u.email||"")+' • '+(u.rawRole||u.role)+'</div></div>'+(u.id===currentUser.id?'<span class="tag">Você</span>':'<span class="tag">'+(u.ativo===false?"Inativo":"Ativo")+'</span>')+'</div>'}).join("");usersList.innerHTML=rows||'<div class="empty">Nenhum usuário.</div>';newUserSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("");toggleUserSeller()}
 function toggleUserSeller(){newUserSellerField.style.display=newUserRole.value==="vendedor"?"block":"none"}
-async function saveUser(){if(!isManager())return;const nome=newUserName.value.trim(),email=newUserEmail.value.trim().toLowerCase(),senha=newUserPassword.value,role=newUserRole.value,sellerId=role==="vendedor"?Number(newUserSeller.value):null;if(!nome||!email||!senha)return alert("Preencha nome, e-mail e senha.");if(senha.length<6)return alert("Use uma senha com pelo menos 6 caracteres.");if(users.some(u=>u.email===email))return alert("Este e-mail já está cadastrado.");if(role==="vendedor"&&!sellerId)return alert("Selecione o vendedor vinculado.");users.push({id:Date.now(),nome,email,role,sellerId,senhaHash:await hashPass(senha),ativo:true});saveUsers();newUserName.value="";newUserEmail.value="";newUserPassword.value="";renderUsers()}
+async function saveUser(){
+  if(!isManager())return;
+  const nome=newUserName.value.trim(),email=newUserEmail.value.trim().toLowerCase(),senha=newUserPassword.value,roleUi=newUserRole.value,sellerId=roleUi==="vendedor"?Number(newUserSeller.value):null;
+  if(!nome||!email||!senha)return alert("Preencha nome, e-mail e senha.");
+  if(senha.length<8)return alert("Use uma senha com pelo menos 8 caracteres.");
+  let role="seller";
+  if(roleUi==="gestor")role=currentUser.rawRole==="super_admin"?"manager":"manager";
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)return alert("Sessão expirada.");
+  const payload={
+    email,password:senha,full_name:nome,role,
+    organization_id:currentUser.organization_id,
+    store_id:currentUser.store_id,
+    daily_goal:25
+  };
+  const res=await fetch(SUPABASE_URL+"/functions/v1/create-user",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "apikey":SUPABASE_KEY,
+      "Authorization":"Bearer "+session.access_token
+    },
+    body:JSON.stringify(payload)
+  });
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok)return alert(body.error||"Não foi possível criar o usuário.");
+  newUserName.value="";newUserEmail.value="";newUserPassword.value="";
+  alert("Usuário criado com sucesso.");
+  await loadUsersFromCloud();
+  renderUsers()
+}
 function toggleUser(id){if(!isManager())return;const u=users.find(x=>x.id===id);if(!u||u.id===currentUser.id)return;u.ativo=u.ativo===false?true:false;saveUsers();renderUsers()}
 function status(c){return c.status||"Contatado"}function count(st,list=clients){return list.filter(c=>status(c)===st).length}function pts(c){return POINTS[status(c)]||0}
 function dayStart(ts=Date.now()){const d=new Date(ts);d.setHours(0,0,0,0);return d.getTime()}function dayEnd(ts=Date.now()){const d=new Date(ts);d.setHours(23,59,59,999);return d.getTime()}
