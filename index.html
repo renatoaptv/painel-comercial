@@ -111,6 +111,13 @@
 <div class="field"><label>Senha inicial</label><input id="newUserPassword" type="password"></div>
 <div class="modal-actions"><button class="btn secondary" onclick="closeModal('usersModal')">Fechar</button><button class="btn" onclick="saveUser()">Criar usuário</button></div></div></div>
 
+<div class="modal" id="editUserModal"><div class="modal-box"><div class="modal-head"><h2>Alterar usuário</h2><button class="x" onclick="closeModal('editUserModal')">×</button></div>
+<input type="hidden" id="editUserId">
+<div class="two"><div class="field"><label>Nome</label><input id="editUserName"></div><div class="field"><label>E-mail</label><input id="editUserEmail" type="email"></div></div>
+<div class="two"><div class="field"><label>Perfil</label><select id="editUserRole"><option value="seller">Vendedor</option><option value="manager">Gestor</option><option value="network_admin">Administrador da rede</option></select></div><div class="field"><label>Meta diária</label><input id="editUserGoal" type="number" min="1" value="25"></div></div>
+<div class="field"><label>Status</label><select id="editUserActive"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
+<div class="modal-actions"><button class="btn secondary" onclick="closeModal('editUserModal')">Cancelar</button><button class="btn" onclick="saveUserEdit()">Salvar alterações</button></div></div></div>
+
 <div class="celebrate" id="celebrate"><div class="celebrate-box"><img id="celebratePhoto"><h2>🎉 VENDA!</h2><p id="celebrateText"></p><button class="btn" style="margin-top:18px" onclick="closeCelebrate()">Continuar</button></div></div>
 
 <script>
@@ -228,10 +235,76 @@ async function loadUsersFromCloud(){
   const {data,error}=await sb.from("profiles").select("*").eq("organization_id",currentUser.organization_id).order("created_at");
   if(!error&&data)users=data.map(u=>({
     id:u.id,nome:u.full_name,email:u.email||"",role:u.role==="seller"?"vendedor":"gestor",
-    rawRole:u.role,sellerId:u.id,ativo:u.active!==false
+    rawRole:u.role,sellerId:u.id,ativo:u.active!==false,daily_goal:Number(u.daily_goal)||25
   }));
 }
-function renderUsers(){const rows=users.map(u=>{return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><div><strong>'+esc(u.nome)+'</strong><div class="desc">'+esc(u.email||"")+' • '+(u.rawRole||u.role)+'</div></div>'+(u.id===currentUser.id?'<span class="tag">Você</span>':'<span class="tag">'+(u.ativo===false?"Inativo":"Ativo")+'</span>')+'</div>'}).join("");usersList.innerHTML=rows||'<div class="empty">Nenhum usuário.</div>';newUserSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("");toggleUserSeller()}
+function renderUsers(){
+  const canAdmin=currentUser&&currentUser.rawRole==="super_admin";
+  const rows=users.map(u=>{
+    const actions=canAdmin&&u.id!==currentUser.id
+      ? '<div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn secondary" onclick="openEditUser(\''+u.id+'\')">Alterar</button><button class="btn secondary" style="border-color:rgba(239,68,68,.45);color:#fecaca" onclick="deleteUserAccess(\''+u.id+'\')">Excluir</button></div>'
+      : (u.id===currentUser.id?'<span class="tag">Você</span>':'');
+    return '<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><div><strong>'+esc(u.nome)+'</strong><div class="desc">'+esc(u.email||"")+' • '+esc(u.rawRole||u.role)+(u.ativo===false?' • INATIVO':'')+'</div></div>'+actions+'</div>'
+  }).join("");
+  usersList.innerHTML=rows||'<div class="empty">Nenhum usuário.</div>';
+  newUserSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("");
+  toggleUserSeller()
+}
+function openEditUser(id){
+  if(!currentUser||currentUser.rawRole!=="super_admin")return;
+  const u=users.find(x=>x.id===String(id));if(!u)return;
+  editUserId.value=u.id;
+  editUserName.value=u.nome||"";
+  editUserEmail.value=u.email||"";
+  editUserRole.value=u.rawRole==="seller"?"seller":(u.rawRole==="network_admin"?"network_admin":"manager");
+  editUserGoal.value=u.daily_goal||25;
+  editUserActive.value=u.ativo===false?"false":"true";
+  editUserModal.classList.add("show")
+}
+async function callManageUser(payload){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session)throw new Error("Sessão expirada.");
+  const res=await fetch(SUPABASE_URL+"/functions/v1/manage-user",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "apikey":SUPABASE_KEY,
+      "Authorization":"Bearer "+session.access_token
+    },
+    body:JSON.stringify(payload)
+  });
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(body.error||"Não foi possível concluir a operação.");
+  return body
+}
+async function saveUserEdit(){
+  if(!currentUser||currentUser.rawRole!=="super_admin")return;
+  try{
+    await callManageUser({
+      action:"update",
+      user_id:editUserId.value,
+      full_name:editUserName.value.trim(),
+      email:editUserEmail.value.trim().toLowerCase(),
+      role:editUserRole.value,
+      daily_goal:Number(editUserGoal.value)||25,
+      active:editUserActive.value==="true",
+      store_id:currentUser.store_id
+    });
+    closeModal("editUserModal");
+    await loadUsersFromCloud();await loadCloudData();renderUsers();renderAll();
+    alert("Usuário alterado com sucesso.")
+  }catch(e){alert(e.message)}
+}
+async function deleteUserAccess(id){
+  if(!currentUser||currentUser.rawRole!=="super_admin")return;
+  const u=users.find(x=>x.id===String(id));if(!u)return;
+  if(!confirm('Excluir o acesso de '+u.nome+'?\n\nO histórico de clientes e vendas será preservado.'))return;
+  try{
+    await callManageUser({action:"delete",user_id:String(id)});
+    await loadUsersFromCloud();await loadCloudData();renderUsers();renderAll();
+    alert("Acesso excluído com sucesso.")
+  }catch(e){alert(e.message)}
+}
 function toggleUserSeller(){newUserSellerField.style.display="none"}
 async function saveUser(){
   if(!isManager())return;
