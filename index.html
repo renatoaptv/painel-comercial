@@ -588,64 +588,88 @@ function openSaleForm(id){
   saleNotes.value=lead.saleNotes||lead.observacao||"";
   saleFormModal.classList.add("show")
 }
+
 function salePdfLine(doc,label,value,x,y,w){
-  doc.setFont("helvetica","bold");doc.setFontSize(7.5);doc.text(label,x,y);
+  doc.setFont("helvetica","bold");doc.setFontSize(7.4);doc.text(label,x,y);
   doc.setFont("helvetica","normal");doc.text(String(value||"-"),x,y+4,{maxWidth:w});
 }
-function buildSalePdf(lead,seller){
+async function imageUrlToDataUrl(url){
+  try{
+    const res=await fetch(url,{mode:"cors"});
+    if(!res.ok)throw new Error("imagem");
+    const blob=await res.blob();
+    return await new Promise((resolve,reject)=>{const fr=new FileReader();fr.onload=()=>resolve(fr.result);fr.onerror=reject;fr.readAsDataURL(blob)})
+  }catch(e){return null}
+}
+function pdfSection(doc,title,y){
+  doc.setFillColor(226,232,238);doc.rect(10,y,190,7,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(20,20,20);
+  doc.text(title,105,y+5,{align:"center"});
+}
+function pdfClause(doc,title,text,y){
+  if(title){doc.setFont("helvetica","bold");doc.setFontSize(8.1);doc.text(title,11,y);y+=5}
+  doc.setFont("helvetica","normal");doc.setFontSize(6.4);
+  const lines=doc.splitTextToSize(text,188);
+  doc.text(lines,11,y,{lineHeightFactor:1.13});
+  return y+(lines.length*2.62)+3
+}
+async function buildSalePdf(lead,seller){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:"mm",format:"a4"});
-  const margin=10,pageW=210;
-  doc.setFont("helvetica","bold");doc.setFontSize(17);doc.text("FICHA DE VENDA / CONTRATO PRELIMINAR",105,15,{align:"center"});
-  doc.setFontSize(9);doc.text("PROSPECTA REAL",10,15);
-  doc.setDrawColor(120);doc.line(10,20,200,20);
+  const logo=await imageUrlToDataUrl("https://cdn.dealerspace.ai/barigui/seminovos/logos/barigui%20logo.png");
+  if(logo){try{doc.addImage(logo,"PNG",10,7,25,16)}catch(e){}}
+  else{doc.setFont("helvetica","bold");doc.setFontSize(12);doc.text("GRUPO BARIGÜI",10,16)}
 
-  doc.setFillColor(230,235,240);doc.rect(10,24,190,7,"F");doc.setFontSize(10);doc.text("DADOS DO CLIENTE",105,29,{align:"center"});
-  salePdfLine(doc,"NOME:",lead.nome,11,36,92); salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,108,36,90);
-  salePdfLine(doc,"RG:",lead.rg,11,47,60); salePdfLine(doc,"DATA DE NASCIMENTO:",lead.birthDate?new Date(lead.birthDate+"T00:00:00").toLocaleDateString("pt-BR"):"",75,47,55); salePdfLine(doc,"TELEFONE 1:",lead.telefone,135,47,63);
-  salePdfLine(doc,"ENDEREÇO:",(lead.endereco||"")+" "+(lead.numero||""),11,58,92); salePdfLine(doc,"TELEFONE 2:",lead.phone2,108,58,90);
-  salePdfLine(doc,"COMPLEMENTO:",lead.complemento,11,69,80); salePdfLine(doc,"E-MAIL:",lead.email,95,69,103);
-  salePdfLine(doc,"BAIRRO:",lead.bairro,11,80,55); salePdfLine(doc,"CIDADE:",lead.cidade,70,80,55); salePdfLine(doc,"UF:",lead.uf,130,80,20); salePdfLine(doc,"CEP:",lead.cep,155,80,43);
+  doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("CONTRATO PRELIMINAR DE COMPRA E VENDA",120,15,{align:"center"});
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);
+  doc.rect(10,25,190,5);doc.text("VOLKSWAGEN BLUSA",11,28.5);
+  doc.rect(10,31,190,5);doc.text("RUA ALBERTO STEIN, BLUMENAU, SC, 89036200",11,34.5);
 
-  doc.setFillColor(230,235,240);doc.rect(10,88,190,7,"F");doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("DADOS DO VEÍCULO",105,93,{align:"center"});
-  salePdfLine(doc,"TIPO:",lead.vehicleType,11,101,55); salePdfLine(doc,"MARCA:",lead.vehicleBrand,70,101,55); salePdfLine(doc,"MODELO:",lead.vehicleModel,130,101,68);
-  salePdfLine(doc,"CHASSI:",lead.chassis,11,112,92); salePdfLine(doc,"PLACA:",lead.plate,108,112,90);
-  salePdfLine(doc,"COR:",lead.vehicleColor,11,123,45); salePdfLine(doc,"ANO FAB:",lead.yearFab,60,123,35); salePdfLine(doc,"ANO MOD:",lead.yearModel,100,123,35);
-  salePdfLine(doc,"VALOR R$:",Number(lead.saleValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),140,123,58);
-  salePdfLine(doc,"TROCO NA TROCA R$:",Number(lead.tradeValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),11,134,80);
+  pdfSection(doc,"DADOS DO CLIENTE",41);
+  salePdfLine(doc,"NOME:",lead.nome,11,53,92);salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,108,53,90);
+  salePdfLine(doc,"RG:",lead.rg,11,64,55);salePdfLine(doc,"DATA DE NASCIMENTO:",lead.birthDate?new Date(lead.birthDate+"T00:00:00").toLocaleDateString("pt-BR"):"",70,64,55);salePdfLine(doc,"TELEFONE 1:",lead.telefone,130,64,68);
+  salePdfLine(doc,"ENDEREÇO:",(lead.endereco||"")+" "+(lead.numero||""),11,75,92);salePdfLine(doc,"TELEFONE 2:",lead.phone2,108,75,90);
+  salePdfLine(doc,"COMPLEMENTO:",lead.complemento,11,86,80);salePdfLine(doc,"E-MAIL:",lead.email,95,86,103);
+  salePdfLine(doc,"BAIRRO:",lead.bairro,11,97,55);salePdfLine(doc,"CIDADE:",lead.cidade,70,97,55);salePdfLine(doc,"UF:",lead.uf,130,97,20);salePdfLine(doc,"CEP:",lead.cep,155,97,43);
 
-  doc.setFillColor(230,235,240);doc.rect(10,143,190,7,"F");doc.setFont("helvetica","bold");doc.text("SERVIÇOS ADICIONAIS",105,148,{align:"center"});
+  pdfSection(doc,"DADOS DO VEÍCULO",105);
+  salePdfLine(doc,"TIPO:",lead.vehicleType,11,117,50);salePdfLine(doc,"CHASSI:",lead.chassis,108,117,60);salePdfLine(doc,"PLACA:",lead.plate,172,117,26);
+  salePdfLine(doc,"MARCA:",lead.vehicleBrand,11,128,88);salePdfLine(doc,"MODELO:",lead.vehicleModel,108,128,90);
+  salePdfLine(doc,"COR:",lead.vehicleColor,11,139,38);salePdfLine(doc,"ANO FAB:",lead.yearFab,53,139,32);salePdfLine(doc,"ANO MOD:",lead.yearModel,89,139,32);
+  salePdfLine(doc,"VALOR R$:",Number(lead.saleValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),125,139,37);
+  salePdfLine(doc,"TROCO NA TROCA R$:",Number(lead.tradeValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),166,139,32);
+
+  pdfSection(doc,"SERVIÇOS ADICIONAIS",148);
   const svc=(lead.additionalServices||[]).filter(x=>x.name);
-  doc.autoTable({startY:153,margin:{left:10,right:10},head:[["NOME DO PRODUTO","QUANTIDADE","PREÇO UNITÁRIO (R$)","DESCRIÇÃO"]],body:(svc.length?svc:[{name:"-",value:0}]).map(x=>[x.name,"1",Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2}),""]),styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
+  doc.autoTable({startY:157,margin:{left:10,right:10},head:[["NOME DO PRODUTO","QUANTIDADE","PREÇO UNITÁRIO (R$)","DESCRIÇÃO"]],body:(svc.length?svc:[{name:"-",value:0}]).map(x=>[x.name,"1",Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2}),""]),styles:{fontSize:7,cellPadding:2.2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
 
-  let y=doc.lastAutoTable.finalY+5;
-  doc.setFillColor(230,235,240);doc.rect(10,y,190,7,"F");doc.setFont("helvetica","bold");doc.text("CONDIÇÃO DE PAGAMENTO",105,y+5,{align:"center"});y+=10;
+  let y=doc.lastAutoTable.finalY+5;pdfSection(doc,"CONDIÇÃO DE PAGAMENTO",y);y+=10;
   const pay=(lead.paymentTerms||[]).filter(x=>x.condition);
-  doc.autoTable({startY:y,margin:{left:10,right:10},head:[["CONDIÇÃO","VALOR (R$)"]],body:(pay.length?pay:[{condition:"-",value:0}]).map(x=>[x.condition,Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2})]),styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
-  y=doc.lastAutoTable.finalY+5;
-  doc.setFillColor(230,235,240);doc.rect(10,y,190,7,"F");doc.setFont("helvetica","bold");doc.text("OBSERVAÇÕES",105,y+5,{align:"center"});
-  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.text(String(lead.saleNotes||"-"),11,y+13,{maxWidth:188});
-
-  doc.setFontSize(7.5);doc.text("Cliente: ________________________________________________",10,278);
-  doc.text("Vendedor: ___________________________",10,287);
-  doc.text("Gestor: ______________________________",120,287);
+  doc.autoTable({startY:y,margin:{left:10,right:10},head:[["CONDIÇÃO","VALOR (R$)"]],body:(pay.length?pay:[{condition:"-",value:0}]).map(x=>[x.condition,Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2})]),styles:{fontSize:7,cellPadding:2.1},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
+  y=doc.lastAutoTable.finalY+5;pdfSection(doc,"OBSERVAÇÃO",y);
+  doc.setFont("helvetica","normal");doc.setFontSize(7.2);doc.text(String(lead.saleNotes||"-"),11,y+12,{maxWidth:188});
+  doc.setFontSize(7.5);doc.text("Cliente: ________________________________________________",10,274);doc.text("Vendedor: ___________________________",10,286);doc.text("Gerente: ____________________________",120,286);
 
   doc.addPage();
-  doc.setFillColor(230,235,240);doc.rect(10,10,190,8,"F");doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("VÍNCULO DADOS DO CLIENTE E DO VEÍCULO NEGOCIADO",105,16,{align:"center"});
-  salePdfLine(doc,"NOME:",lead.nome,11,26,85); salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,105,26,93);
-  salePdfLine(doc,"MODELO:",lead.vehicleModel,11,37,65); salePdfLine(doc,"MARCA:",lead.vehicleBrand,80,37,60); salePdfLine(doc,"PLACA:",lead.plate,145,37,53);
-  salePdfLine(doc,"CHASSI:",lead.chassis,11,48,100);
-  doc.setFillColor(230,235,240);doc.rect(10,58,190,8,"F");doc.setFont("helvetica","bold");doc.text("INFORMAÇÕES COMPLEMENTARES",105,64,{align:"center"});
-  doc.setFont("helvetica","normal");doc.setFontSize(8);
-  doc.text("Ficha gerada eletronicamente pelo sistema Prospecta Real.",11,76);
-  doc.text("As condições comerciais e cláusulas jurídicas da concessionária devem ser conferidas e aprovadas pela contratante.",11,84,{maxWidth:188});
-  doc.text("Observações:",11,98);doc.text(String(lead.saleNotes||"-"),11,105,{maxWidth:188});
-  doc.text("Cliente: ________________________________________________",10,270);
-  doc.text("Vendedor: ___________________________",10,282);
-  doc.text("Gestor: ______________________________",120,282);
+  pdfSection(doc,"VÍNCULO DADOS DO CLIENTE E DO VEÍCULO NEGOCIADO",10);
+  salePdfLine(doc,"NOME:",lead.nome,11,23,90);salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,105,23,93);
+  salePdfLine(doc,"MODELO:",lead.vehicleModel,11,34,65);salePdfLine(doc,"MARCA:",lead.vehicleBrand,80,34,55);
+  salePdfLine(doc,"PLACA:",lead.plate,140,34,58);salePdfLine(doc,"CHASSI:",lead.chassis,11,45,100);
+
+  pdfSection(doc,"CLÁUSULAS E INFORMAÇÕES COMPLEMENTARES",54);
+  let cy=68;
+  cy=pdfClause(doc,"DOCUMENTOS PARA O EMPLACAMENTO / TRANSFERÊNCIA (DESPACHANTE)","1 - Para veículos novos o IPVA precisa ser pago no prazo máximo de 30 dias após a emissão da Nota Fiscal.\n2 - Para veículos novos ou Seminovos será necessário apresentar:\na) Será necessário apresentar a Cópia simples e legível da CNH e caso o Cliente não tenha, apresentar cópia autenticada do RG e CPF e a cópia simples e legível da CNH do condutor terceiro.\nb) Comprovante de endereço original, podendo ser contas de consumo como água, luz ou telefone, ou correspondências com o selo FAC com emissão ou postagem não superior a 60 dias. Caso o comprovante seja em nome de cônjuge apresentar a certidão de casamento autenticada e caso seja em nome de terceiro, necessário apresentação da Declaração de Endereço disponível no site do Detran reconhecido firma em Cartório.\n3 - Caso o Cliente opte pelo registro particular, este assume total responsabilidade pelo veículo, ficando a Concessionária isenta de qualquer ônus. Estando notificado, a partir da data de assinatura da nota fiscal de venda, o prazo de até 15 dias para entregar uma cópia do referido CRV (certificado de Registro do Veículo) transferido, para a concessionária.",cy);
+  cy=pdfClause(doc,"DOCUMENTOS PARA VEÍCULOS USADOS COMO PARTE DE PAGAMENTO","1 - O cliente precisa assinar o Contrato de Compra e Venda e reconhecer firma em cartório, para os casos do estado de Santa Catarina, ainda apresentar uma Procuração Pública dando poderes aos procuradores do Grupo Barigui para que a concessionária possa realizar a transferência do veículo.\n2 - Caso o carro seja de outro estado, o veículo precisa primeiramente ser transferido para o Estado da Concessionária e com o IPVA/Licenciamento quitado, para posteriormente ser utilizado como condição de pagamento na negociação.\n3 - Caso a avaliação do veículo usado seja menor que o valor do veículo objeto deste pré-contrato, será cobrada do Cliente a diferença, caso seja maior será devolvida ao mesmo, como TROCO NA TROCA.\n4 - O Cliente fica ciente que todos os débitos que constarem no veículo usado, dado como parte de pagamento nesta negociação, será de inteira responsabilidade do mesmo e deverão estar quitados antes da entrega do veículo para a concessionária e que não podem apresentar nenhum tipo de bloqueio administrativo e/ou Restrição Judicial.\n5 - O Cliente fica também ciente que caso o veículo usado como parte de pagamento não tenha: triângulo, chave de roda, \"macaco\", chave reserva, manual, cartão código, ainda se algum dos vidros estiver com a numeração do chassi adulterada, com o lacre da placa violado/quebrado e se ela estiver ilegível será necessário arcar com todos os custos de reposição no dia que estiver entregando o veículo para a Concessionária. Para evitar transtornos e desconfortos no dia da troca de chaves, será necessário regularizar todos estes itens antes da entrega do veículo seminovo para a concessionária.\n6 - Na entrega do usado é obrigatório ter o recibo de transferência CRV (certificado de Registro do Veículo) sem preenchimento, para liberação da entrega do veículo objeto deste pré-contrato.\n7 - É IMPRESCINDÍVEL entregar o veículo usado como parte de pagamento EXATAMENTE da maneira como foi avaliado no dia da negociação, ressalta-se ao observado em relação a rodas de liga leve, tapetes do veículo entre outros itens acordados por ambas as partes.\n8 - O Cliente está ciente que deve chegar 30 minutos antes do horário agendado para a entrega do veículo objeto deste pré-contrato para que seja realizado o recebimento do veículo usado como parte do pagamento conforme padrão da Concessionária.\n9 - O veículo usado como parte de pagamento citado neste contrato preliminar, não poderá ser desvinculado da negociação após a assinatura, estando sujeito a nova negociação.\n10 - A concessionária só irá receber o veículo seminovo com a aprovação de vistoria veicular em uma das empresas indicadas pelo Grupo Barigui. Obs.: Em caso de vistoria reprovada por falta de etiquetas (ETA), o cliente irá arcar com as custas do processo de solicitação junto à montadora.",cy);
+  if(cy>205){doc.addPage();cy=15}
+  cy=pdfClause(doc,"FATURAMENTO E ENTREGA DO VEÍCULO NOVO OU SEMINOVO","1 - O veículo somente será faturado quando comprovado o pagamento do veículo. Todos os comprovantes de pagamento deverão ser entregues ao vendedor preferencialmente de forma digital.\n2 - Para os veículos novos a entrega será agendada pelo departamento de Pós-Venda da Concessionária. Esta atividade está condicionada à apresentação de toda a documentação exigida bem como a comprovação dos pagamentos relacionados a negociação. Após essa condicionante será realizado as instalações de acessórios, vistoria e preparação do veículo, seguindo os padrões de qualidade da montadora em um prazo estimado de 7 dias úteis, sendo que as entregas acontecem exclusivamente em dia útil, das 09:00 às 17:00 horas.\n3 - O Cliente precisa reservar de 1:30 a 2:00 horas para a retirada do veículo objeto deste pré-contrato, pois neste dia serão apresentados todos os detalhes de utilização do carro.\n4 - Em caso da necessidade de entrega para terceiros do veículo objeto deste pré-contrato, o Cliente deverá apresentar o Termo de Autorização de Entrega para Terceiros.\n5 - A parcela acordada no ato da assinatura deste pré-contrato poderá sofrer alteração quando for o caso de CARRO DE PEDIDO DE FÁBRICA. As taxas e valores do veículo novo serão alteradas conforme vigência na data da chegada do veículo na Concessionária.\n6 - Pagamento com CHEQUE parcelado ou à vista está sujeito a consulta para aprovação.\n7 - A FALTA DOS DOCUMENTOS SOLICITADOS IMPLICARÁ DIRETAMENTE NO PRAZO DE ENTREGA E EMPLACAMENTO DO VEÍCULO.\n\nEm conformidade com a Lei 13.709/18 de proteção de dados, estou ciente e de acordo que para viabilizar os procedimentos necessários à concretização do negócio que estou firmando com a Concessionária, esta poderá compartilhar meus dados para os seguintes operadores: Montadora do Veículo, Despachante, Corretora de Seguros, Empresa de Cobrança e Crédito, Seguradora e Instituição Financeira, bem como autorizo a realização de pesquisa de satisfação e ofertas diversas, sem prejuízo da utilização e manutenção dos dados pessoais com lastro nas demais hipóteses legais.",cy);
+  if(cy>226){doc.addPage();cy=15}
+  pdfSection(doc,"CLÁUSULA DE DESISTÊNCIA",cy);cy+=11;
+  cy=pdfClause(doc,"","Em caso de desistência neste ato pactuado, que somente poderá ocorrer: ANTES DA ENTREGA DO VEÍCULO objeto presente e NÃO ESTANDO AINDA REGISTRADO AO PROPRIETÁRIO NO DETRAN, ficará desde já definido que as partes sujeitar-se-ão ao disposto no artigo 420 do Código Civil estipulando que as arras corresponderão ao percentual de 5% sobre o valor à vista do veículo objeto do presente contrato conforme descrito acima. Não havendo ônus para ambas as Partes em caso de não aprovação do Crédito. Também havendo semi novo como parte de pagamento, este passará por vistoria veicular e se não aprovado, a negociação poderá ser alterada ou invalidada, neste caso sem ônus para as partes.\n\nEm consequência aos imprevistos causados pela pandemia do COVID19, qual tem paralisado inúmeras áreas, inclusive as montadoras de veículos, poderá gerar prazo de entrega maior que o previsto, bem como reajuste de valores dos automóveis decorrente do aumento de preço da montadora.\n\nOs termos pré pactuados neste documento, referente ao veículo, valores e condições de pagamento, que poderão ser ajustados entre as partes, serão finalizados e firmados no documento denominado PEDIDO de venda que originará a emissão da nota fiscal.",cy);
+  const sy=Math.min(274,Math.max(cy+8,252));
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.text("Cliente: ________________________________________________",10,sy);doc.text("Vendedor: ___________________________",10,Math.min(286,sy+12));doc.text("Gerente: ____________________________",120,Math.min(286,sy+12));
 
   const safe=(lead.nome||"cliente").replace(/[^a-zA-Z0-9À-ÿ]+/g,"_").replace(/^_+|_+$/g,"");
-  doc.save("Ficha_Venda_"+safe+".pdf")
+  doc.save("Contrato_Preliminar_Barigui_"+safe+".pdf")
 }
 async function saveSaleFormAndPdf(){
   const id=String(saleLeadId.value),lead=clients.find(x=>x.id===id);if(!lead)return;
@@ -707,7 +731,7 @@ async function saveSaleFormAndPdf(){
   const seller=sellers.find(x=>x.id===updated.vendedorId);
   lastCelebratedSaleId=id;
   celebrateSale(seller,updated);
-  buildSalePdf(updated,seller)
+  await buildSalePdf(updated,seller)
 }
 async function changeStatus(id,st){
   const c=clients.find(x=>x.id===String(id));
