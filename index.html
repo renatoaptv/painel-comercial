@@ -641,56 +641,54 @@ function pdfClause(doc,title,text,y){
   doc.text(lines,11,y,{lineHeightFactor:1.13});
   return y+(lines.length*2.62)+3
 }
-function drawBariguiLogo(doc,x=10,y=4){
+function drawBariguiLogo(doc,x=8.5,y=4.5){
   const blue=[38,51,145];
-
-  // símbolo B estilizado, feito só com texto e retângulos para máxima compatibilidade no jsPDF
   doc.setTextColor(...blue);
   doc.setFont("helvetica","bolditalic");
-  doc.setFontSize(26);
-  doc.text("B",x+1,y+10.5);
+  doc.setFontSize(24);
+  doc.text("B",x+2.2,y+9.5);
 
   doc.setTextColor(105,105,105);
   doc.setFont("helvetica","normal");
-  doc.setFontSize(5.1);
-  doc.text("G  R  U  P  O",x,y+15.5);
+  doc.setFontSize(4.8);
+  doc.text("G  R  U  P  O",x+1.2,y+14.1);
 
   doc.setFillColor(...blue);
-  doc.rect(x,y+17,27,6.5,"F");
+  doc.rect(x,y+15.5,25.5,5.8,"F");
   doc.setTextColor(255,255,255);
   doc.setFont("helvetica","bold");
-  doc.setFontSize(8.2);
-  doc.text("BARIGÜI",x+13.5,y+21.8,{align:"center"});
+  doc.setFontSize(7.8);
+  doc.text("BARIGÜI",x+12.75,y+19.8,{align:"center"});
 
   doc.setTextColor(20,20,20);
 }
 async function buildSalePdf(lead,seller){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:"mm",format:"a4"});
-  drawBariguiLogo(doc,10,4);
-doc.setFont("helvetica","bold");doc.setFontSize(16);doc.text("CONTRATO PRELIMINAR DE COMPRA E VENDA",120,15,{align:"center"});
+  drawBariguiLogo(doc,8.5,4.5);
+  doc.setFont("helvetica","bold");doc.setFontSize(15.5);doc.text("CONTRATO PRELIMINAR DE COMPRA E VENDA",122,16,{align:"center"});
   doc.setFont("helvetica","normal");doc.setFontSize(7.5);
   doc.setDrawColor(70,70,70);doc.setLineWidth(.3);
-  doc.rect(10,25,190,5.4);doc.text("VOLKSWAGEN BLUSA",11,28.7);
-  doc.rect(10,31.5,190,5.4);doc.text("RUA ALBERTO STEIN, BLUMENAU, SC, 89036200",11,35.2);
+  doc.rect(10,30,190,5.4);doc.text("VOLKSWAGEN BLUSA",11,33.7);
+  doc.rect(10,36.5,190,5.4);doc.text("RUA ALBERTO STEIN, BLUMENAU, SC, 89036200",11,40.2);
 
-  pdfSection(doc,"DADOS DO CLIENTE",41);
-  salePdfLine(doc,"NOME:",lead.nome,11,53,92);salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,108,53,90);
-  salePdfLine(doc,"RG:",lead.rg,11,64,55);salePdfLine(doc,"DATA DE NASCIMENTO:",lead.birthDate?new Date(lead.birthDate+"T00:00:00").toLocaleDateString("pt-BR"):"",70,64,55);salePdfLine(doc,"TELEFONE 1:",lead.telefone,130,64,68);
-  salePdfLine(doc,"ENDEREÇO:",(lead.endereco||"")+" "+(lead.numero||""),11,75,92);salePdfLine(doc,"TELEFONE 2:",lead.phone2,108,75,90);
-  salePdfLine(doc,"COMPLEMENTO:",lead.complemento,11,86,80);salePdfLine(doc,"E-MAIL:",lead.email,95,86,103);
-  salePdfLine(doc,"BAIRRO:",lead.bairro,11,97,55);salePdfLine(doc,"CIDADE:",lead.cidade,70,97,55);salePdfLine(doc,"UF:",lead.uf,130,97,20);salePdfLine(doc,"CEP:",lead.cep,155,97,43);
+  pdfSection(doc,"DADOS DO CLIENTE",46);
+  salePdfLine(doc,"NOME:",lead.nome,11,58,92);salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,108,58,90);
+  salePdfLine(doc,"RG:",lead.rg,11,69,55);salePdfLine(doc,"DATA DE NASCIMENTO:",lead.birthDate?new Date(lead.birthDate+"T00:00:00").toLocaleDateString("pt-BR"):"",70,69,55);salePdfLine(doc,"TELEFONE 1:",lead.telefone,130,69,68);
+  salePdfLine(doc,"ENDEREÇO:",(lead.endereco||"")+" "+(lead.numero||""),11,80,92);salePdfLine(doc,"TELEFONE 2:",lead.phone2,108,80,90);
+  salePdfLine(doc,"COMPLEMENTO:",lead.complemento,11,91,80);salePdfLine(doc,"E-MAIL:",lead.email,95,91,103);
+  salePdfLine(doc,"BAIRRO:",lead.bairro,11,102,55);salePdfLine(doc,"CIDADE:",lead.cidade,70,102,55);salePdfLine(doc,"UF:",lead.uf,130,102,20);salePdfLine(doc,"CEP:",lead.cep,155,102,43);
 
-  pdfSection(doc,"DADOS DO VEÍCULO",105);
-  salePdfLine(doc,"TIPO:",lead.vehicleType,11,117,50);salePdfLine(doc,"CHASSI:",lead.chassis,108,117,60);salePdfLine(doc,"PLACA:",lead.plate,172,117,26);
-  salePdfLine(doc,"MARCA:",lead.vehicleBrand,11,128,88);salePdfLine(doc,"MODELO:",lead.vehicleModel,108,128,90);
-  salePdfLine(doc,"COR:",lead.vehicleColor,11,139,38);salePdfLine(doc,"ANO FAB:",lead.yearFab,53,139,32);salePdfLine(doc,"ANO MOD:",lead.yearModel,89,139,32);
-  salePdfLine(doc,"VALOR R$:",Number(lead.saleValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),125,139,37);
-  salePdfLine(doc,"TROCO NA TROCA R$:",Number(lead.tradeValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),166,139,32);
+  pdfSection(doc,"DADOS DO VEÍCULO",110);
+  salePdfLine(doc,"TIPO:",lead.vehicleType,11,122,50);salePdfLine(doc,"CHASSI:",lead.chassis,108,122,60);salePdfLine(doc,"PLACA:",lead.plate,172,122,26);
+  salePdfLine(doc,"MARCA:",lead.vehicleBrand,11,133,88);salePdfLine(doc,"MODELO:",lead.vehicleModel,108,133,90);
+  salePdfLine(doc,"COR:",lead.vehicleColor,11,144,38);salePdfLine(doc,"ANO FAB:",lead.yearFab,53,144,32);salePdfLine(doc,"ANO MOD:",lead.yearModel,89,144,32);
+  salePdfLine(doc,"VALOR R$:",Number(lead.saleValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),125,144,37);
+  salePdfLine(doc,"TROCO NA TROCA R$:",Number(lead.tradeValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),166,144,32);
 
-  pdfSection(doc,"SERVIÇOS ADICIONAIS",148);
+  pdfSection(doc,"SERVIÇOS ADICIONAIS",153);
   const svc=(lead.additionalServices||[]).filter(x=>x.name);
-  doc.autoTable({startY:157,margin:{left:10,right:10},head:[["NOME DO PRODUTO","QUANTIDADE","PREÇO UNITÁRIO (R$)","DESCRIÇÃO"]],body:(svc.length?svc:[{name:"-",value:0}]).map(x=>[x.name,"1",Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2}),""]),styles:{fontSize:7,cellPadding:2.2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
+  doc.autoTable({startY:162,margin:{left:10,right:10},head:[["NOME DO PRODUTO","QUANTIDADE","PREÇO UNITÁRIO (R$)","DESCRIÇÃO"]],body:(svc.length?svc:[{name:"-",value:0}]).map(x=>[x.name,"1",Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2}),""]),styles:{fontSize:7,cellPadding:2.2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
 
   let y=doc.lastAutoTable.finalY+5;pdfSection(doc,"CONDIÇÃO DE PAGAMENTO",y);y+=10;
   const pay=(lead.paymentTerms||[]).filter(x=>x.condition);
