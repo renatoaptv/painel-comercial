@@ -138,13 +138,12 @@
   <div class="two"><div class="field"><label>Valor da venda (R$)</label><input id="saleValue" inputmode="decimal"></div><div class="field"><label>Troco na troca (R$)</label><input id="saleTradeValue" inputmode="decimal"></div></div>
 
   <h3 style="margin:18px 0 12px">Serviços adicionais</h3>
-  <div class="two"><div class="field"><label>Produto/serviço</label><input id="saleService1"></div><div class="field"><label>Valor (R$)</label><input id="saleServiceValue1" inputmode="decimal"></div></div>
-  <div class="two"><div class="field"><label>Produto/serviço 2</label><input id="saleService2"></div><div class="field"><label>Valor (R$)</label><input id="saleServiceValue2" inputmode="decimal"></div></div>
+  <div id="saleServicesList"></div>
+  <button type="button" class="btn secondary" style="margin-bottom:16px" onclick="addSaleService()">+ Adicionar serviço</button>
 
   <h3 style="margin:18px 0 12px">Condição de pagamento</h3>
-  <div class="two"><div class="field"><label>Condição 1</label><input id="salePayment1" placeholder="Ex.: PIX / Financiamento / Entrada"></div><div class="field"><label>Valor (R$)</label><input id="salePaymentValue1" inputmode="decimal"></div></div>
-  <div class="two"><div class="field"><label>Condição 2</label><input id="salePayment2"></div><div class="field"><label>Valor (R$)</label><input id="salePaymentValue2" inputmode="decimal"></div></div>
-  <div class="two"><div class="field"><label>Condição 3</label><input id="salePayment3"></div><div class="field"><label>Valor (R$)</label><input id="salePaymentValue3" inputmode="decimal"></div></div>
+  <div id="salePaymentsList"></div>
+  <button type="button" class="btn secondary" style="margin-bottom:16px" onclick="addSalePayment()">+ Adicionar condição de pagamento</button>
 
   <div class="field"><label>Observações da venda</label><textarea id="saleNotes" rows="4"></textarea></div>
   <div class="modal-actions"><button class="btn secondary" onclick="closeModal('saleFormModal')">Cancelar</button><button class="btn" onclick="saveSaleFormAndPdf()">Concluir venda e gerar PDF</button></div>
@@ -551,6 +550,29 @@ function brMoney(v){
   const n=Number(String(v??"").replace(/\./g,"").replace(",","."));
   return Number.isFinite(n)?n:0
 }
+
+function saleRowTemplate(type,index,a="",b=""){
+  const isService=type==="service";
+  const labelA=isService?"Produto/serviço":"Condição";
+  const placeholder=isService?"":"Ex.: PIX / Financiamento / Entrada";
+  return '<div class="two dynamic-sale-row" data-kind="'+type+'"><div class="field"><label>'+labelA+'</label><input class="sale-row-a" value="'+esc(a)+'" '+(placeholder?'placeholder="'+placeholder+'"':'')+'></div><div class="field"><label>Valor (R$)</label><div style="display:flex;gap:8px"><input class="sale-row-b" inputmode="decimal" value="'+esc(b)+'"><button type="button" class="btn secondary" onclick="removeSaleRow(this)" title="Remover">−</button></div></div></div>'
+}
+function addSaleService(a="",b=""){saleServicesList.insertAdjacentHTML("beforeend",saleRowTemplate("service",saleServicesList.children.length,a,b))}
+function addSalePayment(a="",b=""){salePaymentsList.insertAdjacentHTML("beforeend",saleRowTemplate("payment",salePaymentsList.children.length,a,b))}
+function removeSaleRow(btn){
+  const row=btn.closest(".dynamic-sale-row");
+  if(!row)return;
+  const list=row.parentElement;
+  if(list.children.length<=1){row.querySelector(".sale-row-a").value="";row.querySelector(".sale-row-b").value="";return}
+  row.remove()
+}
+function collectSaleRows(list,type){
+  return [...list.querySelectorAll(".dynamic-sale-row")].map(row=>{
+    const a=row.querySelector(".sale-row-a").value.trim();
+    const b=brMoney(row.querySelector(".sale-row-b").value);
+    return type==="service"?{name:a,value:b}:{condition:a,value:b}
+  }).filter(x=>type==="service"?x.name:x.condition)
+}
 function openSaleForm(id){
   const lead=clients.find(x=>x.id===String(id));if(!lead)return;
   saleLeadId.value=lead.id;
@@ -578,13 +600,12 @@ function openSaleForm(id){
   salePlate.value=lead.plate||"";
   saleValue.value=lead.saleValue??"";
   saleTradeValue.value=lead.tradeValue??"";
+  saleServicesList.innerHTML="";
   const sv=lead.additionalServices||[];
-  saleService1.value=sv[0]?.name||"";saleServiceValue1.value=sv[0]?.value??"";
-  saleService2.value=sv[1]?.name||"";saleServiceValue2.value=sv[1]?.value??"";
+  if(sv.length)sv.forEach(x=>addSaleService(x.name||"",x.value??""));else addSaleService();
+  salePaymentsList.innerHTML="";
   const pt=lead.paymentTerms||[];
-  salePayment1.value=pt[0]?.condition||"";salePaymentValue1.value=pt[0]?.value??"";
-  salePayment2.value=pt[1]?.condition||"";salePaymentValue2.value=pt[1]?.value??"";
-  salePayment3.value=pt[2]?.condition||"";salePaymentValue3.value=pt[2]?.value??"";
+  if(pt.length)pt.forEach(x=>addSalePayment(x.condition||"",x.value??""));else addSalePayment();
   saleNotes.value=lead.saleNotes||lead.observacao||"";
   saleFormModal.classList.add("show")
 }
@@ -680,15 +701,8 @@ async function saveSaleFormAndPdf(){
   if(!saleVehicleModel.value.trim())return alert("Informe o modelo do veículo.");
   if(!saleValue.value.trim())return alert("Informe o valor da venda.");
 
-  const services=[
-    {name:saleService1.value.trim(),value:brMoney(saleServiceValue1.value)},
-    {name:saleService2.value.trim(),value:brMoney(saleServiceValue2.value)}
-  ].filter(x=>x.name);
-  const payments=[
-    {condition:salePayment1.value.trim(),value:brMoney(salePaymentValue1.value)},
-    {condition:salePayment2.value.trim(),value:brMoney(salePaymentValue2.value)},
-    {condition:salePayment3.value.trim(),value:brMoney(salePaymentValue3.value)}
-  ].filter(x=>x.condition);
+  const services=collectSaleRows(saleServicesList,"service");
+  const payments=collectSaleRows(salePaymentsList,"payment");
 
   const patch={
     customer_name:saleName.value.trim(),
