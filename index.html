@@ -290,7 +290,7 @@ function saveSeller(){openUsers();closeModal("sellerModal")}
 function openPhoto(id){id=String(id);if(!isManager()&&id!==mySellerId())return;const s=sellers.find(x=>x.id===id);if(!s)return;photoSellerId.value=id;photoPreview.src=s.foto||fallback(s.nome);newPhoto.value="";photoModal.classList.add("show")}newPhoto.addEventListener("change",function(){const f=this.files[0];if(!f)return;const r=new FileReader;r.onload=e=>photoPreview.src=e.target.result;r.readAsDataURL(f)});async function saveNewPhoto(){
   const id=String(photoSellerId.value),s=sellers.find(x=>x.id===id),f=newPhoto.files[0];
   if(!s||!f)return alert("Selecione uma foto.");
-  if(f.size>900000)return alert("Use uma imagem com até 900 KB.");
+  if(f.size>5000000)return alert("Use uma imagem com até 5 MB.");
   const r=new FileReader;
   r.onload=async e=>{
     const {error}=await sb.from("profiles").update({avatar_url:e.target.result}).eq("id",id);
