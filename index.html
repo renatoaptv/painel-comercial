@@ -27,6 +27,8 @@
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.hero-leader{width:100%}.grid{grid-template-columns:1fr}.kpis,.smart{grid-template-columns:repeat(2,1fr)}.seller{grid-template-columns:42px 70px 1fr 70px}.seller .btn{grid-column:3/5}.agenda-item{grid-template-columns:1fr}}@media(max-width:520px){.kpis,.smart{grid-template-columns:1fr 1fr}.hero-leader img{width:104px;height:104px}.two{grid-template-columns:1fr}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 <div class="login-screen" id="loginScreen">
@@ -113,6 +115,40 @@
 <div class="field"><label>Etapa</label><select id="clientStatus"><option>Contatado</option><option>Confirmado</option><option>Compareceu</option><option>Vendido</option><option>Perdido</option></select></div>
 <div class="field"><label>Observações</label><textarea id="clientObs" rows="3"></textarea></div>
 <div class="modal-actions"><button class="btn secondary" onclick="closeModal('clientModal')">Cancelar</button><button class="btn" onclick="saveClient()">Cadastrar cliente</button></div></div></div>
+
+
+<div class="modal" id="saleFormModal"><div class="modal-box" style="width:min(98%,880px)">
+  <div class="modal-head"><div><h2>Ficha completa da venda</h2><div class="desc">Preencha os dados para concluir a venda e gerar o PDF.</div></div><button class="x" onclick="closeModal('saleFormModal')">×</button></div>
+  <input type="hidden" id="saleLeadId">
+  <h3 style="margin:8px 0 12px">Dados do cliente</h3>
+  <div class="two"><div class="field"><label>Nome / Razão social</label><input id="saleName"></div><div class="field"><label>CPF/CNPJ</label><input id="saleCpfCnpj"></div></div>
+  <div class="two"><div class="field"><label>RG</label><input id="saleRg"></div><div class="field"><label>Data de nascimento</label><input id="saleBirthDate" type="date"></div></div>
+  <div class="two"><div class="field"><label>Telefone 1</label><input id="salePhone1"></div><div class="field"><label>Telefone 2</label><input id="salePhone2"></div></div>
+  <div class="field"><label>E-mail</label><input id="saleEmail" type="email"></div>
+  <div class="two"><div class="field"><label>Endereço</label><input id="saleAddress"></div><div class="field"><label>Número</label><input id="saleAddressNumber"></div></div>
+  <div class="two"><div class="field"><label>Complemento</label><input id="saleComplement"></div><div class="field"><label>Bairro</label><input id="saleNeighborhood"></div></div>
+  <div class="two"><div class="field"><label>Cidade</label><input id="saleCity"></div><div class="field"><label>UF</label><input id="saleState" maxlength="2"></div></div>
+  <div class="field"><label>CEP</label><input id="saleZip"></div>
+
+  <h3 style="margin:18px 0 12px">Dados do veículo</h3>
+  <div class="two"><div class="field"><label>Tipo</label><select id="saleVehicleType"><option value="Novo">Novo</option><option value="Venda Direta">Venda Direta</option><option value="Seminovo">Seminovo</option></select></div><div class="field"><label>Marca</label><input id="saleVehicleBrand"></div></div>
+  <div class="two"><div class="field"><label>Modelo</label><input id="saleVehicleModel"></div><div class="field"><label>Cor</label><input id="saleVehicleColor"></div></div>
+  <div class="two"><div class="field"><label>Ano fabricação</label><input id="saleYearFab"></div><div class="field"><label>Ano modelo</label><input id="saleYearModel"></div></div>
+  <div class="two"><div class="field"><label>Chassi</label><input id="saleChassis"></div><div class="field"><label>Placa</label><input id="salePlate"></div></div>
+  <div class="two"><div class="field"><label>Valor da venda (R$)</label><input id="saleValue" inputmode="decimal"></div><div class="field"><label>Troco na troca (R$)</label><input id="saleTradeValue" inputmode="decimal"></div></div>
+
+  <h3 style="margin:18px 0 12px">Serviços adicionais</h3>
+  <div class="two"><div class="field"><label>Produto/serviço</label><input id="saleService1"></div><div class="field"><label>Valor (R$)</label><input id="saleServiceValue1" inputmode="decimal"></div></div>
+  <div class="two"><div class="field"><label>Produto/serviço 2</label><input id="saleService2"></div><div class="field"><label>Valor (R$)</label><input id="saleServiceValue2" inputmode="decimal"></div></div>
+
+  <h3 style="margin:18px 0 12px">Condição de pagamento</h3>
+  <div class="two"><div class="field"><label>Condição 1</label><input id="salePayment1" placeholder="Ex.: PIX / Financiamento / Entrada"></div><div class="field"><label>Valor (R$)</label><input id="salePaymentValue1" inputmode="decimal"></div></div>
+  <div class="two"><div class="field"><label>Condição 2</label><input id="salePayment2"></div><div class="field"><label>Valor (R$)</label><input id="salePaymentValue2" inputmode="decimal"></div></div>
+  <div class="two"><div class="field"><label>Condição 3</label><input id="salePayment3"></div><div class="field"><label>Valor (R$)</label><input id="salePaymentValue3" inputmode="decimal"></div></div>
+
+  <div class="field"><label>Observações da venda</label><textarea id="saleNotes" rows="4"></textarea></div>
+  <div class="modal-actions"><button class="btn secondary" onclick="closeModal('saleFormModal')">Cancelar</button><button class="btn" onclick="saveSaleFormAndPdf()">Concluir venda e gerar PDF</button></div>
+</div></div>
 
 <div class="modal" id="photoModal"><div class="modal-box"><div class="modal-head"><h2>Alterar foto</h2><button class="x" onclick="closeModal('photoModal')">×</button></div><input type="hidden" id="photoSellerId"><img class="preview" id="photoPreview"><div class="field"><label>Nova foto</label><input id="newPhoto" type="file" accept="image/*"></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal('photoModal')">Cancelar</button><button class="btn" onclick="saveNewPhoto()">Salvar foto</button></div></div></div>
 
@@ -223,6 +259,32 @@ async function loadCloudData(){
       dataContato:r.contact_at?new Date(r.contact_at).getTime():null,
       proximoFollowup:r.next_followup_at?new Date(r.next_followup_at).getTime():null,
       motivoPerda:r.loss_reason||"",
+      email:r.email||"",
+      cpfCnpj:r.cpf_cnpj||"",
+      rg:r.rg||"",
+      birthDate:r.birth_date||"",
+      phone2:r.phone_2||"",
+      endereco:r.address||"",
+      numero:r.address_number||"",
+      complemento:r.complement||"",
+      bairro:r.neighborhood||"",
+      cidade:r.city||"",
+      uf:r.state||"",
+      cep:r.zip_code||"",
+      vehicleType:r.vehicle_type||"",
+      vehicleBrand:r.vehicle_brand||"",
+      vehicleModel:r.vehicle_model||"",
+      vehicleColor:r.vehicle_color||"",
+      yearFab:r.vehicle_year_fab||"",
+      yearModel:r.vehicle_year_model||"",
+      chassis:r.vehicle_chassis||"",
+      plate:r.vehicle_plate||"",
+      saleValue:r.sale_value,
+      tradeValue:r.trade_value,
+      additionalServices:r.additional_services||[],
+      paymentTerms:r.payment_terms||[],
+      saleNotes:r.sale_notes||"",
+      saleFormCompletedAt:r.sale_form_completed_at?new Date(r.sale_form_completed_at).getTime():null,
       criadoEm:new Date(r.created_at).getTime(),
       ultimaAtualizacao:new Date(r.updated_at).getTime(),
       soldAt:r.sold_at?new Date(r.sold_at).getTime():null
@@ -451,7 +513,7 @@ async function saveClient(){
     origin:clientOrigin.value,
     interest:clientInterest.value.trim(),
     notes:clientObs.value.trim(),
-    stage:st,
+    stage:st==="Vendido"?"Contatado":st,
     contact_at:clientContactDate.value?new Date(clientContactDate.value).toISOString():new Date().toISOString(),
     next_followup_at:clientFollow.value?new Date(clientFollow.value).toISOString():null,
     loss_reason:"",
@@ -464,8 +526,12 @@ async function saveClient(){
     return alert("Erro ao cadastrar cliente: "+error.message);
   }
   const temp={id:data.id,vendedorId:String(data.seller_id),nome:data.customer_name,telefone:data.phone_raw,status:data.stage};
-  if(st==="Vendido"){lastCelebratedSaleId=data.id;celebrateSale(sellers.find(x=>x.id===vendedorId),temp)}
   closeModal("clientModal");
+  if(st==="Vendido"){
+    await loadCloudData();renderAll();
+    openSaleForm(data.id);
+    return;
+  }
   ["clientName","clientPhone","clientInterest","clientContactDate","clientFollow","clientObs"].forEach(id=>document.getElementById(id).value="");
   clientOrigin.value="Ligação";clientStatus.value="Contatado";
   await loadCloudData();renderAll()
@@ -480,16 +546,182 @@ async function changeFollow(id,v){
   if(error)return alert("Erro ao atualizar follow-up.");
   await loadCloudData();renderAll()
 }
+
+function brMoney(v){
+  const n=Number(String(v??"").replace(/\./g,"").replace(",","."));
+  return Number.isFinite(n)?n:0
+}
+function openSaleForm(id){
+  const lead=clients.find(x=>x.id===String(id));if(!lead)return;
+  saleLeadId.value=lead.id;
+  saleName.value=lead.nome||"";
+  saleCpfCnpj.value=lead.cpfCnpj||"";
+  saleRg.value=lead.rg||"";
+  saleBirthDate.value=lead.birthDate||"";
+  salePhone1.value=lead.telefone||"";
+  salePhone2.value=lead.phone2||"";
+  saleEmail.value=lead.email||"";
+  saleAddress.value=lead.endereco||"";
+  saleAddressNumber.value=lead.numero||"";
+  saleComplement.value=lead.complemento||"";
+  saleNeighborhood.value=lead.bairro||"";
+  saleCity.value=lead.cidade||"";
+  saleState.value=lead.uf||"";
+  saleZip.value=lead.cep||"";
+  saleVehicleType.value=lead.vehicleType||"Novo";
+  saleVehicleBrand.value=lead.vehicleBrand||"";
+  saleVehicleModel.value=lead.vehicleModel||lead.interesse||"";
+  saleVehicleColor.value=lead.vehicleColor||"";
+  saleYearFab.value=lead.yearFab||"";
+  saleYearModel.value=lead.yearModel||"";
+  saleChassis.value=lead.chassis||"";
+  salePlate.value=lead.plate||"";
+  saleValue.value=lead.saleValue??"";
+  saleTradeValue.value=lead.tradeValue??"";
+  const sv=lead.additionalServices||[];
+  saleService1.value=sv[0]?.name||"";saleServiceValue1.value=sv[0]?.value??"";
+  saleService2.value=sv[1]?.name||"";saleServiceValue2.value=sv[1]?.value??"";
+  const pt=lead.paymentTerms||[];
+  salePayment1.value=pt[0]?.condition||"";salePaymentValue1.value=pt[0]?.value??"";
+  salePayment2.value=pt[1]?.condition||"";salePaymentValue2.value=pt[1]?.value??"";
+  salePayment3.value=pt[2]?.condition||"";salePaymentValue3.value=pt[2]?.value??"";
+  saleNotes.value=lead.saleNotes||lead.observacao||"";
+  saleFormModal.classList.add("show")
+}
+function salePdfLine(doc,label,value,x,y,w){
+  doc.setFont("helvetica","bold");doc.setFontSize(7.5);doc.text(label,x,y);
+  doc.setFont("helvetica","normal");doc.text(String(value||"-"),x,y+4,{maxWidth:w});
+}
+function buildSalePdf(lead,seller){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const margin=10,pageW=210;
+  doc.setFont("helvetica","bold");doc.setFontSize(17);doc.text("FICHA DE VENDA / CONTRATO PRELIMINAR",105,15,{align:"center"});
+  doc.setFontSize(9);doc.text("PROSPECTA REAL",10,15);
+  doc.setDrawColor(120);doc.line(10,20,200,20);
+
+  doc.setFillColor(230,235,240);doc.rect(10,24,190,7,"F");doc.setFontSize(10);doc.text("DADOS DO CLIENTE",105,29,{align:"center"});
+  salePdfLine(doc,"NOME:",lead.nome,11,36,92); salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,108,36,90);
+  salePdfLine(doc,"RG:",lead.rg,11,47,60); salePdfLine(doc,"DATA DE NASCIMENTO:",lead.birthDate?new Date(lead.birthDate+"T00:00:00").toLocaleDateString("pt-BR"):"",75,47,55); salePdfLine(doc,"TELEFONE 1:",lead.telefone,135,47,63);
+  salePdfLine(doc,"ENDEREÇO:",(lead.endereco||"")+" "+(lead.numero||""),11,58,92); salePdfLine(doc,"TELEFONE 2:",lead.phone2,108,58,90);
+  salePdfLine(doc,"COMPLEMENTO:",lead.complemento,11,69,80); salePdfLine(doc,"E-MAIL:",lead.email,95,69,103);
+  salePdfLine(doc,"BAIRRO:",lead.bairro,11,80,55); salePdfLine(doc,"CIDADE:",lead.cidade,70,80,55); salePdfLine(doc,"UF:",lead.uf,130,80,20); salePdfLine(doc,"CEP:",lead.cep,155,80,43);
+
+  doc.setFillColor(230,235,240);doc.rect(10,88,190,7,"F");doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("DADOS DO VEÍCULO",105,93,{align:"center"});
+  salePdfLine(doc,"TIPO:",lead.vehicleType,11,101,55); salePdfLine(doc,"MARCA:",lead.vehicleBrand,70,101,55); salePdfLine(doc,"MODELO:",lead.vehicleModel,130,101,68);
+  salePdfLine(doc,"CHASSI:",lead.chassis,11,112,92); salePdfLine(doc,"PLACA:",lead.plate,108,112,90);
+  salePdfLine(doc,"COR:",lead.vehicleColor,11,123,45); salePdfLine(doc,"ANO FAB:",lead.yearFab,60,123,35); salePdfLine(doc,"ANO MOD:",lead.yearModel,100,123,35);
+  salePdfLine(doc,"VALOR R$:",Number(lead.saleValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),140,123,58);
+  salePdfLine(doc,"TROCO NA TROCA R$:",Number(lead.tradeValue||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}),11,134,80);
+
+  doc.setFillColor(230,235,240);doc.rect(10,143,190,7,"F");doc.setFont("helvetica","bold");doc.text("SERVIÇOS ADICIONAIS",105,148,{align:"center"});
+  const svc=(lead.additionalServices||[]).filter(x=>x.name);
+  doc.autoTable({startY:153,margin:{left:10,right:10},head:[["NOME DO PRODUTO","QUANTIDADE","PREÇO UNITÁRIO (R$)","DESCRIÇÃO"]],body:(svc.length?svc:[{name:"-",value:0}]).map(x=>[x.name,"1",Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2}),""]),styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
+
+  let y=doc.lastAutoTable.finalY+5;
+  doc.setFillColor(230,235,240);doc.rect(10,y,190,7,"F");doc.setFont("helvetica","bold");doc.text("CONDIÇÃO DE PAGAMENTO",105,y+5,{align:"center"});y+=10;
+  const pay=(lead.paymentTerms||[]).filter(x=>x.condition);
+  doc.autoTable({startY:y,margin:{left:10,right:10},head:[["CONDIÇÃO","VALOR (R$)"]],body:(pay.length?pay:[{condition:"-",value:0}]).map(x=>[x.condition,Number(x.value||0).toLocaleString("pt-BR",{minimumFractionDigits:2})]),styles:{fontSize:7,cellPadding:2},headStyles:{fillColor:[235,235,235],textColor:[20,20,20]}});
+  y=doc.lastAutoTable.finalY+5;
+  doc.setFillColor(230,235,240);doc.rect(10,y,190,7,"F");doc.setFont("helvetica","bold");doc.text("OBSERVAÇÕES",105,y+5,{align:"center"});
+  doc.setFont("helvetica","normal");doc.setFontSize(7.5);doc.text(String(lead.saleNotes||"-"),11,y+13,{maxWidth:188});
+
+  doc.setFontSize(7.5);doc.text("Cliente: ________________________________________________",10,278);
+  doc.text("Vendedor: ___________________________",10,287);
+  doc.text("Gestor: ______________________________",120,287);
+
+  doc.addPage();
+  doc.setFillColor(230,235,240);doc.rect(10,10,190,8,"F");doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("VÍNCULO DADOS DO CLIENTE E DO VEÍCULO NEGOCIADO",105,16,{align:"center"});
+  salePdfLine(doc,"NOME:",lead.nome,11,26,85); salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,105,26,93);
+  salePdfLine(doc,"MODELO:",lead.vehicleModel,11,37,65); salePdfLine(doc,"MARCA:",lead.vehicleBrand,80,37,60); salePdfLine(doc,"PLACA:",lead.plate,145,37,53);
+  salePdfLine(doc,"CHASSI:",lead.chassis,11,48,100);
+  doc.setFillColor(230,235,240);doc.rect(10,58,190,8,"F");doc.setFont("helvetica","bold");doc.text("INFORMAÇÕES COMPLEMENTARES",105,64,{align:"center"});
+  doc.setFont("helvetica","normal");doc.setFontSize(8);
+  doc.text("Ficha gerada eletronicamente pelo sistema Prospecta Real.",11,76);
+  doc.text("As condições comerciais e cláusulas jurídicas da concessionária devem ser conferidas e aprovadas pela contratante.",11,84,{maxWidth:188});
+  doc.text("Observações:",11,98);doc.text(String(lead.saleNotes||"-"),11,105,{maxWidth:188});
+  doc.text("Cliente: ________________________________________________",10,270);
+  doc.text("Vendedor: ___________________________",10,282);
+  doc.text("Gestor: ______________________________",120,282);
+
+  const safe=(lead.nome||"cliente").replace(/[^a-zA-Z0-9À-ÿ]+/g,"_").replace(/^_+|_+$/g,"");
+  doc.save("Ficha_Venda_"+safe+".pdf")
+}
+async function saveSaleFormAndPdf(){
+  const id=String(saleLeadId.value),lead=clients.find(x=>x.id===id);if(!lead)return;
+  if(!saleName.value.trim())return alert("Informe o nome do cliente.");
+  if(!saleCpfCnpj.value.trim())return alert("Informe CPF/CNPJ.");
+  if(!saleEmail.value.trim())return alert("Informe o e-mail.");
+  if(!saleAddress.value.trim())return alert("Informe o endereço.");
+  if(!saleVehicleModel.value.trim())return alert("Informe o modelo do veículo.");
+  if(!saleValue.value.trim())return alert("Informe o valor da venda.");
+
+  const services=[
+    {name:saleService1.value.trim(),value:brMoney(saleServiceValue1.value)},
+    {name:saleService2.value.trim(),value:brMoney(saleServiceValue2.value)}
+  ].filter(x=>x.name);
+  const payments=[
+    {condition:salePayment1.value.trim(),value:brMoney(salePaymentValue1.value)},
+    {condition:salePayment2.value.trim(),value:brMoney(salePaymentValue2.value)},
+    {condition:salePayment3.value.trim(),value:brMoney(salePaymentValue3.value)}
+  ].filter(x=>x.condition);
+
+  const patch={
+    customer_name:saleName.value.trim(),
+    cpf_cnpj:saleCpfCnpj.value.trim(),
+    rg:saleRg.value.trim(),
+    birth_date:saleBirthDate.value||null,
+    phone_raw:salePhone1.value.trim(),
+    phone_2:salePhone2.value.trim(),
+    email:saleEmail.value.trim(),
+    address:saleAddress.value.trim(),
+    address_number:saleAddressNumber.value.trim(),
+    complement:saleComplement.value.trim(),
+    neighborhood:saleNeighborhood.value.trim(),
+    city:saleCity.value.trim(),
+    state:saleState.value.trim().toUpperCase(),
+    zip_code:saleZip.value.trim(),
+    vehicle_type:saleVehicleType.value,
+    vehicle_brand:saleVehicleBrand.value.trim(),
+    vehicle_model:saleVehicleModel.value.trim(),
+    vehicle_color:saleVehicleColor.value.trim(),
+    vehicle_year_fab:saleYearFab.value.trim(),
+    vehicle_year_model:saleYearModel.value.trim(),
+    vehicle_chassis:saleChassis.value.trim(),
+    vehicle_plate:salePlate.value.trim().toUpperCase(),
+    sale_value:brMoney(saleValue.value),
+    trade_value:brMoney(saleTradeValue.value),
+    additional_services:services,
+    payment_terms:payments,
+    sale_notes:saleNotes.value.trim(),
+    sale_form_completed_at:new Date().toISOString(),
+    stage:"Vendido",
+    next_followup_at:null,
+    updated_by:currentUser.id
+  };
+  const {data,error}=await sb.from("leads").update(patch).eq("id",id).select().single();
+  if(error)return alert("Erro ao concluir ficha: "+error.message);
+  closeModal("saleFormModal");
+  await loadCloudData();renderAll();
+  const updated=clients.find(x=>x.id===id);
+  const seller=sellers.find(x=>x.id===updated.vendedorId);
+  lastCelebratedSaleId=id;
+  celebrateSale(seller,updated);
+  buildSalePdf(updated,seller)
+}
 async function changeStatus(id,st){
   const c=clients.find(x=>x.id===String(id));
   if(!c||(!isManager()&&c.vendedorId!==mySellerId())||status(c)===st)return;
+  if(st==="Vendido"){
+    renderClients();
+    openSaleForm(id);
+    return;
+  }
   let motivo="";
   if(st==="Perdido"){const m=prompt("Qual foi o motivo da perda?",c.motivoPerda||"");if(m===null)return renderClients();motivo=m.trim()}
   const patch={stage:st,loss_reason:motivo,updated_by:currentUser.id};
-  if(st==="Vendido")patch.next_followup_at=null;
   const {error}=await sb.from("leads").update(patch).eq("id",String(id));
   if(error)return alert("Erro ao atualizar etapa.");
-  if(st==="Vendido"){lastCelebratedSaleId=String(id);celebrateSale(sellers.find(x=>x.id===c.vendedorId),c)}
   await loadCloudData();renderAll()
 }
 function launchFireworks(){
