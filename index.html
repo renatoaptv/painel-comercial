@@ -25,6 +25,16 @@
 .celebrate{position:fixed;inset:0;background:rgba(3,8,18,.9);display:none;align-items:center;justify-content:center;z-index:2000}.celebrate.show{display:flex}.celebrate-box{text-align:center;width:min(90%,430px);padding:34px;border-radius:28px;background:#0f1b2d;border:1px solid var(--line)}.celebrate-box img{width:130px;height:130px;border-radius:50%;object-fit:cover;border:5px solid var(--green)}.celebrate-box h2{font-size:34px;margin:12px 0}
 .login-screen{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 20% 0%,rgba(59,130,246,.22),transparent 28%),radial-gradient(circle at 90% 15%,rgba(34,197,94,.12),transparent 25%),#07111f}.login-card{width:min(94%,430px);padding:28px;border-radius:26px;background:#0f1b2d;border:1px solid var(--line);box-shadow:var(--shadow)}.login-card h1{font-size:28px;margin-bottom:7px}.login-card p{color:var(--muted);font-size:13px;margin-bottom:20px}.login-brand{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(59,130,246,.12);color:#93c5fd;font-size:10px;font-weight:900;margin-bottom:12px}.app-hidden{display:none!important}.user-chip{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.05)}.user-chip b{display:block;font-size:11px}.user-chip span{display:block;color:var(--muted);font-size:9px}.manager-only{display:none}.manager-on .manager-only{display:inline-flex}.login-error{color:#fca5a5;font-size:11px;min-height:16px;margin-top:8px}
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.hero-leader{width:100%}.grid{grid-template-columns:1fr}.kpis,.smart{grid-template-columns:repeat(2,1fr)}.seller{grid-template-columns:42px 70px 1fr 70px}.seller .btn{grid-column:3/5}.agenda-item{grid-template-columns:1fr}}@media(max-width:520px){.kpis,.smart{grid-template-columns:1fr 1fr}.hero-leader img{width:104px;height:104px}.two{grid-template-columns:1fr}}
+
+.client-phone-wrap{position:relative;display:inline-flex;align-items:center;gap:7px}
+.client-phone-actions{display:inline-flex;gap:6px;opacity:0;transform:translateY(2px);pointer-events:none;transition:.18s}
+td:hover .client-phone-actions,.client-phone-wrap:focus-within .client-phone-actions{opacity:1;transform:none;pointer-events:auto}
+.icon-btn{border:1px solid var(--line);background:#122238;color:#e5eef8;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:800;cursor:pointer}
+.icon-btn:hover{border-color:#38bdf8}
+.icon-btn.wa{border-color:rgba(34,197,94,.45);color:#86efac}
+.icon-btn.danger{border-color:rgba(239,68,68,.45);color:#fecaca}
+.manager-actions{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:800px){.client-phone-actions{opacity:1;pointer-events:auto;transform:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -149,6 +159,13 @@
   <div class="modal-actions"><button class="btn secondary" onclick="closeModal('saleFormModal')">Cancelar</button><button class="btn" onclick="saveSaleFormAndPdf()">Concluir venda e gerar PDF</button></div>
 </div></div>
 
+<div class="modal" id="transferClientModal"><div class="modal-box" style="width:min(94%,520px)">
+  <div class="modal-head"><div><h2>Transferir cliente</h2><div class="desc" id="transferClientLabel">Selecione o novo vendedor.</div></div><button class="x" onclick="closeModal('transferClientModal')">×</button></div>
+  <input type="hidden" id="transferClientId">
+  <div class="field"><label>Novo vendedor</label><select id="transferSeller"></select></div>
+  <div class="modal-actions"><button class="btn secondary" onclick="closeModal('transferClientModal')">Cancelar</button><button class="btn" onclick="confirmTransferClient()">Transferir cliente</button></div>
+</div></div>
+
 <div class="modal" id="photoModal"><div class="modal-box"><div class="modal-head"><h2>Alterar foto</h2><button class="x" onclick="closeModal('photoModal')">×</button></div><input type="hidden" id="photoSellerId"><img class="preview" id="photoPreview"><div class="field"><label>Nova foto</label><input id="newPhoto" type="file" accept="image/*"></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal('photoModal')">Cancelar</button><button class="btn" onclick="saveNewPhoto()">Salvar foto</button></div></div></div>
 
 <div class="modal" id="usersModal"><div class="modal-box"><div class="modal-head"><h2>Usuários do sistema</h2><button class="x" onclick="closeModal('usersModal')">×</button></div>
@@ -240,7 +257,8 @@ async function loadCloudData(){
       id:String(p.id),
       nome:p.full_name,
       foto:p.avatar_url||fallback(p.full_name),
-      metaDiaria:Number(p.daily_goal)||25
+      metaDiaria:Number(p.daily_goal)||25,
+      storeId:p.store_id?String(p.store_id):null
     }));
   }
   let q=sb.from("leads").select("*").eq("organization_id",currentUser.organization_id).order("created_at",{ascending:false});
@@ -273,6 +291,7 @@ async function loadCloudData(){
     clients=leadRows.map(r=>({
       id:String(r.id),
       vendedorId:String(r.seller_id),
+      storeId:r.store_id?String(r.store_id):null,
       nome:r.customer_name,
       telefone:r.phone_raw,
       origem:r.origin||"",
@@ -503,7 +522,80 @@ function streak(s){const meta=Number(s.metaDiaria)||25,days={};metricClients().f
 function renderPerformance(){const mc=metricClients();document.getElementById("performance").innerHTML=sellers.map(s=>{const cs=mc.filter(c=>c.vendedorId===s.id),done=todayFor(s.id),goal=Number(s.metaDiaria)||25,pct=Math.min(100,goal?done/goal*100:0),sold=count("Vendido",cs),conv=cs.length?sold/cs.length*100:0,conf=cs.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,show=cs.filter(c=>["Compareceu","Vendido"].includes(status(c))).length,rate=conf?show/conf*100:0;return '<div class="perf"><div class="perf-top"><img src="'+s.foto+'" onerror="this.src=fallback(\''+esc(s.nome)+'\')"><div><strong>'+esc(s.nome)+'</strong><div class="desc">🔥 '+streak(s)+' dias de sequência</div></div></div><div style="font-size:11px;margin-top:10px">Meta hoje: '+done+'/'+goal+'</div><div class="bar"><div style="width:'+pct+'%"></div></div><div class="mini"><div><b>'+conv.toFixed(1)+'%</b><span>Conversão</span></div><div><b>'+rate.toFixed(1)+'%</b><span>Comparecimento</span></div><div><b>'+cs.length+'</b><span>Clientes</span></div></div></div>'}).join("")}
 function renderAgenda(){const a=clients.filter(c=>c.proximoFollowup&&!["Vendido","Perdido"].includes(status(c))).sort((x,y)=>x.proximoFollowup-y.proximoFollowup).slice(0,20);document.getElementById("agenda").innerHTML=a.length?a.map(c=>{const s=sellers.find(x=>x.id===c.vendedorId),d=new Date(c.proximoFollowup),late=c.proximoFollowup<Date.now();return '<div class="agenda-item"><div class="agenda-time">'+d.toLocaleDateString("pt-BR")+' • '+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div><strong>'+esc(c.nome)+'</strong><div class="desc">'+esc(s?s.nome:"-")+' • '+esc(c.telefone||"Sem telefone")+'</div>'+(late?'<div class="warn">⚠️ Follow-up atrasado</div>':'')+'</div><span class="tag">'+esc(status(c))+'</span></div>'}).join(""):'<div class="empty">Nenhum follow-up agendado.</div>'}
 function dtLocal(ts){if(!ts)return"";const d=new Date(Number(ts)),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
-function renderClients(){const visible=isManager()?clients:clients.filter(c=>c.vendedorId===mySellerId());if(!visible.length){document.getElementById("clients").innerHTML='<div class="empty">Nenhum cliente cadastrado.</div>';return}const rows=[...visible].sort((a,b)=>b.criadoEm-a.criadoEm).map(c=>{const s=sellers.find(x=>x.id===c.vendedorId);return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong>'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+esc(c.telefone||"-")+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+["Contatado","Confirmado","Compareceu","Vendido","Perdido"].map(x=>'<option '+(status(c)===x?"selected":"")+'>'+x+'</option>').join("")+'</select></td></tr>'}).join("");document.getElementById("clients").innerHTML='<table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th></tr></thead><tbody>'+rows+'</tbody></table>'}
+
+function managerClientActionsAllowed(){return currentUser&&["super_admin","network_admin","manager"].includes(currentUser.rawRole)}
+function sellerNameById(id){const s=sellers.find(x=>x.id===String(id));return s?s.nome:"Vendedor"}
+function whatsappNumber(v){
+  const n=normalizePhone(v);
+  if(!n)return "";
+  return n.startsWith("55")?n:"55"+n
+}
+function openManagerWhatsapp(id){
+  if(!managerClientActionsAllowed())return;
+  const lead=clients.find(x=>x.id===String(id));if(!lead)return;
+  const seller=sellers.find(x=>x.id===lead.vendedorId);
+  const phone=whatsappNumber(lead.telefone);
+  if(!phone)return alert("Este cliente não possui celular válido.");
+  const manager=currentUser.nome||"Gestor";
+  const sellerName=seller?seller.nome:"nosso vendedor";
+  const msg="Olá, "+lead.nome+"! Tudo bem? Meu nome é "+manager+", sou gestor do vendedor "+sellerName+". Estou acompanhando o seu atendimento e gostaria de saber como está sendo sua experiência até o momento. Está tudo correndo bem? Posso ajudar em algo?";
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener")
+}
+function openTransferClient(id){
+  if(!managerClientActionsAllowed())return;
+  const lead=clients.find(x=>x.id===String(id));if(!lead)return;
+  const allowed=sellers.filter(s=>{
+    if(s.id===lead.vendedorId)return false;
+    if(currentUser.rawRole==="super_admin"||currentUser.rawRole==="network_admin")return !lead.storeId||!s.storeId||s.storeId===lead.storeId;
+    return s.storeId===currentUser.store_id;
+  });
+  if(!allowed.length)return alert("Não há outro vendedor ativo disponível nesta loja.");
+  transferClientId.value=lead.id;
+  transferClientLabel.textContent=lead.nome+" • atual: "+sellerNameById(lead.vendedorId);
+  transferSeller.innerHTML=allowed.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("");
+  transferClientModal.classList.add("show")
+}
+async function confirmTransferClient(){
+  if(!managerClientActionsAllowed())return;
+  const id=String(transferClientId.value),sellerId=String(transferSeller.value);
+  if(!id||!sellerId)return;
+  const lead=clients.find(x=>x.id===id),seller=sellers.find(x=>x.id===sellerId);
+  if(!lead||!seller)return;
+  if(!confirm("Transferir "+lead.nome+" para "+seller.nome+"?"))return;
+  const {error}=await sb.from("leads").update({seller_id:sellerId,updated_by:currentUser.id}).eq("id",id);
+  if(error)return alert("Não foi possível transferir o cliente: "+error.message);
+  closeModal("transferClientModal");
+  await loadCloudData();renderAll();
+  alert("Cliente transferido para "+seller.nome+".")
+}
+async function deleteClient(id){
+  if(!managerClientActionsAllowed())return;
+  const lead=clients.find(x=>x.id===String(id));if(!lead)return;
+  const sold=status(lead)==="Vendido";
+  const warning=sold?"\n\nATENÇÃO: este cliente está marcado como VENDIDO. A exclusão removerá também essa venda dos indicadores.":"";
+  if(!confirm("Excluir o cliente "+lead.nome+"?"+warning+"\n\nEsta ação não poderá ser desfeita."))return;
+  const {error}=await sb.from("leads").delete().eq("id",String(id));
+  if(error)return alert("Não foi possível excluir o cliente: "+error.message);
+  await loadCloudData();renderAll();
+  alert("Cliente excluído.")
+}
+function renderClients(){
+  const visible=isManager()?clients:clients.filter(c=>c.vendedorId===mySellerId());
+  if(!visible.length){document.getElementById("clients").innerHTML='<div class="empty">Nenhum cliente cadastrado.</div>';return}
+  const canManage=managerClientActionsAllowed();
+  const rows=[...visible].sort((a,b)=>b.criadoEm-a.criadoEm).map(c=>{
+    const s=sellers.find(x=>x.id===c.vendedorId);
+    const phone=esc(c.telefone||"-");
+    const phoneHtml=canManage&&c.telefone
+      ? '<div class="client-phone-wrap"><span>'+phone+'</span><span class="client-phone-actions"><button class="icon-btn wa" title="Chamar no WhatsApp como gestor" onclick="openManagerWhatsapp(\''+c.id+'\')">WhatsApp</button></span></div>'
+      : phone;
+    const actions=canManage
+      ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">Excluir</button></div>'
+      : '-';
+    return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong>'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+phoneHtml+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+["Contatado","Confirmado","Compareceu","Vendido","Perdido"].map(x=>'<option '+(status(c)===x?"selected":"")+'>'+x+'</option>').join("")+'</select></td><td>'+actions+'</td></tr>'
+  }).join("");
+  document.getElementById("clients").innerHTML='<table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table>'
+}
 function renderDaily(){const m={};metricClients().filter(c=>c.dataContato).forEach(c=>{const d=new Date(c.dataContato),k=d.toISOString().slice(0,10);m[k]=(m[k]||0)+1});const days=Object.keys(m).sort().reverse().slice(0,10);document.getElementById("daily").innerHTML=days.length?days.map(k=>{const[a,b,c]=k.split("-");return '<div class="day"><span>'+c+'/'+b+'/'+a+'</span><strong>'+m[k]+'</strong><span>clientes contatados</span></div>'}).join(""):'<div class="day"><span>Contatos por dia</span><strong>0</strong></div>'}
 function fillSellers(){clientSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("")}
 function openSeller(){if(!isManager())return alert("Apenas o gestor pode cadastrar vendedores.");openUsers();newUserRole.value="vendedor";toggleUserSeller()}function openClient(id=null){if(!sellers.length){if(isManager())return openSeller();return alert("Seu usuário ainda não está vinculado como vendedor.")}fillSellers();if(!isManager()){clientSeller.value=mySellerId();clientSellerField.style.display="none"}else{clientSellerField.style.display="block";if(id)clientSeller.value=String(id)}clientModal.classList.add("show")}function closeModal(id){document.getElementById(id).classList.remove("show")}
