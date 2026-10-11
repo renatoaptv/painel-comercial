@@ -230,7 +230,13 @@ async function showApp(){
   startRealtime();
 }
 async function logout(){if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null}await sb.auth.signOut();currentUser=null;showLogin()}
-async function openUsers(){if(!isManager())return;await loadUsersFromCloud();renderUsers();usersModal.classList.add("show")}
+async function openUsers(){
+  if(!isManager())return;
+  await loadUsersFromCloud();
+  configureNewUserRoles();
+  renderUsers();
+  usersModal.classList.add("show")
+}
 async function loadUsersFromCloud(){
   const {data,error}=await sb.from("profiles").select("*").eq("organization_id",currentUser.organization_id).order("created_at");
   if(!error&&data)users=data.map(u=>({
@@ -305,10 +311,23 @@ async function deleteUserAccess(id){
     alert("Acesso excluído com sucesso.")
   }catch(e){alert(e.message)}
 }
+function configureNewUserRoles(){
+  if(!newUserRole)return;
+  if(currentUser.rawRole==="manager"){
+    newUserRole.innerHTML='<option value="vendedor">Vendedor</option>';
+  }else if(currentUser.rawRole==="network_admin"){
+    newUserRole.innerHTML='<option value="vendedor">Vendedor</option><option value="gestor">Gestor</option>';
+  }else if(currentUser.rawRole==="super_admin"){
+    newUserRole.innerHTML='<option value="vendedor">Vendedor</option><option value="gestor">Gestor</option>';
+  }
+  newUserRole.value="vendedor";
+  toggleUserSeller();
+}
 function toggleUserSeller(){newUserSellerField.style.display="none"}
 async function saveUser(){
   if(!isManager())return;
-  const nome=newUserName.value.trim(),email=newUserEmail.value.trim().toLowerCase(),senha=newUserPassword.value,roleUi=newUserRole.value,sellerId=roleUi==="vendedor"?Number(newUserSeller.value):null;
+  const nome=newUserName.value.trim(),email=newUserEmail.value.trim().toLowerCase(),senha=newUserPassword.value,roleUi=newUserRole.value;
+  if(currentUser.rawRole==="manager"&&roleUi!=="vendedor")return alert("Gestor só pode cadastrar usuários vendedores.");
   if(!nome||!email||!senha)return alert("Preencha nome, e-mail e senha.");
   if(senha.length<8)return alert("Use uma senha com pelo menos 8 caracteres.");
   let role="seller";
