@@ -27,7 +27,8 @@
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.hero-leader{width:100%}.grid{grid-template-columns:1fr}.kpis,.smart{grid-template-columns:repeat(2,1fr)}.seller{grid-template-columns:42px 70px 1fr 70px}.seller .btn{grid-column:3/5}.agenda-item{grid-template-columns:1fr}}@media(max-width:520px){.kpis,.smart{grid-template-columns:1fr 1fr}.hero-leader img{width:104px;height:104px}.two{grid-template-columns:1fr}}
 
 .client-phone-wrap{position:relative;display:inline-flex;align-items:center;gap:7px}
-.client-phone-actions{display:inline-flex;gap:6px;opacity:1;transform:none;pointer-events:auto}
+.client-phone-actions{display:inline-flex;gap:6px;opacity:0;transform:translateY(2px);pointer-events:none;transition:.18s}
+.client-phone-wrap:hover .client-phone-actions,.client-phone-wrap:focus-within .client-phone-actions{opacity:1;transform:none;pointer-events:auto}
 .icon-btn{border:1px solid var(--line);background:#122238;color:#e5eef8;border-radius:9px;padding:6px 8px;font-size:11px;font-weight:800;cursor:pointer}
 .icon-btn:hover{border-color:#38bdf8}
 .icon-btn.wa{border-color:rgba(34,197,94,.45);color:#86efac}
@@ -529,6 +530,16 @@ function whatsappNumber(v){
   if(!n)return "";
   return n.startsWith("55")?n:"55"+n
 }
+function openSellerWhatsapp(id){
+  if(!currentUser||currentUser.rawRole!=="seller")return;
+  const lead=clients.find(x=>x.id===String(id));if(!lead)return;
+  const phone=whatsappNumber(lead.telefone);
+  if(!phone)return alert("Este cliente não possui celular válido.");
+  const seller=currentUser.nome||"Vendedor";
+  const firstName=(lead.nome||"").trim().split(/\s+/)[0]||"";
+  const msg="Olá, "+firstName+"! Tudo bem? Aqui é o "+seller+", da Volkswagen. Estou retomando nosso contato para falar sobre a compra do seu Volkswagen zero km. Queria saber se ainda posso te ajudar com alguma condição, modelo ou simulação. Fico à disposição!";
+  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank","noopener")
+}
 function openManagerWhatsapp(id){
   if(!managerClientActionsAllowed())return;
   const lead=clients.find(x=>x.id===String(id));if(!lead)return;
@@ -585,8 +596,12 @@ function renderClients(){
   const rows=[...visible].sort((a,b)=>b.criadoEm-a.criadoEm).map(c=>{
     const s=sellers.find(x=>x.id===c.vendedorId);
     const phone=esc(c.telefone||"-");
-    const phoneHtml=canManage&&c.telefone
-      ? '<div class="client-phone-wrap"><span>'+phone+'</span><span class="client-phone-actions"><button class="icon-btn wa" title="Abrir WhatsApp com mensagem do gestor" onclick="openManagerWhatsapp(\''+c.id+'\')">💬 WhatsApp</button></span></div>'
+    const phoneHtml=c.telefone
+      ? '<div class="client-phone-wrap"><span>'+phone+'</span><span class="client-phone-actions">'+
+        (canManage
+          ? '<button class="icon-btn wa" title="Abrir WhatsApp com mensagem do gestor" onclick="openManagerWhatsapp(\''+c.id+'\')">💬 WhatsApp</button>'
+          : '<button class="icon-btn wa" title="Retomar contato pelo WhatsApp" onclick="openSellerWhatsapp(\''+c.id+'\')">💬 WhatsApp</button>')+
+        '</span></div>'
       : phone;
     const actions=canManage
       ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">🔁 Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">🗑 Excluir</button></div>'
