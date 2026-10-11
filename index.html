@@ -200,6 +200,7 @@ const DEFAULT_SELLERS=[
 {id:104,nome:"JULIA",foto:"julia-caricatura.jpg",metaDiaria:25}
 ];
 let sellers=[];
+let prospectaWhatsappWindow=null;
 let clients=[];
 let teamClients=[];
 let users=[];
@@ -525,6 +526,17 @@ function dtLocal(ts){if(!ts)return"";const d=new Date(Number(ts)),p=n=>String(n)
 
 function managerClientActionsAllowed(){return isManager()}
 function sellerNameById(id){const s=sellers.find(x=>x.id===String(id));return s?s.nome:"Vendedor"}
+function openWhatsappSameTab(url){
+  if(prospectaWhatsappWindow && !prospectaWhatsappWindow.closed){
+    try{
+      prospectaWhatsappWindow.location.href=url;
+      prospectaWhatsappWindow.focus();
+      return;
+    }catch(e){}
+  }
+  prospectaWhatsappWindow=window.open(url,"prospecta_whatsapp");
+  if(prospectaWhatsappWindow)prospectaWhatsappWindow.focus();
+}
 function whatsappNumber(v){
   const n=normalizePhone(v);
   if(!n)return "";
@@ -538,7 +550,7 @@ function openSellerWhatsapp(id){
   const seller=currentUser.nome||"Vendedor";
   const firstName=(lead.nome||"").trim().split(/\s+/)[0]||"";
   const msg="Olá, "+firstName+"! Vamos retomar nossa conversa sobre o seu Volkswagen zero km na Barigui Blusa Volkswagen. Separei algumas informações para continuarmos de onde paramos.";
-  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"prospecta_whatsapp","noopener")
+  openWhatsappSameTab("https://wa.me/"+phone+"?text="+encodeURIComponent(msg))
 }
 function openManagerWhatsapp(id){
   if(!managerClientActionsAllowed())return;
@@ -549,7 +561,7 @@ function openManagerWhatsapp(id){
   const manager=currentUser.nome||"Gestor";
   const sellerName=seller?seller.nome:"nosso vendedor";
   const msg="Olá, "+lead.nome+"! Tudo bem? Meu nome é "+manager+", sou gestor do vendedor "+sellerName+". Estou acompanhando o seu atendimento e gostaria de saber como está sendo sua experiência até o momento. Está tudo correndo bem? Posso ajudar em algo?";
-  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"prospecta_whatsapp","noopener")
+  openWhatsappSameTab("https://wa.me/"+phone+"?text="+encodeURIComponent(msg))
 }
 function openTransferClient(id){
   if(!managerClientActionsAllowed())return;
