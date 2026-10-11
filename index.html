@@ -641,32 +641,27 @@ function pdfClause(doc,title,text,y){
   doc.text(lines,11,y,{lineHeightFactor:1.13});
   return y+(lines.length*2.62)+3
 }
-function drawBariguiLogo(doc,x=10,y=5){
-  const blue=[35,49,142];
-  doc.setFillColor(...blue);
-  // Símbolo superior
-  doc.ellipse(x+13.5,y+5.2,10.8,3.8,"F");
-  doc.setFillColor(255,255,255);
-  doc.ellipse(x+14.7,y+5.3,6.9,1.7,"F");
-  // Símbolo inferior / traço principal
-  doc.setFillColor(...blue);
-  doc.ellipse(x+12.4,y+10.7,13.0,4.5,"F");
-  doc.setFillColor(255,255,255);
-  doc.ellipse(x+13.3,y+10.0,7.8,2.2,"F");
-  // Recorte para formar o "B"
-  doc.rect(x+0.2,y+6.2,6.2,5.7,"F");
-  // GRUPO
-  doc.setTextColor(95,95,95);
+function drawBariguiLogo(doc,x=10,y=4){
+  const blue=[38,51,145];
+
+  // símbolo B estilizado, feito só com texto e retângulos para máxima compatibilidade no jsPDF
+  doc.setTextColor(...blue);
+  doc.setFont("helvetica","bolditalic");
+  doc.setFontSize(26);
+  doc.text("B",x+1,y+10.5);
+
+  doc.setTextColor(105,105,105);
   doc.setFont("helvetica","normal");
-  doc.setFontSize(5.3);
-  doc.text("G  R  U  P  O",x+1.2,y+17.1);
-  // faixa BARIGÜI
+  doc.setFontSize(5.1);
+  doc.text("G  R  U  P  O",x,y+15.5);
+
   doc.setFillColor(...blue);
-  doc.rect(x,y+18.5,27,6.2,"F");
+  doc.rect(x,y+17,27,6.5,"F");
   doc.setTextColor(255,255,255);
   doc.setFont("helvetica","bold");
-  doc.setFontSize(8.5);
-  doc.text("BARIGÜI",x+13.5,y+23.1,{align:"center"});
+  doc.setFontSize(8.2);
+  doc.text("BARIGÜI",x+13.5,y+21.8,{align:"center"});
+
   doc.setTextColor(20,20,20);
 }
 async function buildSalePdf(lead,seller){
