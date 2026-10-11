@@ -21,6 +21,7 @@
 .daily{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;padding:16px 18px 4px}.day{background:#0b1626;border:1px solid var(--line);border-radius:14px;padding:13px}.day span{display:block;color:var(--muted);font-size:10px}.day strong{display:block;font-size:22px;color:#38bdf8;margin:4px 0}
 .clients{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1000px}th,td{text-align:left;padding:12px;border-top:1px solid var(--line);font-size:12px;vertical-align:top}th{color:#cbd5e1;background:rgba(255,255,255,.02)}.tag{display:inline-block;padding:5px 7px;border-radius:999px;background:rgba(59,130,246,.12);color:#93c5fd;font-size:10px}.status,input.follow{background:#0b1626;color:#fff;border:1px solid var(--line);border-radius:9px;padding:7px}.empty{padding:24px;color:var(--muted);text-align:center}
 .modal{position:fixed;inset:0;background:rgba(2,6,23,.82);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}.modal.show{display:flex}.modal-box{width:min(96%,650px);max-height:92vh;overflow:auto;background:#0f1b2d;border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:var(--shadow)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.x{background:transparent;color:#fff;border:0;font-size:25px;cursor:pointer}.field{margin-bottom:12px}.field label{display:block;font-size:11px;color:#cbd5e1;margin-bottom:6px;font-weight:800}.field input,.field select,.field textarea{width:100%;background:#0b1626;color:#fff;border:1px solid var(--line);border-radius:11px;padding:11px}.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}.preview{width:120px;height:120px;border-radius:50%;object-fit:cover;display:block;margin:8px auto 15px}
+.last-sale-wrap{margin-bottom:20px}.last-sale-card{position:relative;overflow:hidden;display:grid;grid-template-columns:96px 1fr auto;align-items:center;gap:18px;padding:20px 22px;border-radius:24px;border:1px solid rgba(34,197,94,.32);background:radial-gradient(circle at 8% 20%,rgba(34,197,94,.20),transparent 32%),linear-gradient(135deg,rgba(14,165,233,.10),rgba(34,197,94,.08)),#0f1b2d;box-shadow:0 20px 45px rgba(0,0,0,.25)}.last-sale-card:before{content:"";position:absolute;inset:-45%;background:conic-gradient(from 0deg,transparent,rgba(34,197,94,.10),transparent,rgba(14,165,233,.08),transparent);animation:lastSaleGlow 9s linear infinite;pointer-events:none}.last-sale-card>*{position:relative;z-index:1}.last-sale-photo{width:88px;height:88px;border-radius:50%;object-fit:cover;border:4px solid rgba(74,222,128,.8);box-shadow:0 0 28px rgba(34,197,94,.25)}.last-sale-kicker{font-size:11px;font-weight:900;color:#86efac;letter-spacing:.08em;text-transform:uppercase}.last-sale-name{font-size:24px;font-weight:900;margin:4px 0}.last-sale-detail{font-size:12px;color:#cbd5e1;line-height:1.55}.last-sale-time{text-align:right}.last-sale-time strong{display:block;font-size:18px;color:#4ade80}.last-sale-time span{font-size:10px;color:var(--muted)}.last-sale-empty{padding:18px;border:1px dashed var(--line);border-radius:18px;color:var(--muted);text-align:center;background:rgba(15,27,45,.65)}@keyframes lastSaleGlow{to{transform:rotate(360deg)}}.fireworks-layer{position:fixed;inset:0;pointer-events:none;z-index:2100;overflow:hidden}.firework{position:absolute;width:8px;height:8px;border-radius:50%;background:white;box-shadow:0 0 10px currentColor;animation:fireworkBurst 1.15s ease-out forwards}.firework:before,.firework:after{content:"";position:absolute;left:50%;top:50%;width:120px;height:3px;background:linear-gradient(90deg,transparent,currentColor,transparent);transform:translate(-50%,-50%)}.firework:after{transform:translate(-50%,-50%) rotate(90deg)}@keyframes fireworkBurst{0%{transform:scale(.15);opacity:0}15%{opacity:1}100%{transform:scale(1.8);opacity:0}}@media(max-width:620px){.last-sale-card{grid-template-columns:72px 1fr}.last-sale-photo{width:68px;height:68px}.last-sale-time{grid-column:1/-1;text-align:left;padding-left:2px}.last-sale-name{font-size:20px}}
 .celebrate{position:fixed;inset:0;background:rgba(3,8,18,.9);display:none;align-items:center;justify-content:center;z-index:2000}.celebrate.show{display:flex}.celebrate-box{text-align:center;width:min(90%,430px);padding:34px;border-radius:28px;background:#0f1b2d;border:1px solid var(--line)}.celebrate-box img{width:130px;height:130px;border-radius:50%;object-fit:cover;border:5px solid var(--green)}.celebrate-box h2{font-size:34px;margin:12px 0}
 .login-screen{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 20% 0%,rgba(59,130,246,.22),transparent 28%),radial-gradient(circle at 90% 15%,rgba(34,197,94,.12),transparent 25%),#07111f}.login-card{width:min(94%,430px);padding:28px;border-radius:26px;background:#0f1b2d;border:1px solid var(--line);box-shadow:var(--shadow)}.login-card h1{font-size:28px;margin-bottom:7px}.login-card p{color:var(--muted);font-size:13px;margin-bottom:20px}.login-brand{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(59,130,246,.12);color:#93c5fd;font-size:10px;font-weight:900;margin-bottom:12px}.app-hidden{display:none!important}.user-chip{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.05)}.user-chip b{display:block;font-size:11px}.user-chip span{display:block;color:var(--muted);font-size:9px}.manager-only{display:none}.manager-on .manager-only{display:inline-flex}.login-error{color:#fca5a5;font-size:11px;min-height:16px;margin-top:8px}
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.hero-leader{width:100%}.grid{grid-template-columns:1fr}.kpis,.smart{grid-template-columns:repeat(2,1fr)}.seller{grid-template-columns:42px 70px 1fr 70px}.seller .btn{grid-column:3/5}.agenda-item{grid-template-columns:1fr}}@media(max-width:520px){.kpis,.smart{grid-template-columns:1fr 1fr}.hero-leader img{width:104px;height:104px}.two{grid-template-columns:1fr}}
@@ -52,6 +53,19 @@
   <button class="btn secondary" onclick="logout()">Sair</button>
 </div>
 </header>
+
+<section class="last-sale-wrap" id="lastSaleWrap">
+  <div class="last-sale-empty" id="lastSaleEmpty">🎆 A última venda da equipe aparecerá aqui.</div>
+  <div class="last-sale-card" id="lastSaleCard" style="display:none">
+    <img class="last-sale-photo" id="lastSalePhoto" src="" alt="Vendedor">
+    <div>
+      <div class="last-sale-kicker">🎉 Última venda</div>
+      <div class="last-sale-name" id="lastSaleSeller">-</div>
+      <div class="last-sale-detail" id="lastSaleDetail">-</div>
+    </div>
+    <div class="last-sale-time"><strong id="lastSaleWhen">-</strong><span id="lastSaleScope">Venda mais recente</span></div>
+  </div>
+</section>
 
 <section class="kpis">
 <article class="kpi k1"><span>Contatados</span><strong id="kContacted">0</strong><small>Clientes em contato</small></article>
@@ -118,6 +132,7 @@
 <div class="field"><label>Status</label><select id="editUserActive"><option value="true">Ativo</option><option value="false">Inativo</option></select></div>
 <div class="modal-actions"><button class="btn secondary" onclick="closeModal('editUserModal')">Cancelar</button><button class="btn" onclick="saveUserEdit()">Salvar alterações</button></div></div></div>
 
+<div class="fireworks-layer" id="fireworksLayer"></div>
 <div class="celebrate" id="celebrate"><div class="celebrate-box"><img id="celebratePhoto"><h2>🎉 VENDA!</h2><p id="celebrateText"></p><button class="btn" style="margin-top:18px" onclick="closeCelebrate()">Continuar</button></div></div>
 
 <script>
@@ -137,6 +152,7 @@ let clients=[];
 let users=[];
 let currentUser=null;
 let realtimeChannel=null;
+let lastCelebratedSaleId=null;
 let period="hoje";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function fallback(name){const t=(name||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();return "data:image/svg+xml;charset=UTF-8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="100%" height="100%" fill="#334155"/><text x="50%" y="55%" text-anchor="middle" font-family="Arial" font-size="70" font-weight="700" fill="white">'+t+"</text></svg>")}
@@ -208,14 +224,24 @@ async function loadCloudData(){
       proximoFollowup:r.next_followup_at?new Date(r.next_followup_at).getTime():null,
       motivoPerda:r.loss_reason||"",
       criadoEm:new Date(r.created_at).getTime(),
-      ultimaAtualizacao:new Date(r.updated_at).getTime()
+      ultimaAtualizacao:new Date(r.updated_at).getTime(),
+      soldAt:r.sold_at?new Date(r.sold_at).getTime():null
     }));
   }
 }
 function startRealtime(){
   if(realtimeChannel) sb.removeChannel(realtimeChannel);
   realtimeChannel=sb.channel("crm-"+currentUser.organization_id)
-    .on("postgres_changes",{event:"*",schema:"public",table:"leads"},async()=>{await loadCloudData();renderAll()})
+    .on("postgres_changes",{event:"*",schema:"public",table:"leads"},async(payload)=>{
+      const wasSold=payload.old&&payload.old.stage==="Vendido";
+      const isSold=payload.new&&payload.new.stage==="Vendido";
+      await loadCloudData();renderAll();
+      if(isSold&&!wasSold&&payload.new&&payload.new.id!==lastCelebratedSaleId){
+        const sale=clients.find(x=>x.id===String(payload.new.id));
+        const seller=sale?sellers.find(x=>x.id===sale.vendedorId):null;
+        if(sale&&seller){lastCelebratedSaleId=payload.new.id;celebrateSale(seller,sale)}
+      }
+    })
     .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},async()=>{await loadCloudData();renderAll()})
     .subscribe();
 }
@@ -366,7 +392,23 @@ function isForgotten(c){if(["Vendido","Perdido"].includes(status(c)))return fals
 function normalizePhone(v){let n=String(v||"").replace(/\D/g,"");if(n.startsWith("55")&&n.length>11)n=n.slice(2);return n}
 function duplicatePhone(v){const n=normalizePhone(v);return clients.find(c=>normalizePhone(c.telefone)===n)}
 function setPeriod(p,b){period=p;document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderRanking()}
-function renderAll(){renderRanking();renderFunnel();renderSmart();renderPerformance();renderAgenda();renderClients();renderDaily();fillSellers()}
+function renderAll(){renderLastSale();renderRanking();renderFunnel();renderSmart();renderPerformance();renderAgenda();renderClients();renderDaily();fillSellers()}
+function renderLastSale(){
+  let sold=clients.filter(c=>status(c)==="Vendido");
+  if(!isManager())sold=sold.filter(c=>c.vendedorId===mySellerId());
+  sold.sort((a,b)=>Number(b.soldAt||b.ultimaAtualizacao||b.criadoEm)-Number(a.soldAt||a.ultimaAtualizacao||a.criadoEm));
+  const sale=sold[0];
+  if(!sale){lastSaleCard.style.display="none";lastSaleEmpty.style.display="block";return}
+  const seller=sellers.find(s=>s.id===sale.vendedorId);
+  const when=new Date(sale.soldAt||sale.ultimaAtualizacao||sale.criadoEm);
+  lastSaleEmpty.style.display="none";
+  lastSaleCard.style.display="grid";
+  lastSalePhoto.src=(seller&&seller.foto)||fallback(seller?seller.nome:"V");
+  lastSaleSeller.textContent=seller?seller.nome:"Vendedor";
+  lastSaleDetail.textContent="Fechou com "+sale.nome+(sale.interesse?" • "+sale.interesse:"");
+  lastSaleWhen.textContent=when.toLocaleDateString("pt-BR")+" • "+when.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+  lastSaleScope.textContent=currentUser.rawRole==="seller"?"Sua venda mais recente":(currentUser.rawRole==="manager"?"Venda mais recente da loja":"Venda mais recente da rede");
+}
 function renderRanking(){const list=byPeriod().map(v=>v);const data=sellers.map(s=>{const cs=list.filter(c=>c.vendedorId===s.id);return{...s,total:cs.length,pontos:cs.reduce((a,c)=>a+pts(c),0),vendas:count("Vendido",cs)}}).sort((a,b)=>b.pontos-a.pontos||b.vendas-a.vendas||b.total-a.total);sellerCount.textContent=sellers.length+" vendedores";const leader=data[0];if(leader&&leader.pontos>0){leaderName.textContent=leader.nome;leaderScore.textContent=leader.pontos+" pontos • "+leader.vendas+" vendas";leaderPhoto.src=leader.foto||fallback(leader.nome)}else{leaderName.textContent="-";leaderScore.textContent="0 pontos";leaderPhoto.src=fallback("L")}document.getElementById("ranking").innerHTML=data.length?data.map((s,i)=>'<div class="seller"><div class="rank">'+(["🥇","🥈","🥉"][i]||((i+1)+"º"))+'</div><div class="photo-wrap" onclick="openPhoto(\''+s.id+'\')"><img class="photo" src="'+s.foto+'" onerror="this.onerror=null;this.src=fallback(\''+esc(s.nome)+'\')"></div><div><div class="name">'+esc(s.nome)+'</div><div class="desc">'+s.total+' clientes • '+s.vendas+' vendas</div><span class="score">'+s.pontos+' pontos</span></div><div class="points"><strong>'+s.pontos+'</strong><span>pontos</span></div><button class="btn" onclick="openClient(\''+s.id+'\')">+ Cliente</button></div>').join(""):'<div class="empty">Nenhum vendedor.</div>'}
 function renderFunnel(){const a=count("Contatado"),b=count("Confirmado"),c=count("Compareceu"),d=count("Vendido");kContacted.textContent=fContacted.textContent=a;kConfirmed.textContent=fConfirmed.textContent=b;kShowed.textContent=fShowed.textContent=c;kSold.textContent=fSold.textContent=d;conversion.textContent=(clients.length?d/clients.length*100:0).toFixed(1)+"%"}
 function renderSmart(){const goal=sellers.reduce((a,s)=>a+(Number(s.metaDiaria)||25),0),done=sellers.reduce((a,s)=>a+todayFor(s.id),0);document.getElementById("teamGoal").textContent=(goal?Math.min(100,done/goal*100):0).toFixed(0)+"%";document.getElementById("teamGoalDetail").textContent=done+" de "+goal+" contatos";document.getElementById("forgotten").textContent=clients.filter(isForgotten).length;document.getElementById("followToday").textContent=clients.filter(c=>c.proximoFollowup>=dayStart()&&c.proximoFollowup<=dayEnd()&&!["Vendido","Perdido"].includes(status(c))).length;const confirmed=clients.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,showed=clients.filter(c=>["Compareceu","Vendido"].includes(status(c))).length;document.getElementById("showRate").textContent=(confirmed?showed/confirmed*100:0).toFixed(1)+"%"}
@@ -422,7 +464,7 @@ async function saveClient(){
     return alert("Erro ao cadastrar cliente: "+error.message);
   }
   const temp={id:data.id,vendedorId:String(data.seller_id),nome:data.customer_name,telefone:data.phone_raw,status:data.stage};
-  if(st==="Vendido")celebrateSale(sellers.find(x=>x.id===vendedorId),temp);
+  if(st==="Vendido"){lastCelebratedSaleId=data.id;celebrateSale(sellers.find(x=>x.id===vendedorId),temp)}
   closeModal("clientModal");
   ["clientName","clientPhone","clientInterest","clientContactDate","clientFollow","clientObs"].forEach(id=>document.getElementById(id).value="");
   clientOrigin.value="Ligação";clientStatus.value="Contatado";
@@ -447,10 +489,18 @@ async function changeStatus(id,st){
   if(st==="Vendido")patch.next_followup_at=null;
   const {error}=await sb.from("leads").update(patch).eq("id",String(id));
   if(error)return alert("Erro ao atualizar etapa.");
-  if(st==="Vendido")celebrateSale(sellers.find(x=>x.id===c.vendedorId),c);
+  if(st==="Vendido"){lastCelebratedSaleId=String(id);celebrateSale(sellers.find(x=>x.id===c.vendedorId),c)}
   await loadCloudData();renderAll()
 }
-function celebrateSale(s,c){if(!s)return;celebratePhoto.src=s.foto||fallback(s.nome);celebrateText.textContent=s.nome+" fechou a venda com "+c.nome+"!";celebrate.classList.add("show")}function closeCelebrate(){celebrate.classList.remove("show")}
+function launchFireworks(){
+  const layer=document.getElementById("fireworksLayer");if(!layer)return;
+  layer.innerHTML="";
+  const points=[[18,28],[35,18],[50,34],[66,16],[82,30],[27,55],[74,58]];
+  points.forEach((p,i)=>setTimeout(()=>{
+    const el=document.createElement("div");el.className="firework";el.style.left=p[0]+"%";el.style.top=p[1]+"%";el.style.color=["#fbbf24","#22c55e","#38bdf8","#fb7185","#a78bfa"][i%5];layer.appendChild(el);setTimeout(()=>el.remove(),1300)
+  },i*120));
+}
+function celebrateSale(s,c){if(!s)return;celebratePhoto.src=s.foto||fallback(s.nome);celebrateText.textContent=s.nome+" fechou a venda com "+c.nome+"!";celebrate.classList.add("show");launchFireworks()}function closeCelebrate(){celebrate.classList.remove("show")}
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("show")}));
 function updateDate(){dateNow.textContent=new Date().toLocaleDateString("pt-BR")}updateDate();setInterval(updateDate,60000);initAuth();
 </script>
