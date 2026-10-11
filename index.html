@@ -641,38 +641,21 @@ function pdfClause(doc,title,text,y){
   doc.text(lines,11,y,{lineHeightFactor:1.13});
   return y+(lines.length*2.62)+3
 }
-function drawBariguiLogo(doc,x=8.5,y=4.5){
-  const blue=[38,51,145];
-  doc.setTextColor(...blue);
-  doc.setFont("helvetica","bolditalic");
-  doc.setFontSize(24);
-  doc.text("B",x+2.2,y+9.5);
-
-  doc.setTextColor(105,105,105);
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(4.8);
-  doc.text("G  R  U  P  O",x+1.2,y+14.1);
-
-  doc.setFillColor(...blue);
-  doc.rect(x,y+15.5,25.5,5.8,"F");
-  doc.setTextColor(255,255,255);
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(7.8);
-  doc.text("BARIGÜI",x+12.75,y+19.8,{align:"center"});
-
-  doc.setTextColor(20,20,20);
+function drawBariguiLogo(doc,x=10,y=4.5){
+  const logo="data:image/jpeg;base64,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";
+  doc.addImage(logo,"JPEG",x,y,25,22.8,"bariguiLogo","FAST");
 }
 async function buildSalePdf(lead,seller){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:"mm",format:"a4"});
-  drawBariguiLogo(doc,8.5,4.5);
-  doc.setFont("helvetica","bold");doc.setFontSize(15.5);doc.text("CONTRATO PRELIMINAR DE COMPRA E VENDA",122,16,{align:"center"});
+  drawBariguiLogo(doc,10,4.5);
+  doc.setFont("helvetica","bold");doc.setFontSize(15.5);doc.text("CONTRATO PRELIMINAR DE COMPRA E VENDA",121,16,{align:"center"});
   doc.setFont("helvetica","normal");doc.setFontSize(7.5);
   doc.setDrawColor(70,70,70);doc.setLineWidth(.3);
-  doc.rect(10,30,190,5.4);doc.text("VOLKSWAGEN BLUSA",11,33.7);
-  doc.rect(10,36.5,190,5.4);doc.text("RUA ALBERTO STEIN, BLUMENAU, SC, 89036200",11,40.2);
+  doc.rect(10,29,190,5.4);doc.text("VOLKSWAGEN BLUSA",11,32.7);
+  doc.rect(10,35.5,190,5.4);doc.text("RUA ALBERTO STEIN, BLUMENAU, SC, 89036200",11,39.2);
 
-  pdfSection(doc,"DADOS DO CLIENTE",46);
+  pdfSection(doc,"DADOS DO CLIENTE",45);
   salePdfLine(doc,"NOME:",lead.nome,11,58,92);salePdfLine(doc,"CPF/CNPJ:",lead.cpfCnpj,108,58,90);
   salePdfLine(doc,"RG:",lead.rg,11,69,55);salePdfLine(doc,"DATA DE NASCIMENTO:",lead.birthDate?new Date(lead.birthDate+"T00:00:00").toLocaleDateString("pt-BR"):"",70,69,55);salePdfLine(doc,"TELEFONE 1:",lead.telefone,130,69,68);
   salePdfLine(doc,"ENDEREÇO:",(lead.endereco||"")+" "+(lead.numero||""),11,80,92);salePdfLine(doc,"TELEFONE 2:",lead.phone2,108,80,90);
