@@ -37,7 +37,7 @@
 @media(max-width:800px){.client-phone-actions{opacity:1;pointer-events:auto;transform:none}}
 
 .clients-metric{position:relative;cursor:pointer}
-.clients-metric .clients-hover-card{display:none;position:absolute;right:0;bottom:calc(100% + 10px);width:280px;max-height:260px;overflow:auto;background:#0d1b2d;border:1px solid #29415f;border-radius:14px;padding:10px;z-index:50;box-shadow:0 14px 34px rgba(0,0,0,.35);text-align:left}
+.clients-metric .clients-hover-card{display:none;position:absolute;right:0;bottom:100%;width:280px;max-height:260px;overflow:auto;background:#0d1b2d;border:1px solid #29415f;border-radius:14px;padding:10px;z-index:50;box-shadow:0 14px 34px rgba(0,0,0,.35);text-align:left}
 .clients-metric:hover .clients-hover-card,.clients-metric:focus-within .clients-hover-card{display:block}
 .clients-hover-title{font-size:12px;font-weight:900;margin-bottom:8px;color:#fff}
 .clients-hover-item{padding:8px 6px;border-top:1px solid rgba(255,255,255,.08)}
@@ -582,12 +582,27 @@ async function openClientDetail(id){
   const lead=clients.find(x=>String(x.id)===String(id));
   if(!clientDetailCanOpen(lead))return alert("Você não tem acesso aos dados deste cliente.");
   const seller=sellers.find(x=>String(x.id)===String(lead.vendedorId));
-  clientDetailId.value=lead.id;
-  clientDetailTitle.textContent=lead.nome||"Cliente";
-  clientDetailSubtitle.textContent=(seller?seller.nome:"Vendedor")+" • "+status(lead);
+
+  const modal=document.getElementById("clientDetailModal");
+  const idInput=document.getElementById("clientDetailId");
+  const title=document.getElementById("clientDetailTitle");
+  const subtitle=document.getElementById("clientDetailSubtitle");
+  const content=document.getElementById("clientDetailContent");
+  const commentInput=document.getElementById("newClientComment");
+
+  if(!modal||!idInput||!title||!subtitle||!content){
+    alert("Não foi possível abrir a ficha do cliente.");
+    return;
+  }
+
+  idInput.value=lead.id;
+  title.textContent=lead.nome||"Cliente";
+  subtitle.textContent=(seller?seller.nome:"Vendedor")+" • "+status(lead);
+
   const follow=lead.proximoFollowup?new Date(lead.proximoFollowup).toLocaleString("pt-BR"):"-";
   const contact=lead.dataContato?new Date(lead.dataContato).toLocaleString("pt-BR"):"-";
-  clientDetailContent.innerHTML=
+
+  content.innerHTML=
     '<div class="client-detail-grid">'+
       '<div class="client-detail-box"><span>Telefone</span><strong>'+esc(clientDetailValue(lead.telefone))+'</strong></div>'+
       '<div class="client-detail-box"><span>Vendedor</span><strong>'+esc(clientDetailValue(seller?seller.nome:"-"))+'</strong></div>'+
@@ -598,15 +613,17 @@ async function openClientDetail(id){
       '<div class="client-detail-box"><span>Próximo follow-up</span><strong>'+esc(follow)+'</strong></div>'+
       '<div class="client-detail-box"><span>Observação atual</span><strong>'+esc(clientDetailValue(lead.observacao))+'</strong></div>'+
     '</div>';
-  newClientComment.value="";
-  clientDetailModal.classList.add("show");
-  await loadClientComments(lead.id)
+
+  if(commentInput)commentInput.value="";
+  modal.classList.add("show");
+  await loadClientComments(lead.id);
 }
 async function addClientComment(){
-  const id=String(clientDetailId.value||"");
+  const id=String((document.getElementById("clientDetailId")||{}).value||"");
   const lead=clients.find(x=>String(x.id)===id);
   if(!clientDetailCanOpen(lead))return alert("Você não tem acesso a este cliente.");
-  const comment=newClientComment.value.trim();
+  const commentInput=document.getElementById("newClientComment");
+  const comment=commentInput?commentInput.value.trim():"";
   if(!comment)return alert("Digite o comentário.");
   const {error}=await sb.from("lead_comments").insert({
     lead_id:id,
@@ -616,7 +633,7 @@ async function addClientComment(){
     comment
   });
   if(error)return alert("Não foi possível salvar o comentário: "+error.message);
-  newClientComment.value="";
+  if(commentInput)commentInput.value="";
   await loadClientComments(id)
 }
 function renderPerformance(){
