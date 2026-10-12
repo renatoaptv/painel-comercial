@@ -1406,8 +1406,7 @@ function renderSellerReport(){
     '</div>'+
     '<div class="seller-report-table"><table><thead><tr><th>Vendedor</th><th>Contatos</th><th>Confirmados</th><th>Compareceram</th><th>Vendidos</th><th>Perdidos</th><th>Contato→Conf.</th><th>Conf.→Comp.</th><th>Comp.→Venda</th><th>Conversão final</th></tr></thead><tbody>'+
       metrics.map(x=>'<tr><td><strong>'+esc(x.seller.nome)+'</strong></td><td>'+x.m.contacted+'</td><td>'+x.m.confirmed+'</td><td>'+x.m.showed+'</td><td>'+x.m.sold+'</td><td>'+x.m.lost+'</td><td>'+x.m.contactToConfirm.toFixed(1)+'%</td><td>'+x.m.confirmToShow.toFixed(1)+'%</td><td>'+x.m.showToSale.toFixed(1)+'%</td><td>'+x.m.finalConversion.toFixed(1)+'%</td></tr>').join("")+
-    '</tbody></table></div>'+
-    renderSellerInsightsHtml()
+    '</tbody></table></div>'
 }
 function generateSellerPerformancePdf(){
   if(!isManager())return alert("Acesso disponível apenas para gestão.");
@@ -1469,83 +1468,6 @@ function generateSellerPerformancePdf(){
     ); y+=8;
   });
 
-
-  const insightEvents=sellerInsightEvents();
-  if(insightEvents.length){
-    doc.addPage();
-    doc.setFont("helvetica","bold");doc.setFontSize(14);
-    doc.text("MOTIVOS, OBJEÇÕES E QUALIDADE DOS CONTATOS",10,15);
-    doc.setFont("helvetica","normal");doc.setFontSize(8);
-    doc.text(sellerReportRangeText(),10,21);
-
-    const noVisit=groupInsight(insightEvents,"reasonNotVisit");
-    const objections=groupInsight(insightEvents,"objection");
-    const whatsapp=groupInsight(insightEvents,"reasonPriceWhatsapp");
-    const competitors=groupInsight(insightEvents,"competitor");
-    const actions=groupInsight(insightEvents,"nextAction");
-    const hot=insightEvents.filter(e=>String(e.temperature).includes("Quente")).length;
-    const warm=insightEvents.filter(e=>String(e.temperature).includes("Morno")).length;
-    const cold=insightEvents.filter(e=>String(e.temperature).includes("Frio")).length;
-    const trade=insightEvents.filter(e=>e.hasTradeIn).length;
-
-    doc.autoTable({
-      startY:27,
-      head:[["Indicador","Resultado"]],
-      body:[
-        ["Contatos analisados",String(insightEvents.length)],
-        ["Com veículo para avaliação",String(trade)],
-        ["Temperatura",hot+" quentes / "+warm+" mornos / "+cold+" frios"],
-        ["Parcela média desejada",moneyBR(avgInsight(insightEvents,"desiredPayment"))],
-        ["Entrada média",moneyBR(avgInsight(insightEvents,"entryAmount"))],
-        ["Volta média",moneyBR(avgInsight(insightEvents,"returnAmount"))]
-      ],
-      styles:{fontSize:8,cellPadding:2},
-      headStyles:{fillColor:[25,48,78],textColor:[255,255,255]}
-    });
-
-    let yy=doc.lastAutoTable.finalY+8;
-    const sections=[
-      ["Por que ainda não veio à loja?",noVisit],
-      ["Principais objeções",objections],
-      ["Preço pelo WhatsApp",whatsapp],
-      ["Concorrentes citados",competitors],
-      ["Próximas ações",actions]
-    ];
-    sections.forEach(([title,arr])=>{
-      if(yy>178){doc.addPage();yy=16}
-      doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text(title,10,yy);yy+=5;
-      doc.setFont("helvetica","normal");doc.setFontSize(8);
-      if(!arr.length){doc.text("Sem dados no período.",12,yy);yy+=6}
-      else arr.slice(0,8).forEach(([k,v])=>{doc.text("- "+k+": "+v,12,yy);yy+=5})
-      yy+=2;
-    });
-
-    doc.addPage();
-    doc.setFont("helvetica","bold");doc.setFontSize(12);
-    doc.text("DETALHAMENTO DOS CONTATOS",10,15);
-    doc.autoTable({
-      startY:20,
-      margin:{left:6,right:6},
-      head:[["Data","Vendedor","Cliente","Temperatura","Não veio por quê?","Objeção","Concorrente","Próxima ação","Comentário"]],
-      body:insightEvents.slice().sort((a,b)=>b.contactedAt-a.contactedAt).map(e=>{
-        const lead=clients.find(c=>String(c.id)===String(e.leadId));
-        const seller=sellers.find(s=>String(s.id)===String(e.sellerId));
-        return [
-          new Date(e.contactedAt).toLocaleString("pt-BR"),
-          seller?seller.nome:"-",
-          lead?lead.nome:"Cliente",
-          e.temperature||"-",
-          e.reasonNotVisit||"-",
-          e.objection||"-",
-          e.competitor||"-",
-          e.nextAction||"-",
-          e.notes||"-"
-        ]
-      }),
-      styles:{fontSize:6.5,cellPadding:1.5,overflow:"linebreak"},
-      headStyles:{fillColor:[25,48,78],textColor:[255,255,255]}
-    });
-  }
 
   const periodName=sellerReportPeriod==="day"?"Diario":sellerReportPeriod==="week"?"Semanal":"Mensal";
   doc.save("Relatorio_"+periodName+"_Vendedores_Barigui_Blusa_"+now.toISOString().slice(0,10)+".pdf")
