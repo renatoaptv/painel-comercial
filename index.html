@@ -349,7 +349,6 @@ async function loadCloudData(){
         criadoEm:r.contact_at?new Date(r.contact_at).getTime():new Date(r.updated_at).getTime(),
         ultimaAtualizacao:new Date(r.updated_at).getTime(),
         soldAt:r.sold_at?new Date(r.sold_at).getTime():null,
-      showedAt:r.showed_at?new Date(r.showed_at).getTime():null,
         showedAt:r.showed_at?new Date(r.showed_at).getTime():null
       }));
     }else teamClients=[];
@@ -398,7 +397,8 @@ async function loadCloudData(){
       saleFormCompletedAt:r.sale_form_completed_at?new Date(r.sale_form_completed_at).getTime():null,
       criadoEm:new Date(r.created_at).getTime(),
       ultimaAtualizacao:new Date(r.updated_at).getTime(),
-      soldAt:r.sold_at?new Date(r.sold_at).getTime():null
+      soldAt:r.sold_at?new Date(r.sold_at).getTime():null,
+      showedAt:r.showed_at?new Date(r.showed_at).getTime():null
     }));
   }
 }
