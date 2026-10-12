@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07111f">
+<link rel="manifest" href="./manifest.webmanifest">
 <title>Painel Comercial</title>
 <style>
 :root{--bg:#07111f;--panel:#0f1b2d;--panel2:#13233a;--text:#f8fafc;--muted:#94a3b8;--line:rgba(255,255,255,.08);--green:#22c55e;--blue:#3b82f6;--cyan:#06b6d4;--yellow:#eab308;--orange:#f97316;--red:#ef4444;--shadow:0 20px 45px rgba(0,0,0,.25)}
@@ -207,6 +208,7 @@
 <div class="actions">
   <div class="user-chip"><div><b id="sessionName">-</b><span id="sessionRole">-</span></div></div>
   <button class="btn secondary manager-only notification-btn" onclick="openManagerNotifications()">🔔 Notificações<span id="managerNotificationBadge" class="notification-badge">0</span></button>
+  <button id="pushPermissionBtn" class="btn secondary manager-only" onclick="enablePushNotifications()">📲 Ativar push</button>
   <button class="btn secondary manager-only" onclick="openUsers()">Usuários</button>
   <button class="btn secondary manager-only" onclick="openManagerClients()">👥 Clientes</button>
   <button class="btn secondary manager-only" onclick="openSellerReport()">📊 Relatório vendedores</button>
