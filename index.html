@@ -122,6 +122,14 @@
 .reception-error{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.45)}
 .reception-result strong{display:block;font-size:16px;margin-bottom:5px}
 @media(max-width:700px){.reception-top{align-items:flex-start;flex-direction:column}.reception-user{align-items:flex-start}.reception-phone-row{grid-template-columns:1fr}}
+
+.repeat-contact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.repeat-contact-grid .field.full{grid-column:1/-1}
+.repeat-contact-grid .field label{font-size:11px}
+.repeat-contact-note{background:#102238;border:1px solid #29415f;border-radius:12px;padding:10px;margin-bottom:12px;color:#b9c9d9;font-size:11px}
+.contact-history-detail{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}
+.contact-history-detail span{font-size:9px;padding:4px 6px;border:1px solid #29415f;border-radius:999px;color:#cbd5e1}
+@media(max-width:760px){.repeat-contact-grid{grid-template-columns:1fr}.repeat-contact-grid .field.full{grid-column:auto}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -313,6 +321,37 @@
   </div>
   <div id="managerClientsSummary" class="manager-clients-summary"></div>
   <div id="managerClientsList" class="manager-clients-table"></div>
+</div></div>
+
+<div class="modal" id="repeatContactModal"><div class="modal-box" style="width:min(96%,820px)">
+  <div class="modal-head"><div><h2>📞 Contatado novamente</h2><div class="desc" id="repeatContactSubtitle">Registrar novo atendimento</div></div><button class="x" onclick="closeModal('repeatContactModal')">×</button></div>
+  <input type="hidden" id="repeatContactLeadId">
+  <div class="repeat-contact-note">Este contato ficará registrado com data e hora e não poderá ser alterado ou excluído pelo vendedor.</div>
+  <div class="repeat-contact-grid">
+    <div class="field"><label>Veículo / modelo de interesse</label><input id="repeatVehicleInterest" placeholder="Ex.: T-Cross Highline"></div>
+    <div class="field"><label>Temperatura do cliente</label><select id="repeatTemperature"><option value="">Selecione</option><option>🔥 Quente</option><option>🟡 Morno</option><option>❄️ Frio</option></select></div>
+
+    <div class="field"><label>Tem veículo para avaliação?</label><select id="repeatHasTrade" onchange="toggleRepeatTradeFields()"><option value="false">Não</option><option value="true">Sim</option></select></div>
+    <div class="field repeat-trade-field" style="display:none"><label>Placa do veículo</label><input id="repeatTradePlate" placeholder="ABC1D23"></div>
+    <div class="field repeat-trade-field" style="display:none"><label>Valor da avaliação (R$)</label><input id="repeatTradeValue" inputmode="decimal" placeholder="Ex.: 75000"></div>
+
+    <div class="field"><label>Parcela desejada (R$)</label><input id="repeatDesiredPayment" inputmode="decimal" placeholder="Ex.: 2000"></div>
+    <div class="field"><label>Valor de volta desejado (R$)</label><input id="repeatReturnAmount" inputmode="decimal" placeholder="Ex.: 30000"></div>
+    <div class="field"><label>Entrada disponível (R$)</label><input id="repeatEntryAmount" inputmode="decimal" placeholder="Ex.: 20000"></div>
+
+    <div class="field"><label>Por que ainda não veio à loja?</label><select id="repeatReasonNotVisit"><option value="">Selecione</option><option>Sem tempo</option><option>Mora longe</option><option>Está pesquisando</option><option>Aguardando dinheiro / salário</option><option>Aguardando vender o carro</option><option>Depende de outra pessoa</option><option>Não respondeu</option><option>Sem interesse no momento</option><option>Outro</option></select></div>
+
+    <div class="field"><label>Por que passamos preço pelo WhatsApp?</label><select id="repeatReasonPrice"><option value="">Selecione</option><option>Não passamos preço pelo WhatsApp</option><option>Cliente exigiu preço antes de ir</option><option>Mora longe</option><option>Comparação com concorrente</option><option>Cliente já conhecia o carro</option><option>Negociação avançada</option><option>Outro</option></select></div>
+
+    <div class="field"><label>Objeção principal</label><select id="repeatObjection"><option value="">Selecione</option><option>Preço</option><option>Parcela</option><option>Entrada</option><option>Avaliação do usado</option><option>Taxa / financiamento</option><option>Prazo de entrega</option><option>Concorrência</option><option>Indecisão</option><option>Sem retorno</option><option>Outro</option></select></div>
+    <div class="field"><label>Concorrente citado</label><input id="repeatCompetitor" placeholder="Marca, modelo ou loja"></div>
+
+    <div class="field"><label>Próxima ação</label><select id="repeatNextAction"><option value="">Selecione</option><option>Ligar novamente</option><option>WhatsApp</option><option>Agendar visita</option><option>Aguardar avaliação</option><option>Aguardar aprovação de crédito</option><option>Aguardar retorno do cliente</option><option>Enviar proposta</option><option>Outro</option></select></div>
+    <div class="field"><label>Próximo contato</label><input id="repeatNextContact" type="datetime-local"></div>
+
+    <div class="field full"><label>Resumo / comentário do contato</label><textarea id="repeatNotes" rows="4" placeholder="Ex.: Cliente gostou do T-Cross, depende da avaliação do usado e quer parcela próxima de R$ 2.000."></textarea></div>
+  </div>
+  <div class="modal-actions"><button class="btn secondary" onclick="closeModal('repeatContactModal')">Cancelar</button><button class="btn" onclick="saveRepeatContact()">Salvar novo contato</button></div>
 </div></div>
 
 <div class="modal" id="clientDetailModal"><div class="modal-box" style="width:min(96%,760px)">
@@ -858,18 +897,89 @@ function renderClientContactHistory(leadId){
     const who=sellers.find(s=>String(s.id)===String(e.contactedBy));
     const dt=new Date(e.contactedAt);
     const label=e.type==="initial"?"Primeiro contato":"Contatado novamente";
-    return '<div class="comment-item"><div class="comment-meta">'+esc(label)+' • '+dt.toLocaleDateString("pt-BR")+' '+dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div class="comment-text">'+esc(who?who.nome:(e.contactedBy===String(currentUser.id)?currentUser.nome:"Usuário"))+'</div></div>'
+    const tags=[];
+    if(e.temperature)tags.push(e.temperature);
+    if(e.vehicleInterest)tags.push("Interesse: "+e.vehicleInterest);
+    if(e.hasTradeIn)tags.push("Avaliação"+(e.tradePlate?" • "+e.tradePlate:""));
+    if(e.desiredPayment)tags.push("Parcela: R$ "+Number(e.desiredPayment).toLocaleString("pt-BR"));
+    if(e.returnAmount)tags.push("Volta: R$ "+Number(e.returnAmount).toLocaleString("pt-BR"));
+    if(e.entryAmount)tags.push("Entrada: R$ "+Number(e.entryAmount).toLocaleString("pt-BR"));
+    if(e.reasonNotVisit)tags.push("Não veio: "+e.reasonNotVisit);
+    if(e.reasonPriceWhatsapp)tags.push("WhatsApp: "+e.reasonPriceWhatsapp);
+    if(e.objection)tags.push("Objeção: "+e.objection);
+    if(e.competitor)tags.push("Concorrente: "+e.competitor);
+    if(e.nextAction)tags.push("Próxima ação: "+e.nextAction);
+    if(e.nextContactAt)tags.push("Próximo contato: "+new Date(e.nextContactAt).toLocaleString("pt-BR"));
+    return '<div class="comment-item"><div class="comment-meta">'+esc(label)+' • '+dt.toLocaleDateString("pt-BR")+' '+dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+' • '+esc(who?who.nome:(e.contactedBy===String(currentUser.id)?currentUser.nome:"Usuário"))+'</div>'+
+      (e.notes?'<div class="comment-text">'+esc(e.notes)+'</div>':'')+
+      (tags.length?'<div class="contact-history-detail">'+tags.map(t=>'<span>'+esc(t)+'</span>').join("")+'</div>':'')+
+    '</div>'
   }).join("")
 }
-async function registerRepeatContact(id){
+function toggleRepeatTradeFields(){
+  const show=document.getElementById("repeatHasTrade").value==="true";
+  document.querySelectorAll(".repeat-trade-field").forEach(x=>x.style.display=show?"block":"none")
+}
+function openRepeatContactModal(id){
   if(!currentUser||currentUser.rawRole!=="seller")return;
   const lead=clients.find(x=>String(x.id)===String(id));
   if(!lead||String(lead.vendedorId)!==String(mySellerId()))return alert("Você só pode registrar contato nos seus próprios clientes.");
-  if(!confirm("Registrar um novo contato com "+lead.nome+" agora?\n\nA data e hora serão gravadas e não poderão ser alteradas ou excluídas."))return;
-  const {data,error}=await sb.rpc("register_repeat_contact",{p_lead_id:String(id)});
+  document.getElementById("repeatContactLeadId").value=lead.id;
+  document.getElementById("repeatContactSubtitle").textContent=(lead.nome||"Cliente")+" • "+(lead.telefone||"");
+  document.getElementById("repeatVehicleInterest").value=lead.interesse||"";
+  document.getElementById("repeatTemperature").value="";
+  document.getElementById("repeatHasTrade").value="false";
+  document.getElementById("repeatTradePlate").value="";
+  document.getElementById("repeatTradeValue").value="";
+  document.getElementById("repeatDesiredPayment").value="";
+  document.getElementById("repeatReturnAmount").value="";
+  document.getElementById("repeatEntryAmount").value="";
+  document.getElementById("repeatReasonNotVisit").value="";
+  document.getElementById("repeatReasonPrice").value="";
+  document.getElementById("repeatObjection").value="";
+  document.getElementById("repeatCompetitor").value="";
+  document.getElementById("repeatNextAction").value="";
+  document.getElementById("repeatNextContact").value="";
+  document.getElementById("repeatNotes").value="";
+  toggleRepeatTradeFields();
+  document.getElementById("repeatContactModal").classList.add("show")
+}
+function repeatMoneyValue(id){
+  const v=(document.getElementById(id).value||"").trim().replace(/\./g,"").replace(",",".");
+  if(!v)return null;
+  const n=Number(v);return Number.isFinite(n)?n:null
+}
+async function saveRepeatContact(){
+  if(!currentUser||currentUser.rawRole!=="seller")return;
+  const id=document.getElementById("repeatContactLeadId").value;
+  const lead=clients.find(x=>String(x.id)===String(id));
+  if(!lead||String(lead.vendedorId)!==String(mySellerId()))return alert("Você só pode registrar contato nos seus próprios clientes.");
+  const nextRaw=document.getElementById("repeatNextContact").value;
+  const payload={
+    notes:document.getElementById("repeatNotes").value.trim(),
+    has_trade_in:document.getElementById("repeatHasTrade").value==="true",
+    trade_plate:document.getElementById("repeatTradePlate").value.trim(),
+    trade_value:repeatMoneyValue("repeatTradeValue"),
+    desired_payment:repeatMoneyValue("repeatDesiredPayment"),
+    return_amount:repeatMoneyValue("repeatReturnAmount"),
+    entry_amount:repeatMoneyValue("repeatEntryAmount"),
+    vehicle_interest:document.getElementById("repeatVehicleInterest").value.trim(),
+    reason_not_visit:document.getElementById("repeatReasonNotVisit").value,
+    reason_price_whatsapp:document.getElementById("repeatReasonPrice").value,
+    next_action:document.getElementById("repeatNextAction").value,
+    next_contact_at:nextRaw?new Date(nextRaw).toISOString():null,
+    temperature:document.getElementById("repeatTemperature").value,
+    objection:document.getElementById("repeatObjection").value,
+    competitor:document.getElementById("repeatCompetitor").value.trim()
+  };
+  if(!payload.notes&&!payload.next_action&&!payload.reason_not_visit&&!payload.objection){
+    return alert("Preencha pelo menos um resumo do contato, próxima ação, motivo de não comparecimento ou objeção.")
+  }
+  const {data,error}=await sb.rpc("register_repeat_contact",{p_lead_id:String(id),p_payload:payload});
   if(error)return alert("Não foi possível registrar o contato: "+error.message);
-  const r=Array.isArray(data)?data[0]:data;
+  closeModal("repeatContactModal");
   await loadCloudData();renderAll();
+  const r=Array.isArray(data)?data[0]:data;
   alert((r&&r.message)||"Novo contato registrado com sucesso.")
 }
 async function openClientDetail(id){
@@ -1321,7 +1431,7 @@ function renderClients(){
       : phone;
     const actions=canManage
       ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">🔁 Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">🗑 Excluir</button></div>'
-      : (String(c.vendedorId)===String(mySellerId())?'<button class="icon-btn" onclick="registerRepeatContact(\''+c.id+'\')">📞 Contatado novamente</button>':'-');
+      : (String(c.vendedorId)===String(mySellerId())?'<button class="icon-btn" onclick="openRepeatContactModal(\''+c.id+'\')">📞 Contatado novamente</button>':'-');
     return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong style="cursor:pointer" onclick="openClientDetail(\''+c.id+'\')">'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+phoneHtml+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+(["Contatado","Confirmado"].concat(status(c)==="Compareceu"?["Compareceu"]:[]).concat(["Vendido","Perdido"])).map(x=>'<option '+(status(c)===x?"selected ":"")+(x==="Compareceu"?"disabled ":"")+'>'+x+'</option>').join("")+'</select></td><td>'+actions+'</td></tr>'
   }).join("");
   document.getElementById("clients").innerHTML=(canManage?'<div class="desc" style="margin:0 0 10px">Gestor: use WhatsApp para acompanhar o atendimento, ou as ações para transferir/excluir clientes.</div>':'')+'<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
