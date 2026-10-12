@@ -130,6 +130,21 @@
 .contact-history-detail{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}
 .contact-history-detail span{font-size:9px;padding:4px 6px;border:1px solid #29415f;border-radius:999px;color:#cbd5e1}
 @media(max-width:760px){.repeat-contact-grid{grid-template-columns:1fr}.repeat-contact-grid .field.full{grid-column:auto}}
+
+.manager-insights{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+.manager-insights h3{margin:0 0 10px}
+.insight-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+.insight-card{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:10px}
+.insight-card span{display:block;font-size:10px;color:#9fb3c8}
+.insight-card strong{display:block;font-size:20px;margin-top:4px}
+.insight-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.insight-list{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:12px}
+.insight-list h4{margin:0 0 8px}
+.insight-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid rgba(255,255,255,.07);font-size:11px}
+.insight-row:first-of-type{border-top:0}
+.insight-detail-table{overflow:auto;max-height:320px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
+.insight-detail-table table{min-width:980px}
+@media(max-width:900px){.insight-grid{grid-template-columns:repeat(2,1fr)}.insight-columns{grid-template-columns:1fr}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -1214,6 +1229,89 @@ function sellerReportSelected(){
   const id=document.getElementById("sellerReportSeller")?.value||"";
   return id?sellers.filter(s=>String(s.id)===String(id)):sellers
 }
+
+function sellerInsightEvents(){
+  const b=sellerReportBounds();
+  const selectedIds=new Set(sellerReportSelected().map(s=>String(s.id)));
+  return contactEvents.filter(e=>
+    selectedIds.has(String(e.sellerId)) &&
+    e.type==="repeat" &&
+    eventInRange(e.contactedAt,b)
+  )
+}
+function groupInsight(rows,key){
+  const m={};
+  rows.forEach(r=>{const v=(r[key]||"").trim();if(v)m[v]=(m[v]||0)+1});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1])
+}
+function avgInsight(rows,key){
+  const vals=rows.map(r=>Number(r[key])).filter(v=>Number.isFinite(v)&&v>0);
+  return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0
+}
+function moneyBR(v){return v?Number(v).toLocaleString("pt-BR",{style:"currency",currency:"BRL"}):"-"}
+function insightList(title,rows){
+  return '<div class="insight-list"><h4>'+esc(title)+'</h4>'+
+    (rows.length?rows.slice(0,8).map(([k,v])=>'<div class="insight-row"><span>'+esc(k)+'</span><strong>'+v+'</strong></div>').join(""):'<div class="desc">Sem dados no período.</div>')+
+  '</div>'
+}
+function renderSellerInsightsHtml(){
+  const ev=sellerInsightEvents();
+  const trade=ev.filter(e=>e.hasTradeIn);
+  const hot=ev.filter(e=>String(e.temperature).includes("Quente"));
+  const warm=ev.filter(e=>String(e.temperature).includes("Morno"));
+  const cold=ev.filter(e=>String(e.temperature).includes("Frio"));
+  const nextPending=ev.filter(e=>e.nextAction||e.nextContactAt);
+  const noVisit=groupInsight(ev,"reasonNotVisit");
+  const whatsapp=groupInsight(ev,"reasonPriceWhatsapp");
+  const objections=groupInsight(ev,"objection");
+  const competitors=groupInsight(ev,"competitor");
+  const actions=groupInsight(ev,"nextAction");
+  const detail=ev.slice().sort((a,b)=>b.contactedAt-a.contactedAt).map(e=>{
+    const lead=clients.find(c=>String(c.id)===String(e.leadId));
+    const seller=sellers.find(s=>String(s.id)===String(e.sellerId));
+    return '<tr>'+
+      '<td>'+new Date(e.contactedAt).toLocaleString("pt-BR")+'</td>'+
+      '<td>'+esc(seller?seller.nome:"-")+'</td>'+
+      '<td>'+esc(lead?lead.nome:"Cliente")+'</td>'+
+      '<td>'+esc(e.temperature||"-")+'</td>'+
+      '<td>'+esc(e.reasonNotVisit||"-")+'</td>'+
+      '<td>'+esc(e.objection||"-")+'</td>'+
+      '<td>'+esc(e.competitor||"-")+'</td>'+
+      '<td>'+esc(e.nextAction||"-")+'</td>'+
+      '<td>'+(e.nextContactAt?new Date(e.nextContactAt).toLocaleString("pt-BR"):"-")+'</td>'+
+      '<td>'+esc(e.notes||"-")+'</td>'+
+    '</tr>'
+  }).join("");
+  return '<div class="manager-insights">'+
+    '<h3>📋 Motivos, objeções e qualidade dos contatos</h3>'+
+    '<div class="desc">Análise dos registros de “Contatado novamente” no mesmo período e vendedor selecionados acima.</div>'+
+    '<div class="insight-grid">'+
+      '<div class="insight-card"><span>Contatos analisados</span><strong>'+ev.length+'</strong></div>'+
+      '<div class="insight-card"><span>Com veículo para avaliação</span><strong>'+trade.length+'</strong></div>'+
+      '<div class="insight-card"><span>Clientes quentes</span><strong>'+hot.length+'</strong></div>'+
+      '<div class="insight-card"><span>Próximas ações registradas</span><strong>'+nextPending.length+'</strong></div>'+
+      '<div class="insight-card"><span>Parcela média desejada</span><strong>'+moneyBR(avgInsight(ev,"desiredPayment"))+'</strong></div>'+
+      '<div class="insight-card"><span>Entrada média</span><strong>'+moneyBR(avgInsight(ev,"entryAmount"))+'</strong></div>'+
+      '<div class="insight-card"><span>Volta média</span><strong>'+moneyBR(avgInsight(ev,"returnAmount"))+'</strong></div>'+
+      '<div class="insight-card"><span>Temperatura</span><strong>'+hot.length+' 🔥 / '+warm.length+' 🟡 / '+cold.length+' ❄️</strong></div>'+
+    '</div>'+
+    '<div class="insight-columns">'+
+      insightList("Por que ainda não veio à loja?",noVisit)+
+      insightList("Principais objeções",objections)+
+      insightList("Por que recebeu preço pelo WhatsApp?",whatsapp)+
+      insightList("Concorrentes citados",competitors)+
+      insightList("Próximas ações",actions)+
+      insightList("Avaliação de usado",[
+        ["Com usado para avaliação",trade.length],
+        ["Sem usado informado",Math.max(0,ev.length-trade.length)]
+      ])+
+    '</div>'+
+    '<div class="insight-detail-table"><table><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Temperatura</th><th>Não veio por quê?</th><th>Objeção</th><th>Concorrente</th><th>Próxima ação</th><th>Próximo contato</th><th>Comentário</th></tr></thead><tbody>'+
+      (detail||'<tr><td colspan="10">Sem registros no período.</td></tr>')+
+    '</tbody></table></div>'+
+    renderSellerInsightsHtml()+
+  '</div>'
+}
 function renderSellerReport(){
   if(!isManager())return;
   const selected=sellerReportSelected();
@@ -1309,6 +1407,84 @@ function generateSellerPerformancePdf(){
       10,y
     ); y+=8;
   });
+
+
+  const insightEvents=sellerInsightEvents();
+  if(insightEvents.length){
+    doc.addPage();
+    doc.setFont("helvetica","bold");doc.setFontSize(14);
+    doc.text("MOTIVOS, OBJEÇÕES E QUALIDADE DOS CONTATOS",10,15);
+    doc.setFont("helvetica","normal");doc.setFontSize(8);
+    doc.text(sellerReportRangeText(),10,21);
+
+    const noVisit=groupInsight(insightEvents,"reasonNotVisit");
+    const objections=groupInsight(insightEvents,"objection");
+    const whatsapp=groupInsight(insightEvents,"reasonPriceWhatsapp");
+    const competitors=groupInsight(insightEvents,"competitor");
+    const actions=groupInsight(insightEvents,"nextAction");
+    const hot=insightEvents.filter(e=>String(e.temperature).includes("Quente")).length;
+    const warm=insightEvents.filter(e=>String(e.temperature).includes("Morno")).length;
+    const cold=insightEvents.filter(e=>String(e.temperature).includes("Frio")).length;
+    const trade=insightEvents.filter(e=>e.hasTradeIn).length;
+
+    doc.autoTable({
+      startY:27,
+      head:[["Indicador","Resultado"]],
+      body:[
+        ["Contatos analisados",String(insightEvents.length)],
+        ["Com veículo para avaliação",String(trade)],
+        ["Temperatura",hot+" quentes / "+warm+" mornos / "+cold+" frios"],
+        ["Parcela média desejada",moneyBR(avgInsight(insightEvents,"desiredPayment"))],
+        ["Entrada média",moneyBR(avgInsight(insightEvents,"entryAmount"))],
+        ["Volta média",moneyBR(avgInsight(insightEvents,"returnAmount"))]
+      ],
+      styles:{fontSize:8,cellPadding:2},
+      headStyles:{fillColor:[25,48,78],textColor:[255,255,255]}
+    });
+
+    let yy=doc.lastAutoTable.finalY+8;
+    const sections=[
+      ["Por que ainda não veio à loja?",noVisit],
+      ["Principais objeções",objections],
+      ["Preço pelo WhatsApp",whatsapp],
+      ["Concorrentes citados",competitors],
+      ["Próximas ações",actions]
+    ];
+    sections.forEach(([title,arr])=>{
+      if(yy>178){doc.addPage();yy=16}
+      doc.setFont("helvetica","bold");doc.setFontSize(9);doc.text(title,10,yy);yy+=5;
+      doc.setFont("helvetica","normal");doc.setFontSize(8);
+      if(!arr.length){doc.text("Sem dados no período.",12,yy);yy+=6}
+      else arr.slice(0,8).forEach(([k,v])=>{doc.text("- "+k+": "+v,12,yy);yy+=5})
+      yy+=2;
+    });
+
+    doc.addPage();
+    doc.setFont("helvetica","bold");doc.setFontSize(12);
+    doc.text("DETALHAMENTO DOS CONTATOS",10,15);
+    doc.autoTable({
+      startY:20,
+      margin:{left:6,right:6},
+      head:[["Data","Vendedor","Cliente","Temperatura","Não veio por quê?","Objeção","Concorrente","Próxima ação","Comentário"]],
+      body:insightEvents.slice().sort((a,b)=>b.contactedAt-a.contactedAt).map(e=>{
+        const lead=clients.find(c=>String(c.id)===String(e.leadId));
+        const seller=sellers.find(s=>String(s.id)===String(e.sellerId));
+        return [
+          new Date(e.contactedAt).toLocaleString("pt-BR"),
+          seller?seller.nome:"-",
+          lead?lead.nome:"Cliente",
+          e.temperature||"-",
+          e.reasonNotVisit||"-",
+          e.objection||"-",
+          e.competitor||"-",
+          e.nextAction||"-",
+          e.notes||"-"
+        ]
+      }),
+      styles:{fontSize:6.5,cellPadding:1.5,overflow:"linebreak"},
+      headStyles:{fillColor:[25,48,78],textColor:[255,255,255]}
+    });
+  }
 
   const periodName=sellerReportPeriod==="day"?"Diario":sellerReportPeriod==="week"?"Semanal":"Mensal";
   doc.save("Relatorio_"+periodName+"_Vendedores_Barigui_Blusa_"+now.toISOString().slice(0,10)+".pdf")
