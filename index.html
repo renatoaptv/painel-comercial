@@ -500,7 +500,22 @@ async function loadCloudData(){
     sellerId:String(r.seller_id),
     contactedBy:String(r.contacted_by),
     contactedAt:new Date(r.contacted_at).getTime(),
-    type:r.contact_type
+    type:r.contact_type,
+    notes:r.notes||"",
+    hasTradeIn:r.has_trade_in===true,
+    tradePlate:r.trade_plate||"",
+    tradeValue:r.trade_value,
+    desiredPayment:r.desired_payment,
+    returnAmount:r.return_amount,
+    entryAmount:r.entry_amount,
+    vehicleInterest:r.vehicle_interest||"",
+    reasonNotVisit:r.reason_not_visit||"",
+    reasonPriceWhatsapp:r.reason_price_whatsapp||"",
+    nextAction:r.next_action||"",
+    nextContactAt:r.next_contact_at?new Date(r.next_contact_at).getTime():null,
+    temperature:r.temperature||"",
+    objection:r.objection||"",
+    competitor:r.competitor||""
   })):[];
 
   if(currentUser.rawRole==="seller"){
