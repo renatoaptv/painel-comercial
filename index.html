@@ -83,6 +83,27 @@
 .journey-list-table{overflow:auto;max-height:62vh;border:1px solid var(--line);border-radius:12px}
 .journey-list-table table{min-width:900px}
 @media(max-width:800px){.journey-hover{display:none!important}}
+
+.seller-report-toolbar{display:grid;grid-template-columns:1.3fr 1fr auto;gap:8px;margin:12px 0}
+.seller-report-periods{display:flex;gap:6px;flex-wrap:wrap}
+.seller-report-periods button.active{outline:2px solid #38bdf8}
+.seller-report-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:14px 0}
+.seller-report-kpi{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:10px}
+.seller-report-kpi span{display:block;font-size:10px;color:#9fb3c8}
+.seller-report-kpi strong{display:block;font-size:22px;margin-top:4px;color:#fff}
+.seller-report-funnel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.seller-report-stage{border-radius:12px;padding:12px;background:#122238;border:1px solid #29415f}
+.seller-report-stage span{display:block;font-size:10px;color:#9fb3c8}
+.seller-report-stage strong{display:block;font-size:20px;margin-top:3px}
+.seller-report-conv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+.seller-report-table{overflow:auto;max-height:48vh;border:1px solid var(--line);border-radius:12px}
+.seller-report-table table{min-width:900px}
+@media(max-width:900px){
+  .seller-report-toolbar{grid-template-columns:1fr}
+  .seller-report-summary{grid-template-columns:repeat(2,1fr)}
+  .seller-report-funnel{grid-template-columns:1fr}
+  .seller-report-conv{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -109,6 +130,7 @@
   <div class="user-chip"><div><b id="sessionName">-</b><span id="sessionRole">-</span></div></div>
   <button class="btn secondary manager-only" onclick="openUsers()">Usuários</button>
   <button class="btn secondary manager-only" onclick="openManagerClients()">👥 Clientes</button>
+  <button class="btn secondary manager-only" onclick="openSellerReport()">📊 Relatório vendedores</button>
   <button class="btn secondary manager-only" onclick="openSeller()">+ Vendedor</button>
   <button class="btn" onclick="openClient()">+ Cadastrar cliente</button>
   <button class="btn secondary" onclick="logout()">Sair</button>
@@ -206,6 +228,24 @@
 
   <div class="field"><label>Observações da venda</label><textarea id="saleNotes" rows="4"></textarea></div>
   <div class="modal-actions"><button class="btn secondary" onclick="closeModal('saleFormModal')">Cancelar</button><button class="btn" onclick="saveSaleFormAndPdf()">Concluir venda e gerar PDF</button></div>
+</div></div>
+
+<div class="modal" id="sellerReportModal"><div class="modal-box" style="width:min(98%,1180px)">
+  <div class="modal-head">
+    <div><h2>📊 Relatório de desempenho dos vendedores</h2><div class="desc">Funil, comparecimento e conversão por período.</div></div>
+    <button class="x" onclick="closeModal('sellerReportModal')">×</button>
+  </div>
+  <div class="seller-report-toolbar">
+    <select id="sellerReportSeller" onchange="renderSellerReport()"><option value="">Todos os vendedores</option></select>
+    <div class="seller-report-periods">
+      <button class="btn secondary seller-period-btn" data-period="day" onclick="setSellerReportPeriod('day',this)">Hoje</button>
+      <button class="btn secondary seller-period-btn active" data-period="week" onclick="setSellerReportPeriod('week',this)">Semana</button>
+      <button class="btn secondary seller-period-btn" data-period="month" onclick="setSellerReportPeriod('month',this)">Mês</button>
+    </div>
+    <button class="btn" onclick="generateSellerPerformancePdf()">📄 Gerar PDF</button>
+  </div>
+  <div id="sellerReportRange" class="desc"></div>
+  <div id="sellerReportContent"></div>
 </div></div>
 
 <div class="modal" id="journeyStageModal"><div class="modal-box" style="width:min(96%,1000px)">
@@ -854,6 +894,169 @@ async function deleteClient(id){
   alert("Cliente excluído.")
 }
 
+
+let sellerReportPeriod="week";
+function sellerReportBounds(p=sellerReportPeriod){
+  const now=new Date(),start=new Date(),end=new Date();
+  end.setHours(23,59,59,999);
+  if(p==="day"){start.setHours(0,0,0,0)}
+  else if(p==="week"){
+    const d=start.getDay()||7;
+    start.setDate(start.getDate()-d+1);
+    start.setHours(0,0,0,0)
+  }else{
+    start.setDate(1);
+    start.setHours(0,0,0,0)
+  }
+  return {start:start.getTime(),end:end.getTime()}
+}
+function eventInRange(ts,b){return !!ts&&Number(ts)>=b.start&&Number(ts)<=b.end}
+function sellerPeriodMetrics(sellerId){
+  const b=sellerReportBounds();
+  const rows=clients.filter(c=>String(c.vendedorId)===String(sellerId));
+  const contacted=rows.filter(c=>eventInRange(c.dataContato||c.criadoEm,b));
+  const confirmed=rows.filter(c=>eventInRange(c.confirmedAt,b));
+  const showed=rows.filter(c=>eventInRange(c.showedAt,b));
+  const sold=rows.filter(c=>eventInRange(c.soldAt,b));
+  const lost=rows.filter(c=>eventInRange(c.lostAt,b));
+  const pct=(a,z)=>z?Math.min(100,a/z*100):0;
+  return {
+    sellerId:String(sellerId),
+    contacted:contacted.length,
+    confirmed:confirmed.length,
+    showed:showed.length,
+    sold:sold.length,
+    lost:lost.length,
+    contactToConfirm:pct(confirmed.length,contacted.length),
+    confirmToShow:pct(showed.length,confirmed.length),
+    showToSale:pct(sold.length,showed.length),
+    finalConversion:pct(sold.length,contacted.length)
+  }
+}
+function sellerReportRangeText(){
+  const b=sellerReportBounds();
+  const a=new Date(b.start),z=new Date(b.end);
+  if(sellerReportPeriod==="day")return "Período: "+a.toLocaleDateString("pt-BR");
+  return "Período: "+a.toLocaleDateString("pt-BR")+" a "+z.toLocaleDateString("pt-BR")
+}
+function openSellerReport(){
+  if(!isManager())return alert("Acesso disponível apenas para gestão.");
+  const sel=document.getElementById("sellerReportSeller");
+  sel.innerHTML='<option value="">Todos os vendedores</option>'+sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("");
+  sellerReportPeriod="week";
+  document.querySelectorAll(".seller-period-btn").forEach(b=>b.classList.toggle("active",b.dataset.period==="week"));
+  renderSellerReport();
+  document.getElementById("sellerReportModal").classList.add("show")
+}
+function setSellerReportPeriod(p,btn){
+  sellerReportPeriod=p;
+  document.querySelectorAll(".seller-period-btn").forEach(x=>x.classList.remove("active"));
+  if(btn)btn.classList.add("active");
+  renderSellerReport()
+}
+function sellerReportSelected(){
+  const id=document.getElementById("sellerReportSeller")?.value||"";
+  return id?sellers.filter(s=>String(s.id)===String(id)):sellers
+}
+function renderSellerReport(){
+  if(!isManager())return;
+  const selected=sellerReportSelected();
+  const metrics=selected.map(s=>({seller:s,m:sellerPeriodMetrics(s.id)}));
+  const total=metrics.reduce((a,x)=>{
+    a.contacted+=x.m.contacted;a.confirmed+=x.m.confirmed;a.showed+=x.m.showed;a.sold+=x.m.sold;a.lost+=x.m.lost;return a
+  },{contacted:0,confirmed:0,showed:0,sold:0,lost:0});
+  const pct=(a,z)=>z?Math.min(100,a/z*100):0;
+  document.getElementById("sellerReportRange").textContent=sellerReportRangeText();
+  const content=document.getElementById("sellerReportContent");
+  content.innerHTML=
+    '<div class="seller-report-summary">'+
+      '<div class="seller-report-kpi"><span>Contatos realizados</span><strong>'+total.contacted+'</strong></div>'+
+      '<div class="seller-report-kpi"><span>Confirmados</span><strong>'+total.confirmed+'</strong></div>'+
+      '<div class="seller-report-kpi"><span>Compareceram</span><strong>'+total.showed+'</strong></div>'+
+      '<div class="seller-report-kpi"><span>Vendidos</span><strong>'+total.sold+'</strong></div>'+
+      '<div class="seller-report-kpi"><span>Vendas perdidas</span><strong>'+total.lost+'</strong></div>'+
+      '<div class="seller-report-kpi"><span>Conversão final</span><strong>'+pct(total.sold,total.contacted).toFixed(1)+'%</strong></div>'+
+    '</div>'+
+    '<div class="seller-report-funnel">'+
+      '<div class="seller-report-stage"><span>1. Contatados</span><strong>'+total.contacted+'</strong></div>'+
+      '<div class="seller-report-stage"><span>2. Confirmados</span><strong>'+total.confirmed+'</strong></div>'+
+      '<div class="seller-report-stage"><span>3. Compareceram</span><strong>'+total.showed+'</strong></div>'+
+      '<div class="seller-report-stage"><span>4. Vendidos</span><strong>'+total.sold+'</strong></div>'+
+      '<div class="seller-report-stage"><span>5. Perdidos</span><strong>'+total.lost+'</strong></div>'+
+    '</div>'+
+    '<div class="seller-report-conv">'+
+      '<div class="seller-report-kpi"><span>Contato → Confirmado</span><strong>'+pct(total.confirmed,total.contacted).toFixed(1)+'%</strong></div>'+
+      '<div class="seller-report-kpi"><span>Confirmado → Compareceu</span><strong>'+pct(total.showed,total.confirmed).toFixed(1)+'%</strong></div>'+
+      '<div class="seller-report-kpi"><span>Compareceu → Venda</span><strong>'+pct(total.sold,total.showed).toFixed(1)+'%</strong></div>'+
+      '<div class="seller-report-kpi"><span>Contato → Venda</span><strong>'+pct(total.sold,total.contacted).toFixed(1)+'%</strong></div>'+
+    '</div>'+
+    '<div class="seller-report-table"><table><thead><tr><th>Vendedor</th><th>Contatos</th><th>Confirmados</th><th>Compareceram</th><th>Vendidos</th><th>Perdidos</th><th>Contato→Conf.</th><th>Conf.→Comp.</th><th>Comp.→Venda</th><th>Conversão final</th></tr></thead><tbody>'+
+      metrics.map(x=>'<tr><td><strong>'+esc(x.seller.nome)+'</strong></td><td>'+x.m.contacted+'</td><td>'+x.m.confirmed+'</td><td>'+x.m.showed+'</td><td>'+x.m.sold+'</td><td>'+x.m.lost+'</td><td>'+x.m.contactToConfirm.toFixed(1)+'%</td><td>'+x.m.confirmToShow.toFixed(1)+'%</td><td>'+x.m.showToSale.toFixed(1)+'%</td><td>'+x.m.finalConversion.toFixed(1)+'%</td></tr>').join("")+
+    '</tbody></table></div>'
+}
+function generateSellerPerformancePdf(){
+  if(!isManager())return alert("Acesso disponível apenas para gestão.");
+  const selected=sellerReportSelected();
+  if(!selected.length)return alert("Nenhum vendedor encontrado.");
+  const rows=selected.map(s=>({seller:s,m:sellerPeriodMetrics(s.id)}));
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});
+  const now=new Date();
+  doc.setFont("helvetica","bold");doc.setFontSize(16);
+  doc.text("RELATÓRIO DE DESEMPENHO DOS VENDEDORES",14,15);
+  doc.setFont("helvetica","normal");doc.setFontSize(9);
+  doc.text("Barigui Blusa Volkswagen",14,21);
+  doc.text(sellerReportRangeText(),14,26);
+  doc.text("Gerado em "+now.toLocaleDateString("pt-BR")+" às "+now.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),14,31);
+
+  doc.autoTable({
+    startY:36,
+    margin:{left:8,right:8},
+    head:[["Vendedor","Contatos","Confirmados","Compareceram","Vendidos","Perdidos","Contato→Conf.","Conf.→Comp.","Comp.→Venda","Conversão final"]],
+    body:rows.map(x=>[
+      x.seller.nome,
+      String(x.m.contacted),
+      String(x.m.confirmed),
+      String(x.m.showed),
+      String(x.m.sold),
+      String(x.m.lost),
+      x.m.contactToConfirm.toFixed(1)+"%",
+      x.m.confirmToShow.toFixed(1)+"%",
+      x.m.showToSale.toFixed(1)+"%",
+      x.m.finalConversion.toFixed(1)+"%"
+    ]),
+    styles:{fontSize:7.5,cellPadding:2.2,overflow:"linebreak"},
+    headStyles:{fillColor:[25,48,78],textColor:[255,255,255]},
+    columnStyles:{0:{cellWidth:48}},
+    didDrawPage:function(){
+      const page=doc.internal.getNumberOfPages();
+      doc.setFontSize(7);doc.setTextColor(100);
+      doc.text("Barigui Blusa Volkswagen • Desempenho comercial",8,203);
+      doc.text("Página "+page,289,203,{align:"right"});
+      doc.setTextColor(20)
+    }
+  });
+
+  // Detailed funnel per seller
+  let y=doc.lastAutoTable.finalY+9;
+  rows.forEach((x,idx)=>{
+    if(y>178){doc.addPage();y=16}
+    doc.setFont("helvetica","bold");doc.setFontSize(10);
+    doc.text(x.seller.nome,10,y); y+=5;
+    doc.setFont("helvetica","normal");doc.setFontSize(8);
+    doc.text(
+      "Funil: "+x.m.contacted+" contatos → "+x.m.confirmed+" confirmados → "+x.m.showed+" compareceram → "+x.m.sold+" vendidos | "+x.m.lost+" perdidos",
+      10,y
+    ); y+=5;
+    doc.text(
+      "Conversões: Contato→Confirmado "+x.m.contactToConfirm.toFixed(1)+"% | Confirmado→Compareceu "+x.m.confirmToShow.toFixed(1)+"% | Compareceu→Venda "+x.m.showToSale.toFixed(1)+"% | Final "+x.m.finalConversion.toFixed(1)+"%",
+      10,y
+    ); y+=8;
+  });
+
+  const periodName=sellerReportPeriod==="day"?"Diario":sellerReportPeriod==="week"?"Semanal":"Mensal";
+  doc.save("Relatorio_"+periodName+"_Vendedores_Barigui_Blusa_"+now.toISOString().slice(0,10)+".pdf")
+}
 function managerClientRows(){
   if(!isManager())return [];
   const search=(document.getElementById("managerClientSearch")?.value||"").trim().toLowerCase();
