@@ -35,6 +35,17 @@
 .icon-btn.danger{border-color:rgba(239,68,68,.45);color:#fecaca}
 .manager-actions{display:flex;gap:6px;flex-wrap:wrap}
 @media(max-width:800px){.client-phone-actions{opacity:1;pointer-events:auto;transform:none}}
+
+.clients-metric{position:relative;cursor:pointer}
+.clients-metric .clients-hover-card{display:none;position:absolute;right:0;bottom:calc(100% + 10px);width:280px;max-height:260px;overflow:auto;background:#0d1b2d;border:1px solid #29415f;border-radius:14px;padding:10px;z-index:50;box-shadow:0 14px 34px rgba(0,0,0,.35);text-align:left}
+.clients-metric:hover .clients-hover-card,.clients-metric:focus-within .clients-hover-card{display:block}
+.clients-hover-title{font-size:12px;font-weight:900;margin-bottom:8px;color:#fff}
+.clients-hover-item{padding:8px 6px;border-top:1px solid rgba(255,255,255,.08)}
+.clients-hover-item:first-of-type{border-top:0}
+.clients-hover-item strong{display:block;font-size:12px;color:#fff}
+.clients-hover-item span{display:block;font-size:10px;color:#9fb3c8;margin-top:2px}
+.clients-hover-empty{font-size:11px;color:#9fb3c8;padding:6px}
+@media(max-width:800px){.clients-metric .clients-hover-card{right:auto;left:0;width:250px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -520,7 +531,34 @@ function renderRanking(){const list=byPeriod().map(v=>v);const data=sellers.map(
 function renderFunnel(){const mc=metricClients(),a=count("Contatado",mc),b=count("Confirmado",mc),c=count("Compareceu",mc),d=count("Vendido",mc);kContacted.textContent=fContacted.textContent=a;kConfirmed.textContent=fConfirmed.textContent=b;kShowed.textContent=fShowed.textContent=c;kSold.textContent=fSold.textContent=d;conversion.textContent=(mc.length?d/mc.length*100:0).toFixed(1)+"%"}
 function renderSmart(){const goal=sellers.reduce((a,s)=>a+(Number(s.metaDiaria)||25),0),done=sellers.reduce((a,s)=>a+todayFor(s.id),0);document.getElementById("teamGoal").textContent=(goal?Math.min(100,done/goal*100):0).toFixed(0)+"%";document.getElementById("teamGoalDetail").textContent=done+" de "+goal+" contatos";document.getElementById("forgotten").textContent=clients.filter(isForgotten).length;document.getElementById("followToday").textContent=clients.filter(c=>c.proximoFollowup>=dayStart()&&c.proximoFollowup<=dayEnd()&&!["Vendido","Perdido"].includes(status(c))).length;const mc=metricClients(),confirmed=mc.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,showed=mc.filter(c=>["Compareceu","Vendido"].includes(status(c))).length;document.getElementById("showRate").textContent=(confirmed?showed/confirmed*100:0).toFixed(1)+"%"}
 function streak(s){const meta=Number(s.metaDiaria)||25,days={};metricClients().filter(c=>c.vendedorId===s.id&&c.dataContato).forEach(c=>{const d=new Date(c.dataContato),k=d.toISOString().slice(0,10);days[k]=(days[k]||0)+1});let n=0,d=new Date();for(let i=0;i<365;i++){const k=d.toISOString().slice(0,10);if((days[k]||0)>=meta)n++;else if(i>0)break;d.setDate(d.getDate()-1)}return n}
-function renderPerformance(){const mc=metricClients();document.getElementById("performance").innerHTML=sellers.map(s=>{const cs=mc.filter(c=>c.vendedorId===s.id),done=todayFor(s.id),goal=Number(s.metaDiaria)||25,pct=Math.min(100,goal?done/goal*100:0),sold=count("Vendido",cs),conv=cs.length?sold/cs.length*100:0,conf=cs.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,show=cs.filter(c=>["Compareceu","Vendido"].includes(status(c))).length,rate=conf?show/conf*100:0;return '<div class="perf"><div class="perf-top"><img src="'+s.foto+'" onerror="this.src=fallback(\''+esc(s.nome)+'\')"><div><strong>'+esc(s.nome)+'</strong><div class="desc">🔥 '+streak(s)+' dias de sequência</div></div></div><div style="font-size:11px;margin-top:10px">Meta hoje: '+done+'/'+goal+'</div><div class="bar"><div style="width:'+pct+'%"></div></div><div class="mini"><div><b>'+conv.toFixed(1)+'%</b><span>Conversão</span></div><div><b>'+rate.toFixed(1)+'%</b><span>Comparecimento</span></div><div><b>'+cs.length+'</b><span>Clientes</span></div></div></div>'}).join("")}
+function renderPerformance(){
+  const mc=metricClients();
+  document.getElementById("performance").innerHTML=sellers.map(s=>{
+    const cs=mc.filter(c=>c.vendedorId===s.id),
+      done=todayFor(s.id),
+      goal=Number(s.metaDiaria)||25,
+      pct=Math.min(100,goal?done/goal*100:0),
+      sold=count("Vendido",cs),
+      conv=cs.length?sold/cs.length*100:0,
+      conf=cs.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,
+      show=cs.filter(c=>["Compareceu","Vendido"].includes(status(c))).length,
+      rate=conf?show/conf*100:0;
+
+    const canSeeNames=isManager()||String(s.id)===String(mySellerId());
+    const namedClients=canSeeNames
+      ? clients.filter(c=>c.vendedorId===s.id)
+      : [];
+    const clientList=canSeeNames
+      ? (namedClients.length
+          ? namedClients.slice().sort((a,b)=>b.criadoEm-a.criadoEm).map(c=>
+              '<div class="clients-hover-item"><strong>'+esc(c.nome)+'</strong><span>'+esc(status(c))+(c.interesse?' • '+esc(c.interesse):'')+'</span></div>'
+            ).join("")
+          : '<div class="clients-hover-empty">Nenhum cliente cadastrado.</div>')
+      : '<div class="clients-hover-empty">Os dados dos clientes deste vendedor são restritos.</div>';
+
+    return '<div class="perf"><div class="perf-top"><img src="'+s.foto+'" onerror="this.src=fallback(\''+esc(s.nome)+'\')"><div><strong>'+esc(s.nome)+'</strong><div class="desc">🔥 '+streak(s)+' dias de sequência</div></div></div><div style="font-size:11px;margin-top:10px">Meta hoje: '+done+'/'+goal+'</div><div class="bar"><div style="width:'+pct+'%"></div></div><div class="mini"><div><b>'+conv.toFixed(1)+'%</b><span>Conversão</span></div><div><b>'+rate.toFixed(1)+'%</b><span>Comparecimento</span></div><div class="clients-metric" tabindex="0"><b>'+cs.length+'</b><span>Clientes</span><div class="clients-hover-card"><div class="clients-hover-title">Clientes de '+esc(s.nome)+'</div>'+clientList+'</div></div></div></div>'
+  }).join("")
+}
 function renderAgenda(){const a=clients.filter(c=>c.proximoFollowup&&!["Vendido","Perdido"].includes(status(c))).sort((x,y)=>x.proximoFollowup-y.proximoFollowup).slice(0,20);document.getElementById("agenda").innerHTML=a.length?a.map(c=>{const s=sellers.find(x=>x.id===c.vendedorId),d=new Date(c.proximoFollowup),late=c.proximoFollowup<Date.now();return '<div class="agenda-item"><div class="agenda-time">'+d.toLocaleDateString("pt-BR")+' • '+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div><strong>'+esc(c.nome)+'</strong><div class="desc">'+esc(s?s.nome:"-")+' • '+esc(c.telefone||"Sem telefone")+'</div>'+(late?'<div class="warn">⚠️ Follow-up atrasado</div>':'')+'</div><span class="tag">'+esc(status(c))+'</span></div>'}).join(""):'<div class="empty">Nenhum follow-up agendado.</div>'}
 function dtLocal(ts){if(!ts)return"";const d=new Date(Number(ts)),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
 
