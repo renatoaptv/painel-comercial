@@ -971,6 +971,69 @@ function renderClientContactHistory(leadId){
     '</div>'
   }).join("")
 }
+
+function updateManagerNotificationBadge(){
+  const badge=document.getElementById("managerNotificationBadge");
+  if(!badge)return;
+  const n=managerNotifications.filter(x=>!x.readAt).length;
+  badge.textContent=n>99?"99+":String(n);
+  badge.style.display=n?"flex":"none"
+}
+function renderManagerNotifications(){
+  const box=document.getElementById("managerNotificationsList");
+  if(!box)return;
+  if(!managerNotifications.length){
+    box.innerHTML='<div class="empty">Nenhuma notificação.</div>';
+    return
+  }
+  box.innerHTML=managerNotifications.map(n=>{
+    const dt=new Date(n.createdAt);
+    return '<div class="notification-item '+(!n.readAt?'unread':'')+'" onclick="openNotificationClient(\''+n.id+'\')">'+
+      '<div class="notification-title">'+esc(n.title)+'</div>'+
+      '<div class="desc">'+esc(n.body)+'</div>'+
+      '<div class="desc" style="margin-top:5px">'+dt.toLocaleDateString("pt-BR")+' • '+dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div>'+
+    '</div>'
+  }).join("")
+}
+function openManagerNotifications(){
+  if(!isManager())return;
+  renderManagerNotifications();
+  const modal=document.getElementById("managerNotificationsModal");
+  if(modal)modal.classList.add("show")
+}
+async function openNotificationClient(notificationId){
+  const n=managerNotifications.find(x=>x.id===String(notificationId));
+  if(!n)return;
+  if(!n.readAt){
+    const now=new Date().toISOString();
+    await sb.from("manager_notifications").update({read_at:now}).eq("id",n.id).eq("recipient_id",currentUser.id);
+    n.readAt=Date.now();
+    updateManagerNotificationBadge();
+    renderManagerNotifications()
+  }
+  closeModal("managerNotificationsModal");
+  await openClientDetail(n.leadId)
+}
+async function markAllManagerNotificationsRead(){
+  if(!isManager())return;
+  const unread=managerNotifications.filter(x=>!x.readAt);
+  if(!unread.length)return;
+  const ids=unread.map(x=>Number(x.id));
+  const now=new Date().toISOString();
+  const {error}=await sb.from("manager_notifications").update({read_at:now}).in("id",ids).eq("recipient_id",currentUser.id);
+  if(error)return alert("Não foi possível marcar as notificações como lidas.");
+  managerNotifications.forEach(x=>{if(!x.readAt)x.readAt=Date.now()});
+  updateManagerNotificationBadge();
+  renderManagerNotifications()
+}
+function showManagerNotificationToast(n){
+  const box=document.getElementById("managerNotificationToast");
+  if(!box||!n)return;
+  box.innerHTML='<strong>'+esc(n.title||"🔔 Nova informação")+'</strong>'+
+    '<div class="desc" style="margin-top:5px">'+esc(n.body||"")+'</div>';
+  box.classList.add("show");
+  setTimeout(()=>box.classList.remove("show"),7000)
+}
 function openRepeatContactModal(id){
   if(!currentUser||currentUser.rawRole!=="seller")return;
   const lead=clients.find(x=>String(x.id)===String(id));
