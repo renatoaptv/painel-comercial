@@ -157,6 +157,11 @@
 .notification-toast.show{display:block}
 .repeat-example{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:10px;margin:8px 0;font-size:11px;color:#cbd5e1}
 .repeat-example strong{display:block;color:#fff;margin-bottom:3px}
+
+.sale-quick-action{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.sale-quick-note{font-size:11px;color:#facc15;font-weight:800;max-width:190px;line-height:1.25}
+.sale-quick-btn{white-space:nowrap}
+@media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -280,7 +285,14 @@
 
 
 <div class="modal" id="saleFormModal"><div class="modal-box" style="width:min(98%,880px)">
-  <div class="modal-head"><div><h2>Ficha completa da venda</h2><div class="desc">Preencha os dados para concluir a venda e gerar o PDF.</div></div><button class="x" onclick="closeModal('saleFormModal')">×</button></div>
+  <div class="modal-head">
+    <div><h2>Ficha completa da venda</h2><div class="desc">Preencha os dados para concluir a venda e gerar o PDF.</div></div>
+    <div class="sale-quick-action">
+      <span class="sale-quick-note">⚠️ Termine de preencher a ficha de venda.</span>
+      <button type="button" id="quickSaleBtn" class="btn sale-quick-btn" onclick="quickMarkSoldFromForm()">🎉 Informar venda</button>
+      <button class="x" onclick="closeModal('saleFormModal')">×</button>
+    </div>
+  </div>
   <input type="hidden" id="saleLeadId">
   <h3 style="margin:8px 0 12px">Dados do cliente</h3>
   <div class="two"><div class="field"><label>Nome / Razão social</label><input id="saleName"></div><div class="field"><label>CPF/CNPJ</label><input id="saleCpfCnpj"></div></div>
@@ -1792,7 +1804,47 @@ function openSaleForm(id){
   const pt=lead.paymentTerms||[];
   if(pt.length)pt.forEach(x=>addSalePayment(x.condition||"",x.value??""));else addSalePayment();
   saleNotes.value=lead.saleNotes||lead.observacao||"";
+  const quickBtn=document.getElementById("quickSaleBtn");
+  if(quickBtn){
+    const alreadySold=!!lead.soldAt||status(lead)==="Vendido";
+    quickBtn.disabled=alreadySold;
+    quickBtn.textContent=alreadySold?"✅ Venda informada":"🎉 Informar venda";
+  }
   saleFormModal.classList.add("show")
+}
+
+async function quickMarkSoldFromForm(){
+  const id=String(saleLeadId.value||"");
+  const lead=clients.find(x=>x.id===id);
+  if(!lead)return;
+  if(!isManager()&&String(lead.vendedorId)!==String(mySellerId()))return alert("Você não pode informar a venda deste cliente.");
+  if(lead.soldAt||status(lead)==="Vendido"){
+    const btn=document.getElementById("quickSaleBtn");
+    if(btn){btn.disabled=true;btn.textContent="✅ Venda informada"}
+    return;
+  }
+  if(!confirm("Informar esta venda agora?\n\nA venda entrará imediatamente nos indicadores e notificações. Depois, termine de preencher a ficha completa."))return;
+  const btn=document.getElementById("quickSaleBtn");
+  if(btn){btn.disabled=true;btn.textContent="Informando..."}
+  const {error}=await sb.from("leads").update({
+    stage:"Vendido",
+    next_followup_at:null,
+    updated_by:currentUser.id
+  }).eq("id",id);
+  if(error){
+    if(btn){btn.disabled=false;btn.textContent="🎉 Informar venda"}
+    return alert("Não foi possível informar a venda: "+error.message);
+  }
+  await loadCloudData();
+  renderAll();
+  const updated=clients.find(x=>x.id===id);
+  const seller=sellers.find(x=>x.id===updated?.vendedorId);
+  if(btn){btn.disabled=true;btn.textContent="✅ Venda informada"}
+  if(updated&&seller){
+    lastCelebratedSaleId=id;
+    celebrateSale(seller,updated)
+  }
+  alert("Venda informada! Agora termine de preencher a ficha de venda.")
 }
 
 function salePdfLine(doc,label,value,x,y,w){
