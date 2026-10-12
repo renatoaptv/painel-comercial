@@ -319,6 +319,8 @@
   <div class="modal-head"><div><h2 id="clientDetailTitle">Cliente</h2><div class="desc" id="clientDetailSubtitle"></div></div><button class="x" onclick="closeModal('clientDetailModal')">×</button></div>
   <input type="hidden" id="clientDetailId">
   <div id="clientDetailContent"></div>
+  <div style="margin-top:16px"><strong>Histórico de contatos</strong><div class="desc">Registros permanentes de cada contato realizado.</div></div>
+  <div id="clientContactHistory" class="comments-list"><div class="empty">Carregando...</div></div>
   <div style="margin-top:16px"><strong>Histórico de comentários</strong><div class="desc">Comentários registrados no atendimento.</div></div>
   <div id="clientComments" class="comments-list"><div class="empty">Carregando...</div></div>
   <div class="comment-compose">
@@ -371,6 +373,7 @@ let sellers=[];
 let prospectaWhatsappWindow=null;
 let clients=[];
 let teamClients=[];
+let contactEvents=[];
 let users=[];
 let currentUser=null;
 let realtimeChannel=null;
@@ -433,6 +436,19 @@ async function loadCloudData(){
   let q=sb.from("leads").select("*").eq("organization_id",currentUser.organization_id).order("created_at",{ascending:false});
   if(currentUser.rawRole==="manager"&&currentUser.store_id) q=q.eq("store_id",currentUser.store_id);
   const {data:leadRows,error:lErr}=await q;
+  let eq=sb.from("lead_contact_events").select("*").eq("organization_id",currentUser.organization_id).order("contacted_at",{ascending:false});
+  if(currentUser.rawRole==="manager"&&currentUser.store_id)eq=eq.eq("store_id",currentUser.store_id);
+  if(currentUser.rawRole==="seller"&&currentUser.store_id)eq=eq.eq("store_id",currentUser.store_id);
+  const {data:contactRows,error:contactErr}=await eq;
+  contactEvents=!contactErr&&contactRows?contactRows.map(r=>({
+    id:String(r.id),
+    leadId:String(r.lead_id),
+    sellerId:String(r.seller_id),
+    contactedBy:String(r.contacted_by),
+    contactedAt:new Date(r.contacted_at).getTime(),
+    type:r.contact_type
+  })):[];
+
   if(currentUser.rawRole==="seller"){
     const {data:teamRows,error:tErr}=await sb.from("lead_dashboard").select("*").eq("organization_id",currentUser.organization_id).eq("store_id",currentUser.store_id).order("updated_at",{ascending:false});
     if(!tErr&&teamRows){
@@ -523,6 +539,7 @@ function startRealtime(){
     })
     .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},async()=>{await loadCloudData();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"lead_dashboard"},async()=>{await loadCloudData();renderAll()})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"lead_contact_events"},async()=>{await loadCloudData();renderAll()})
     .subscribe();
 }
 async function confirmReceptionAttendance(){
@@ -705,7 +722,7 @@ function dayStart(ts=Date.now()){const d=new Date(ts);d.setHours(0,0,0,0);return
 function periodStart(p){if(p==="geral")return 0;if(p==="hoje")return dayStart();const d=new Date();if(p==="semana"){const n=d.getDay()||7;d.setDate(d.getDate()-n+1);d.setHours(0,0,0,0);return d.getTime()}d.setDate(1);d.setHours(0,0,0,0);return d.getTime()}
 function metricClients(){return currentUser&&currentUser.rawRole==="seller"?teamClients:clients}
 function byPeriod(p=period){const start=periodStart(p);return metricClients().filter(c=>Number(c.dataContato||c.criadoEm||0)>=start)}
-function todayFor(id){return metricClients().filter(c=>c.vendedorId===id&&c.dataContato>=dayStart()&&c.dataContato<=dayEnd()).length}
+function todayFor(id){return contactEvents.filter(e=>e.sellerId===String(id)&&e.contactedAt>=dayStart()&&e.contactedAt<=dayEnd()).length}
 function isForgotten(c){if(["Vendido","Perdido"].includes(status(c)))return false;return Date.now()-Number(c.ultimaAtualizacao||c.dataContato||c.criadoEm||0)>172800000}
 function normalizePhone(v){let n=String(v||"").replace(/\D/g,"");if(n.startsWith("55")&&n.length>11)n=n.slice(2);return n}
 function duplicatePhone(v){const n=normalizePhone(v);return clients.find(c=>normalizePhone(c.telefone)===n)}
@@ -731,7 +748,7 @@ function renderRanking(){
   const all=metricClients(),start=periodStart(period);
   const data=sellers.map(s=>{
     const sellerAll=all.filter(c=>c.vendedorId===s.id);
-    const periodContacts=sellerAll.filter(c=>Number(c.dataContato||c.criadoEm||0)>=start);
+    const periodContacts=contactEvents.filter(e=>e.sellerId===s.id&&e.contactedAt>=start);
     const pontos=sellerAll.reduce((a,c)=>a+scoreForPeriod(c,period),0);
     const vendas=sellerAll.filter(c=>soldInPeriod(c,period)).length;
     return {...s,total:periodContacts.length,pontos,vendas}
@@ -748,7 +765,7 @@ function renderRanking(){
   document.getElementById("ranking").innerHTML=data.length?data.map((s,i)=>
     '<div class="seller"><div class="rank">'+(["🥇","🥈","🥉"][i]||((i+1)+"º"))+'</div>'+
     '<div class="photo-wrap" onclick="openPhoto(\''+s.id+'\')"><img class="photo" src="'+s.foto+'" onerror="this.onerror=null;this.src=fallback(\''+esc(s.nome)+'\')"></div>'+
-    '<div><div class="name">'+esc(s.nome)+'</div><div class="desc">'+s.total+' clientes • '+s.vendas+' vendas</div><span class="score">'+s.pontos+' pontos</span></div>'+
+    '<div><div class="name">'+esc(s.nome)+'</div><div class="desc">'+s.total+' contatos • '+s.vendas+' vendas</div><span class="score">'+s.pontos+' pontos</span></div>'+
     '<div class="points"><strong>'+s.pontos+'</strong><span>pontos</span></div>'+
     ((isManager()||String(s.id)===String(mySellerId()))?'<button class="btn" onclick="openClient(\''+s.id+'\')">+ Cliente</button>':'')+
     '</div>').join(""):'<div class="empty">Nenhum vendedor.</div>'
@@ -832,6 +849,29 @@ async function loadClientComments(leadId){
     return '<div class="comment-item"><div class="comment-meta">'+esc(authorName)+' • '+dt.toLocaleDateString("pt-BR")+' '+dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div class="comment-text">'+esc(x.comment)+'</div></div>'
   }).join("")
 }
+
+function renderClientContactHistory(leadId){
+  const box=document.getElementById("clientContactHistory");if(!box)return;
+  const rows=contactEvents.filter(e=>String(e.leadId)===String(leadId)).sort((a,b)=>b.contactedAt-a.contactedAt);
+  if(!rows.length){box.innerHTML='<div class="empty">Nenhum contato registrado.</div>';return}
+  box.innerHTML=rows.map(e=>{
+    const who=sellers.find(s=>String(s.id)===String(e.contactedBy));
+    const dt=new Date(e.contactedAt);
+    const label=e.type==="initial"?"Primeiro contato":"Contatado novamente";
+    return '<div class="comment-item"><div class="comment-meta">'+esc(label)+' • '+dt.toLocaleDateString("pt-BR")+' '+dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div class="comment-text">'+esc(who?who.nome:(e.contactedBy===String(currentUser.id)?currentUser.nome:"Usuário"))+'</div></div>'
+  }).join("")
+}
+async function registerRepeatContact(id){
+  if(!currentUser||currentUser.rawRole!=="seller")return;
+  const lead=clients.find(x=>String(x.id)===String(id));
+  if(!lead||String(lead.vendedorId)!==String(mySellerId()))return alert("Você só pode registrar contato nos seus próprios clientes.");
+  if(!confirm("Registrar um novo contato com "+lead.nome+" agora?\n\nA data e hora serão gravadas e não poderão ser alteradas ou excluídas."))return;
+  const {data,error}=await sb.rpc("register_repeat_contact",{p_lead_id:String(id)});
+  if(error)return alert("Não foi possível registrar o contato: "+error.message);
+  const r=Array.isArray(data)?data[0]:data;
+  await loadCloudData();renderAll();
+  alert((r&&r.message)||"Novo contato registrado com sucesso.")
+}
 async function openClientDetail(id){
   const lead=clients.find(x=>String(x.id)===String(id));
   if(!clientDetailCanOpen(lead))return alert("Você não tem acesso aos dados deste cliente.");
@@ -870,6 +910,7 @@ async function openClientDetail(id){
 
   if(commentInput)commentInput.value="";
   modal.classList.add("show");
+  renderClientContactHistory(lead.id);
   await loadClientComments(lead.id);
 }
 async function addClientComment(){
@@ -1019,7 +1060,7 @@ function eventInRange(ts,b){return !!ts&&Number(ts)>=b.start&&Number(ts)<=b.end}
 function sellerPeriodMetrics(sellerId){
   const b=sellerReportBounds();
   const rows=clients.filter(c=>String(c.vendedorId)===String(sellerId));
-  const contacted=rows.filter(c=>eventInRange(c.dataContato||c.criadoEm,b));
+  const contacted=contactEvents.filter(e=>String(e.sellerId)===String(sellerId)&&eventInRange(e.contactedAt,b));
   const confirmed=rows.filter(c=>eventInRange(c.confirmedAt,b));
   const showed=rows.filter(c=>eventInRange(c.showedAt,b));
   const sold=rows.filter(c=>eventInRange(c.soldAt,b));
@@ -1280,12 +1321,19 @@ function renderClients(){
       : phone;
     const actions=canManage
       ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">🔁 Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">🗑 Excluir</button></div>'
-      : '-';
+      : (String(c.vendedorId)===String(mySellerId())?'<button class="icon-btn" onclick="registerRepeatContact(\''+c.id+'\')">📞 Contatado novamente</button>':'-');
     return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong style="cursor:pointer" onclick="openClientDetail(\''+c.id+'\')">'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+phoneHtml+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+(["Contatado","Confirmado"].concat(status(c)==="Compareceu"?["Compareceu"]:[]).concat(["Vendido","Perdido"])).map(x=>'<option '+(status(c)===x?"selected ":"")+(x==="Compareceu"?"disabled ":"")+'>'+x+'</option>').join("")+'</select></td><td>'+actions+'</td></tr>'
   }).join("");
   document.getElementById("clients").innerHTML=(canManage?'<div class="desc" style="margin:0 0 10px">Gestor: use WhatsApp para acompanhar o atendimento, ou as ações para transferir/excluir clientes.</div>':'')+'<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
 }
-function renderDaily(){const m={};metricClients().filter(c=>c.dataContato).forEach(c=>{const d=new Date(c.dataContato),k=d.toISOString().slice(0,10);m[k]=(m[k]||0)+1});const days=Object.keys(m).sort().reverse().slice(0,10);document.getElementById("daily").innerHTML=days.length?days.map(k=>{const[a,b,c]=k.split("-");return '<div class="day"><span>'+c+'/'+b+'/'+a+'</span><strong>'+m[k]+'</strong><span>clientes contatados</span></div>'}).join(""):'<div class="day"><span>Contatos por dia</span><strong>0</strong></div>'}
+function renderDaily(){
+  const m={};
+  contactEvents.forEach(e=>{const d=new Date(e.contactedAt),k=d.toISOString().slice(0,10);m[k]=(m[k]||0)+1});
+  const days=Object.keys(m).sort().reverse().slice(0,10);
+  document.getElementById("daily").innerHTML=days.length
+    ?days.map(k=>{const[a,b,c]=k.split("-");return '<div class="day"><span>'+c+'/'+b+'/'+a+'</span><strong>'+m[k]+'</strong><span>contatos realizados</span></div>'}).join("")
+    :'<div class="day"><span>Contatos por dia</span><strong>0</strong></div>'
+}
 function fillSellers(){clientSeller.innerHTML=sellers.map(s=>'<option value="'+s.id+'">'+esc(s.nome)+'</option>').join("")}
 function openSeller(){if(!isManager())return alert("Apenas o gestor pode cadastrar vendedores.");openUsers();newUserRole.value="vendedor";toggleUserSeller()}function openClient(id=null){if(!sellers.length){if(isManager())return openSeller();return alert("Seu usuário ainda não está vinculado como vendedor.")}fillSellers();if(!isManager()){clientSeller.value=mySellerId();clientSellerField.style.display="none"}else{clientSellerField.style.display="block";if(id)clientSeller.value=String(id)}clientModal.classList.add("show")}function closeModal(id){document.getElementById(id).classList.remove("show")}
 function saveSeller(){openUsers();closeModal("sellerModal")}
