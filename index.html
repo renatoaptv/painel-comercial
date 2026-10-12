@@ -348,7 +348,9 @@ async function loadCloudData(){
         motivoPerda:"",
         criadoEm:r.contact_at?new Date(r.contact_at).getTime():new Date(r.updated_at).getTime(),
         ultimaAtualizacao:new Date(r.updated_at).getTime(),
-        soldAt:r.sold_at?new Date(r.sold_at).getTime():null
+        soldAt:r.sold_at?new Date(r.sold_at).getTime():null,
+      showedAt:r.showed_at?new Date(r.showed_at).getTime():null,
+        showedAt:r.showed_at?new Date(r.showed_at).getTime():null
       }));
     }else teamClients=[];
   }else{
@@ -583,8 +585,8 @@ function renderLastSale(){
   lastSaleScope.textContent=currentUser.rawRole==="seller"?"Venda mais recente da equipe":(currentUser.rawRole==="manager"?"Venda mais recente da loja":"Venda mais recente da rede");
 }
 function renderRanking(){const list=byPeriod().map(v=>v);const data=sellers.map(s=>{const cs=list.filter(c=>c.vendedorId===s.id);return{...s,total:cs.length,pontos:cs.reduce((a,c)=>a+pts(c),0),vendas:count("Vendido",cs)}}).sort((a,b)=>b.pontos-a.pontos||b.vendas-a.vendas||b.total-a.total);sellerCount.textContent=sellers.length+" vendedores";const leader=data[0];if(leader&&leader.pontos>0){leaderName.textContent=leader.nome;leaderScore.textContent=leader.pontos+" pontos • "+leader.vendas+" vendas";leaderPhoto.src=leader.foto||fallback(leader.nome)}else{leaderName.textContent="-";leaderScore.textContent="0 pontos";leaderPhoto.src=fallback("L")}document.getElementById("ranking").innerHTML=data.length?data.map((s,i)=>'<div class="seller"><div class="rank">'+(["🥇","🥈","🥉"][i]||((i+1)+"º"))+'</div><div class="photo-wrap" onclick="openPhoto(\''+s.id+'\')"><img class="photo" src="'+s.foto+'" onerror="this.onerror=null;this.src=fallback(\''+esc(s.nome)+'\')"></div><div><div class="name">'+esc(s.nome)+'</div><div class="desc">'+s.total+' clientes • '+s.vendas+' vendas</div><span class="score">'+s.pontos+' pontos</span></div><div class="points"><strong>'+s.pontos+'</strong><span>pontos</span></div><button class="btn" onclick="openClient(\''+s.id+'\')">+ Cliente</button></div>').join(""):'<div class="empty">Nenhum vendedor.</div>'}
-function renderFunnel(){const mc=metricClients(),a=count("Contatado",mc),b=count("Confirmado",mc),c=count("Compareceu",mc),d=count("Vendido",mc);kContacted.textContent=fContacted.textContent=a;kConfirmed.textContent=fConfirmed.textContent=b;kShowed.textContent=fShowed.textContent=c;kSold.textContent=fSold.textContent=d;conversion.textContent=(mc.length?d/mc.length*100:0).toFixed(1)+"%"}
-function renderSmart(){const goal=sellers.reduce((a,s)=>a+(Number(s.metaDiaria)||25),0),done=sellers.reduce((a,s)=>a+todayFor(s.id),0);document.getElementById("teamGoal").textContent=(goal?Math.min(100,done/goal*100):0).toFixed(0)+"%";document.getElementById("teamGoalDetail").textContent=done+" de "+goal+" contatos";document.getElementById("forgotten").textContent=clients.filter(isForgotten).length;document.getElementById("followToday").textContent=clients.filter(c=>c.proximoFollowup>=dayStart()&&c.proximoFollowup<=dayEnd()&&!["Vendido","Perdido"].includes(status(c))).length;const mc=metricClients(),confirmed=mc.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,showed=mc.filter(c=>["Compareceu","Vendido"].includes(status(c))).length;document.getElementById("showRate").textContent=(confirmed?showed/confirmed*100:0).toFixed(1)+"%"}
+function renderFunnel(){const mc=metricClients(),a=count("Contatado",mc),b=count("Confirmado",mc),c=mc.filter(x=>x.showedAt||status(x)==="Compareceu").length,d=mc.filter(x=>x.soldAt||status(x)==="Vendido").length;kContacted.textContent=fContacted.textContent=a;kConfirmed.textContent=fConfirmed.textContent=b;kShowed.textContent=fShowed.textContent=c;kSold.textContent=fSold.textContent=d;conversion.textContent=(mc.length?d/mc.length*100:0).toFixed(1)+"%"}
+function renderSmart(){const goal=sellers.reduce((a,s)=>a+(Number(s.metaDiaria)||25),0),done=sellers.reduce((a,s)=>a+todayFor(s.id),0);document.getElementById("teamGoal").textContent=(goal?Math.min(100,done/goal*100):0).toFixed(0)+"%";document.getElementById("teamGoalDetail").textContent=done+" de "+goal+" contatos";document.getElementById("forgotten").textContent=clients.filter(isForgotten).length;document.getElementById("followToday").textContent=clients.filter(c=>c.proximoFollowup>=dayStart()&&c.proximoFollowup<=dayEnd()&&!["Vendido","Perdido"].includes(status(c))).length;const mc=metricClients(),confirmed=mc.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,showed=mc.filter(c=>c.showedAt||status(c)==="Compareceu").length;document.getElementById("showRate").textContent=(confirmed?showed/confirmed*100:0).toFixed(1)+"%"}
 function streak(s){const meta=Number(s.metaDiaria)||25,days={};metricClients().filter(c=>c.vendedorId===s.id&&c.dataContato).forEach(c=>{const d=new Date(c.dataContato),k=d.toISOString().slice(0,10);days[k]=(days[k]||0)+1});let n=0,d=new Date();for(let i=0;i<365;i++){const k=d.toISOString().slice(0,10);if((days[k]||0)>=meta)n++;else if(i>0)break;d.setDate(d.getDate()-1)}return n}
 
 function clientDetailCanOpen(lead){
@@ -675,7 +677,7 @@ function renderPerformance(){
       sold=count("Vendido",cs),
       conv=cs.length?sold/cs.length*100:0,
       conf=cs.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,
-      show=cs.filter(c=>["Compareceu","Vendido"].includes(status(c))).length,
+      show=cs.filter(c=>c.showedAt||status(c)==="Compareceu").length,
       rate=conf?show/conf*100:0;
 
     const canSeeNames=isManager()||String(s.id)===String(mySellerId());
