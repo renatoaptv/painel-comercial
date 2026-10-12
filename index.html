@@ -1012,7 +1012,7 @@ function generateSellerPerformancePdf(){
   doc.autoTable({
     startY:36,
     margin:{left:8,right:8},
-    head:[["Vendedor","Contatos","Confirmados","Compareceram","Vendidos","Perdidos","Contato→Conf.","Conf.→Comp.","Comp.→Venda","Conversão final"]],
+    head:[["Vendedor","Contatos","Confirmados","Compareceram","Vendidos","Perdidos","Contato -> Conf.","Conf. -> Comp.","Comp. -> Venda","Conversão final"]],
     body:rows.map(x=>[
       x.seller.nome,
       String(x.m.contacted),
@@ -1045,7 +1045,7 @@ function generateSellerPerformancePdf(){
     doc.text(x.seller.nome,10,y); y+=5;
     doc.setFont("helvetica","normal");doc.setFontSize(8);
     doc.text(
-      "Funil: "+x.m.contacted+" contatos → "+x.m.confirmed+" confirmados → "+x.m.showed+" compareceram → "+x.m.sold+" vendidos | "+x.m.lost+" perdidos",
+      "Funil: "+x.m.contacted+" contatos -> "+x.m.confirmed+" confirmados -> "+x.m.showed+" compareceram -> "+x.m.sold+" vendidos | "+x.m.lost+" perdidos",
       10,y
     ); y+=5;
     doc.text(
