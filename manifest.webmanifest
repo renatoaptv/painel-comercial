@@ -1,0 +1,10 @@
+{
+  "name": "Prospecta Real",
+  "short_name": "Prospecta",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "description": "Painel comercial e acompanhamento de vendas."
+}
