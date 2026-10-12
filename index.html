@@ -448,6 +448,11 @@ let clients=[];
 let teamClients=[];
 let contactEvents=[];
 let managerNotifications=[];
+let managerNotificationSeenIds=new Set();
+let managerNotificationInitialized=false;
+let managerNotificationQueue=[];
+let managerNotificationToastTimer=null;
+let managerNotificationRefreshTimer=null;
 let users=[];
 let currentUser=null;
 let realtimeChannel=null;
@@ -539,17 +544,10 @@ async function loadCloudData(){
   })):[];
   if(isManager()){
     const {data:notifRows,error:notifErr}=await sb.from("manager_notifications").select("*").eq("recipient_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
-    managerNotifications=!notifErr&&notifRows?notifRows.map(n=>({
-      id:String(n.id),
-      title:n.title||"Nova informação",
-      body:n.body||"",
-      leadId:String(n.lead_id),
-      sellerId:String(n.seller_id),
-      createdAt:new Date(n.created_at).getTime(),
-      readAt:n.read_at?new Date(n.read_at).getTime():null
-    })):[];
+    if(!notifErr&&notifRows)managerNotifications=notifRows.map(toManagerNotification);
   }else managerNotifications=[];
   updateManagerNotificationBadge();
+  announceNewManagerNotifications();
 
   if(currentUser.rawRole==="seller"){
     const {data:teamRows,error:tErr}=await sb.from("lead_dashboard").select("*").eq("organization_id",currentUser.organization_id).eq("store_id",currentUser.store_id).order("updated_at",{ascending:false});
@@ -642,11 +640,8 @@ function startRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},async()=>{await loadCloudData();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"lead_dashboard"},async()=>{await loadCloudData();renderAll()})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"lead_contact_events"},async()=>{await loadCloudData();renderAll()})
-    .on("postgres_changes",{event:"INSERT",schema:"public",table:"manager_notifications",filter:"recipient_id=eq."+currentUser.id},async(payload)=>{
-      if(!isManager())return;
-      await loadCloudData();renderAll();
-      const n=managerNotifications.find(x=>x.id===String(payload.new.id));
-      showManagerNotificationToast(n)
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"manager_notifications",filter:"recipient_id=eq."+currentUser.id},async()=>{
+      if(isManager())await refreshManagerNotificationsFromCloud();
     })
     .subscribe();
 }
@@ -770,15 +765,33 @@ async function showApp(){
   document.body.classList.toggle("manager-on",isManager());
   sessionName.textContent=currentUser.nome;
   sessionRole.textContent=isManager()?"GESTOR":"VENDEDOR";
+  managerNotificationInitialized=false;
+  managerNotificationSeenIds.clear();
+  managerNotificationQueue.length=0;
   await loadCloudData();
   renderAll();
   startRealtime();
+  if(managerNotificationRefreshTimer)clearInterval(managerNotificationRefreshTimer);
+  managerNotificationRefreshTimer=null;
   if(isManager()){
+    managerNotificationRefreshTimer=setInterval(()=>{
+      if(!document.hidden)refreshManagerNotificationsFromCloud();
+    },30000);
     await autoRepairPushRegistration();
     syncPushButton();
   }
 }
-async function logout(){if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null}await sb.auth.signOut();currentUser=null;showLogin()}
+async function logout(){
+  if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null}
+  if(managerNotificationRefreshTimer){clearInterval(managerNotificationRefreshTimer);managerNotificationRefreshTimer=null}
+  if(managerNotificationToastTimer){clearTimeout(managerNotificationToastTimer);managerNotificationToastTimer=null}
+  managerNotificationQueue.length=0;
+  managerNotificationSeenIds.clear();
+  managerNotificationInitialized=false;
+  await sb.auth.signOut();
+  currentUser=null;
+  showLogin()
+}
 async function openUsers(){
   if(!isManager())return;
   await loadUsersFromCloud();
@@ -1071,6 +1084,48 @@ function renderClientContactHistory(leadId){
   }).join("")
 }
 
+function toManagerNotification(n){
+  return {
+    id:String(n.id),
+    title:n.title||"Nova informação",
+    body:n.body||"",
+    leadId:String(n.lead_id),
+    sellerId:String(n.seller_id),
+    createdAt:new Date(n.created_at).getTime(),
+    readAt:n.read_at?new Date(n.read_at).getTime():null
+  }
+}
+function announceNewManagerNotifications(){
+  if(!isManager())return;
+  if(!managerNotificationInitialized){
+    managerNotificationSeenIds=new Set(managerNotifications.map(n=>n.id));
+    managerNotificationInitialized=true;
+    return;
+  }
+  const fresh=managerNotifications.filter(n=>!managerNotificationSeenIds.has(n.id));
+  managerNotifications.forEach(n=>managerNotificationSeenIds.add(n.id));
+  fresh.sort((a,b)=>a.createdAt-b.createdAt).forEach(showManagerNotificationToast);
+  const dialog=document.getElementById("managerNotificationsModal");
+  if(dialog&&dialog.classList.contains("show"))renderManagerNotifications();
+}
+async function refreshManagerNotificationsFromCloud(){
+  if(!isManager())return;
+  const uid=currentUser.id;
+  const {data,error}=await sb.from("manager_notifications").select("*")
+    .eq("recipient_id",uid).order("created_at",{ascending:false}).limit(100);
+  if(error){console.warn("Falha ao atualizar notificações",error.message);return}
+  if(!currentUser||currentUser.id!==uid)return;
+  managerNotifications=(data||[]).map(toManagerNotification);
+  updateManagerNotificationBadge();
+  announceNewManagerNotifications();
+}
+window.addEventListener("focus",()=>{
+  if(isManager())refreshManagerNotificationsFromCloud();
+});
+document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden&&isManager())refreshManagerNotificationsFromCloud();
+});
+
 function updateManagerNotificationBadge(){
   const badge=document.getElementById("managerNotificationBadge");
   if(!badge)return;
@@ -1126,12 +1181,23 @@ async function markAllManagerNotificationsRead(){
   renderManagerNotifications()
 }
 function showManagerNotificationToast(n){
+  if(!n)return;
+  managerNotificationQueue.push(n);
+  if(managerNotificationToastTimer)return;
+  showNextManagerNotificationToast();
+}
+function showNextManagerNotificationToast(){
   const box=document.getElementById("managerNotificationToast");
-  if(!box||!n)return;
+  if(!box){managerNotificationToastTimer=null;return}
+  const n=managerNotificationQueue.shift();
+  if(!n){box.classList.remove("show");managerNotificationToastTimer=null;return}
   box.innerHTML='<strong>'+esc(n.title||"🔔 Nova informação")+'</strong>'+
     '<div class="desc" style="margin-top:5px">'+esc(n.body||"")+'</div>';
   box.classList.add("show");
-  setTimeout(()=>box.classList.remove("show"),7000)
+  managerNotificationToastTimer=setTimeout(()=>{
+    box.classList.remove("show");
+    managerNotificationToastTimer=setTimeout(showNextManagerNotificationToast,250);
+  },6000)
 }
 function openRepeatContactModal(id){
   if(!currentUser||currentUser.rawRole!=="seller")return;
