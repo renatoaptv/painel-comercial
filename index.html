@@ -675,7 +675,7 @@ async function confirmReceptionAttendance(){
   if(input){input.value="";input.focus()}
 }
 
-const VAPID_PUBLIC_KEY="BLsmh3-_SGP00MqtlJMsID8x1lccqqcsGTORAcM4kuXlRV11z-WF1YEg699D8-NTpuVkH_2u5OcdVYqyoXw3tC0";
+const VAPID_PUBLIC_KEY="BAqBtRxBPKzK4U6cVzT5CHVeSx3Y3CWT7BN5xN3QnwPLuaEu4OP5BUGO4eTY7w-5Q89fVUsNtDVD7sM_45sRymo";
 function urlBase64ToUint8Array(base64String){
   const padding="=".repeat((4-base64String.length%4)%4);
   const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
@@ -717,19 +717,42 @@ async function enablePushNotifications(){
       userVisibleOnly:true,
       applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
     });
-    const j=sub.toJSON();
-    const {error}=await sb.rpc("save_push_subscription",{
-      p_endpoint:j.endpoint,
-      p_p256dh:(j.keys&&j.keys.p256dh)||"",
-      p_auth:(j.keys&&j.keys.auth)||"",
-      p_user_agent:navigator.userAgent
-    });
-    if(error)throw error;
+    await persistPushSubscription(sub);
     await syncPushButton();
     alert("Notificações push ativadas neste dispositivo.")
   }catch(e){
     console.error(e);
     alert("Não foi possível ativar o push: "+((e&&e.message)||e))
+  }
+}
+
+async function persistPushSubscription(sub){
+  const j=sub.toJSON();
+  const {error}=await sb.rpc("save_push_subscription",{
+    p_endpoint:j.endpoint,
+    p_p256dh:(j.keys&&j.keys.p256dh)||"",
+    p_auth:(j.keys&&j.keys.auth)||"",
+    p_user_agent:navigator.userAgent
+  });
+  if(error)throw error;
+}
+async function autoRepairPushRegistration(){
+  if(!isManager())return;
+  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window))return;
+  if(Notification.permission!=="granted")return;
+  try{
+    const reg=await registerPushWorker();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    await persistPushSubscription(sub);
+    await syncPushButton();
+  }catch(e){
+    console.error("Falha ao reparar inscrição push",e);
   }
 }
 async function showApp(){
@@ -750,7 +773,10 @@ async function showApp(){
   await loadCloudData();
   renderAll();
   startRealtime();
-  if(isManager())syncPushButton();
+  if(isManager()){
+    await autoRepairPushRegistration();
+    syncPushButton();
+  }
 }
 async function logout(){if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null}await sb.auth.signOut();currentUser=null;showLogin()}
 async function openUsers(){
