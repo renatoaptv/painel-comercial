@@ -663,7 +663,7 @@ async function confirmReceptionAttendance(){
   if(input){input.value="";input.focus()}
 }
 
-const VAPID_PUBLIC_KEY="BNqc2oKYPB5T9sVDNMZKva1GRI6t9leeYit_COZ83OR8K2i8XzfH3yLMf8uLuO8Iup8h8PBrwcUk5cPuSCD7wOo";
+const VAPID_PUBLIC_KEY="BLsmh3-_SGP00MqtlJMsID8x1lccqqcsGTORAcM4kuXlRV11z-WF1YEg699D8-NTpuVkH_2u5OcdVYqyoXw3tC0";
 function urlBase64ToUint8Array(base64String){
   const padding="=".repeat((4-base64String.length%4)%4);
   const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
@@ -700,12 +700,11 @@ async function enablePushNotifications(){
   try{
     const reg=await registerPushWorker();
     let sub=await reg.pushManager.getSubscription();
-    if(!sub){
-      sub=await reg.pushManager.subscribe({
-        userVisibleOnly:true,
-        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      })
-    }
+    if(sub)await sub.unsubscribe();
+    sub=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
     const j=sub.toJSON();
     const {error}=await sb.rpc("save_push_subscription",{
       p_endpoint:j.endpoint,
