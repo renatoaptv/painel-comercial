@@ -145,6 +145,17 @@
 .insight-detail-table{overflow:auto;max-height:320px;border:1px solid var(--line);border-radius:12px;margin-top:12px}
 .insight-detail-table table{min-width:980px}
 @media(max-width:900px){.insight-grid{grid-template-columns:repeat(2,1fr)}.insight-columns{grid-template-columns:1fr}}
+
+.notification-btn{position:relative}
+.notification-badge{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;border-radius:999px;background:#ef4444;color:white;font-size:10px;font-weight:800;display:none;align-items:center;justify-content:center;padding:0 5px;border:2px solid #0b1727}
+.notification-item{padding:12px;border-bottom:1px solid var(--line);cursor:pointer}
+.notification-item.unread{background:rgba(56,189,248,.08)}
+.notification-item:last-child{border-bottom:0}
+.notification-item .notification-title{font-weight:800;margin-bottom:4px}
+.notification-toast{position:fixed;right:18px;bottom:18px;z-index:9999;width:min(380px,calc(100vw - 36px));background:#0d1b2d;border:1px solid #38bdf8;border-radius:14px;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:none}
+.notification-toast.show{display:block}
+.repeat-example{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:10px;margin:8px 0;font-size:11px;color:#cbd5e1}
+.repeat-example strong{display:block;color:#fff;margin-bottom:3px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -195,6 +206,7 @@
 <div class="hero-leader"><img id="leaderPhoto" src=""><div><span>🏆 Líder atual</span><strong id="leaderName">-</strong><small id="leaderScore">0 pontos</small></div></div>
 <div class="actions">
   <div class="user-chip"><div><b id="sessionName">-</b><span id="sessionRole">-</span></div></div>
+  <button class="btn secondary manager-only notification-btn" onclick="openManagerNotifications()">🔔 Notificações<span id="managerNotificationBadge" class="notification-badge">0</span></button>
   <button class="btn secondary manager-only" onclick="openUsers()">Usuários</button>
   <button class="btn secondary manager-only" onclick="openManagerClients()">👥 Clientes</button>
   <button class="btn secondary manager-only" onclick="openSellerReport()">📊 Relatório vendedores</button>
@@ -338,36 +350,29 @@
   <div id="managerClientsList" class="manager-clients-table"></div>
 </div></div>
 
-<div class="modal" id="repeatContactModal"><div class="modal-box" style="width:min(96%,820px)">
+<div class="modal" id="repeatContactModal"><div class="modal-box" style="width:min(96%,720px)">
   <div class="modal-head"><div><h2>📞 Contatado novamente</h2><div class="desc" id="repeatContactSubtitle">Registrar novo atendimento</div></div><button class="x" onclick="closeModal('repeatContactModal')">×</button></div>
   <input type="hidden" id="repeatContactLeadId">
-  <div class="repeat-contact-note">Este contato ficará registrado com data e hora e não poderá ser alterado ou excluído pelo vendedor.</div>
-  <div class="repeat-contact-grid">
-    <div class="field"><label>Veículo / modelo de interesse</label><input id="repeatVehicleInterest" placeholder="Ex.: T-Cross Highline"></div>
-    <div class="field"><label>Temperatura do cliente</label><select id="repeatTemperature"><option value="">Selecione</option><option>🔥 Quente</option><option>🟡 Morno</option><option>❄️ Frio</option></select></div>
+  <div class="repeat-contact-note">Descreva o que aconteceu na conversa. O registro ficará salvo com data, hora e vendedor e não poderá ser alterado ou excluído.</div>
 
-    <div class="field"><label>Tem veículo para avaliação?</label><select id="repeatHasTrade" onchange="toggleRepeatTradeFields()"><option value="false">Não</option><option value="true">Sim</option></select></div>
-    <div class="field repeat-trade-field" style="display:none"><label>Placa do veículo</label><input id="repeatTradePlate" placeholder="ABC1D23"></div>
-    <div class="field repeat-trade-field" style="display:none"><label>Valor da avaliação (R$)</label><input id="repeatTradeValue" inputmode="decimal" placeholder="Ex.: 75000"></div>
+  <div class="repeat-example"><strong>Exemplo — usado / avaliação</strong>Cliente tem um Ford Ka, FIPE de R$ 60 mil. Avaliamos em R$ 30 mil, mas ele quer uma volta de R$ 50 mil. Placa do usado: ABC1D23.</div>
+  <div class="repeat-example"><strong>Exemplo — parcela / entrada</strong>Cliente quer parcela de até R$ 2.000, tem R$ 20 mil de entrada e pediu uma simulação antes de vir à loja.</div>
+  <div class="repeat-example"><strong>Exemplo — preço pelo WhatsApp</strong>Cliente mora longe e pediu o preço pelo WhatsApp antes de sair de casa. Está comparando com outro veículo e disse que retorna amanhã.</div>
+  <div class="repeat-example"><strong>Exemplo — motivo de não comparecer</strong>Cliente confirmou, mas não conseguiu vir por falta de tempo. Pediu novo contato amanhã às 10h para reagendar.</div>
 
-    <div class="field"><label>Parcela desejada (R$)</label><input id="repeatDesiredPayment" inputmode="decimal" placeholder="Ex.: 2000"></div>
-    <div class="field"><label>Valor de volta desejado (R$)</label><input id="repeatReturnAmount" inputmode="decimal" placeholder="Ex.: 30000"></div>
-    <div class="field"><label>Entrada disponível (R$)</label><input id="repeatEntryAmount" inputmode="decimal" placeholder="Ex.: 20000"></div>
-
-    <div class="field"><label>Por que ainda não veio à loja?</label><select id="repeatReasonNotVisit"><option value="">Selecione</option><option>Sem tempo</option><option>Mora longe</option><option>Está pesquisando</option><option>Aguardando dinheiro / salário</option><option>Aguardando vender o carro</option><option>Depende de outra pessoa</option><option>Não respondeu</option><option>Sem interesse no momento</option><option>Outro</option></select></div>
-
-    <div class="field"><label>Por que passamos preço pelo WhatsApp?</label><select id="repeatReasonPrice"><option value="">Selecione</option><option>Não passamos preço pelo WhatsApp</option><option>Cliente exigiu preço antes de ir</option><option>Mora longe</option><option>Comparação com concorrente</option><option>Cliente já conhecia o carro</option><option>Negociação avançada</option><option>Outro</option></select></div>
-
-    <div class="field"><label>Objeção principal</label><select id="repeatObjection"><option value="">Selecione</option><option>Preço</option><option>Parcela</option><option>Entrada</option><option>Avaliação do usado</option><option>Taxa / financiamento</option><option>Prazo de entrega</option><option>Concorrência</option><option>Indecisão</option><option>Sem retorno</option><option>Outro</option></select></div>
-    <div class="field"><label>Concorrente citado</label><input id="repeatCompetitor" placeholder="Marca, modelo ou loja"></div>
-
-    <div class="field"><label>Próxima ação</label><select id="repeatNextAction"><option value="">Selecione</option><option>Ligar novamente</option><option>WhatsApp</option><option>Agendar visita</option><option>Aguardar avaliação</option><option>Aguardar aprovação de crédito</option><option>Aguardar retorno do cliente</option><option>Enviar proposta</option><option>Outro</option></select></div>
-    <div class="field"><label>Próximo contato</label><input id="repeatNextContact" type="datetime-local"></div>
-
-    <div class="field full"><label>Resumo / comentário do contato</label><textarea id="repeatNotes" rows="4" placeholder="Ex.: Cliente gostou do T-Cross, depende da avaliação do usado e quer parcela próxima de R$ 2.000."></textarea></div>
+  <div class="field" style="margin-top:14px">
+    <label>Comentário do novo contato</label>
+    <textarea id="repeatNotes" rows="7" placeholder="Escreva aqui tudo que for importante sobre a negociação, usado, FIPE, avaliação, placa, entrada, parcela, volta, motivo de não vir à loja, preço pelo WhatsApp, concorrente e próximo passo..."></textarea>
   </div>
   <div class="modal-actions"><button class="btn secondary" onclick="closeModal('repeatContactModal')">Cancelar</button><button class="btn" onclick="saveRepeatContact()">Salvar novo contato</button></div>
 </div></div>
+
+<div class="modal" id="managerNotificationsModal"><div class="modal-box" style="width:min(96%,760px)">
+  <div class="modal-head"><div><h2>🔔 Notificações</h2><div class="desc">Novas informações registradas pelos vendedores.</div></div><button class="x" onclick="closeModal('managerNotificationsModal')">×</button></div>
+  <div id="managerNotificationsList"><div class="empty">Nenhuma notificação.</div></div>
+  <div class="modal-actions"><button class="btn secondary" onclick="markAllManagerNotificationsRead()">Marcar todas como lidas</button></div>
+</div></div>
+<div id="managerNotificationToast" class="notification-toast"></div>
 
 <div class="modal" id="clientDetailModal"><div class="modal-box" style="width:min(96%,760px)">
   <div class="modal-head"><div><h2 id="clientDetailTitle">Cliente</h2><div class="desc" id="clientDetailSubtitle"></div></div><button class="x" onclick="closeModal('clientDetailModal')">×</button></div>
@@ -428,6 +433,7 @@ let prospectaWhatsappWindow=null;
 let clients=[];
 let teamClients=[];
 let contactEvents=[];
+let managerNotifications=[];
 let users=[];
 let currentUser=null;
 let realtimeChannel=null;
@@ -517,6 +523,19 @@ async function loadCloudData(){
     objection:r.objection||"",
     competitor:r.competitor||""
   })):[];
+  if(isManager()){
+    const {data:notifRows,error:notifErr}=await sb.from("manager_notifications").select("*").eq("recipient_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
+    managerNotifications=!notifErr&&notifRows?notifRows.map(n=>({
+      id:String(n.id),
+      title:n.title||"Nova informação",
+      body:n.body||"",
+      leadId:String(n.lead_id),
+      sellerId:String(n.seller_id),
+      createdAt:new Date(n.created_at).getTime(),
+      readAt:n.read_at?new Date(n.read_at).getTime():null
+    })):[];
+  }else managerNotifications=[];
+  updateManagerNotificationBadge();
 
   if(currentUser.rawRole==="seller"){
     const {data:teamRows,error:tErr}=await sb.from("lead_dashboard").select("*").eq("organization_id",currentUser.organization_id).eq("store_id",currentUser.store_id).order("updated_at",{ascending:false});
@@ -609,6 +628,12 @@ function startRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"profiles"},async()=>{await loadCloudData();renderAll()})
     .on("postgres_changes",{event:"*",schema:"public",table:"lead_dashboard"},async()=>{await loadCloudData();renderAll()})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"lead_contact_events"},async()=>{await loadCloudData();renderAll()})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"manager_notifications",filter:"recipient_id=eq."+currentUser.id},async(payload)=>{
+      if(!isManager())return;
+      await loadCloudData();renderAll();
+      const n=managerNotifications.find(x=>x.id===String(payload.new.id));
+      showManagerNotificationToast(n)
+    })
     .subscribe();
 }
 async function confirmReceptionAttendance(){
@@ -946,66 +971,24 @@ function renderClientContactHistory(leadId){
     '</div>'
   }).join("")
 }
-function toggleRepeatTradeFields(){
-  const show=document.getElementById("repeatHasTrade").value==="true";
-  document.querySelectorAll(".repeat-trade-field").forEach(x=>x.style.display=show?"block":"none")
-}
 function openRepeatContactModal(id){
   if(!currentUser||currentUser.rawRole!=="seller")return;
   const lead=clients.find(x=>String(x.id)===String(id));
   if(!lead||String(lead.vendedorId)!==String(mySellerId()))return alert("Você só pode registrar contato nos seus próprios clientes.");
   document.getElementById("repeatContactLeadId").value=lead.id;
   document.getElementById("repeatContactSubtitle").textContent=(lead.nome||"Cliente")+" • "+(lead.telefone||"");
-  document.getElementById("repeatVehicleInterest").value=lead.interesse||"";
-  document.getElementById("repeatTemperature").value="";
-  document.getElementById("repeatHasTrade").value="false";
-  document.getElementById("repeatTradePlate").value="";
-  document.getElementById("repeatTradeValue").value="";
-  document.getElementById("repeatDesiredPayment").value="";
-  document.getElementById("repeatReturnAmount").value="";
-  document.getElementById("repeatEntryAmount").value="";
-  document.getElementById("repeatReasonNotVisit").value="";
-  document.getElementById("repeatReasonPrice").value="";
-  document.getElementById("repeatObjection").value="";
-  document.getElementById("repeatCompetitor").value="";
-  document.getElementById("repeatNextAction").value="";
-  document.getElementById("repeatNextContact").value="";
   document.getElementById("repeatNotes").value="";
-  toggleRepeatTradeFields();
-  document.getElementById("repeatContactModal").classList.add("show")
-}
-function repeatMoneyValue(id){
-  const v=(document.getElementById(id).value||"").trim().replace(/\./g,"").replace(",",".");
-  if(!v)return null;
-  const n=Number(v);return Number.isFinite(n)?n:null
+  document.getElementById("repeatContactModal").classList.add("show");
+  setTimeout(()=>document.getElementById("repeatNotes")?.focus(),60)
 }
 async function saveRepeatContact(){
   if(!currentUser||currentUser.rawRole!=="seller")return;
   const id=document.getElementById("repeatContactLeadId").value;
   const lead=clients.find(x=>String(x.id)===String(id));
   if(!lead||String(lead.vendedorId)!==String(mySellerId()))return alert("Você só pode registrar contato nos seus próprios clientes.");
-  const nextRaw=document.getElementById("repeatNextContact").value;
-  const payload={
-    notes:document.getElementById("repeatNotes").value.trim(),
-    has_trade_in:document.getElementById("repeatHasTrade").value==="true",
-    trade_plate:document.getElementById("repeatTradePlate").value.trim(),
-    trade_value:repeatMoneyValue("repeatTradeValue"),
-    desired_payment:repeatMoneyValue("repeatDesiredPayment"),
-    return_amount:repeatMoneyValue("repeatReturnAmount"),
-    entry_amount:repeatMoneyValue("repeatEntryAmount"),
-    vehicle_interest:document.getElementById("repeatVehicleInterest").value.trim(),
-    reason_not_visit:document.getElementById("repeatReasonNotVisit").value,
-    reason_price_whatsapp:document.getElementById("repeatReasonPrice").value,
-    next_action:document.getElementById("repeatNextAction").value,
-    next_contact_at:nextRaw?new Date(nextRaw).toISOString():null,
-    temperature:document.getElementById("repeatTemperature").value,
-    objection:document.getElementById("repeatObjection").value,
-    competitor:document.getElementById("repeatCompetitor").value.trim()
-  };
-  if(!payload.notes&&!payload.next_action&&!payload.reason_not_visit&&!payload.objection){
-    return alert("Preencha pelo menos um resumo do contato, próxima ação, motivo de não comparecimento ou objeção.")
-  }
-  const {data,error}=await sb.rpc("register_repeat_contact",{p_lead_id:String(id),p_payload:payload});
+  const notes=document.getElementById("repeatNotes").value.trim();
+  if(!notes)return alert("Escreva um comentário sobre este novo contato.");
+  const {data,error}=await sb.rpc("register_repeat_contact",{p_lead_id:String(id),p_payload:{notes}});
   if(error)return alert("Não foi possível registrar o contato: "+error.message);
   closeModal("repeatContactModal");
   await loadCloudData();renderAll();
