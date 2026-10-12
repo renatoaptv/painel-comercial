@@ -941,11 +941,11 @@ function renderRanking(){
   const all=metricClients(),start=periodStart(period);
   const data=sellers.map(s=>{
     const sellerAll=all.filter(c=>c.vendedorId===s.id);
-    const periodContacts=contactEvents.filter(e=>e.sellerId===s.id&&e.contactedAt>=start);
+    const compareceram=sellerAll.filter(c=>c.showedAt&&c.showedAt>=start).length;
     const pontos=sellerAll.reduce((a,c)=>a+scoreForPeriod(c,period),0);
     const vendas=sellerAll.filter(c=>soldInPeriod(c,period)).length;
-    return {...s,total:periodContacts.length,pontos,vendas}
-  }).sort((a,b)=>b.pontos-a.pontos||b.vendas-a.vendas||b.total-a.total);
+    return {...s,compareceram,pontos,vendas}
+  }).sort((a,b)=>b.pontos-a.pontos||b.vendas-a.vendas||b.compareceram-a.compareceram);
   sellerCount.textContent=sellers.length+" vendedores";
   const leader=data[0];
   if(leader&&leader.pontos>0){
@@ -958,7 +958,7 @@ function renderRanking(){
   document.getElementById("ranking").innerHTML=data.length?data.map((s,i)=>
     '<div class="seller"><div class="rank">'+(["🥇","🥈","🥉"][i]||((i+1)+"º"))+'</div>'+
     '<div class="photo-wrap" onclick="openPhoto(\''+s.id+'\')"><img class="photo" src="'+s.foto+'" onerror="this.onerror=null;this.src=fallback(\''+esc(s.nome)+'\')"></div>'+
-    '<div><div class="name">'+esc(s.nome)+'</div><div class="desc">'+s.total+' contatos • '+s.vendas+' vendas</div><span class="score">'+s.pontos+' pontos</span></div>'+
+    '<div><div class="name">'+esc(s.nome)+'</div><div class="desc">'+s.compareceram+' compareceram • '+s.vendas+' vendas</div><span class="score">'+s.pontos+' pontos</span></div>'+
     '<div class="points"><strong>'+s.pontos+'</strong><span>pontos</span></div>'+
     ((isManager()||String(s.id)===String(mySellerId()))?'<button class="btn" onclick="openClient(\''+s.id+'\')">+ Cliente</button>':'')+
     '</div>').join(""):'<div class="empty">Nenhum vendedor.</div>'
