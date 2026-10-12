@@ -46,6 +46,20 @@
 .clients-hover-item span{display:block;font-size:10px;color:#9fb3c8;margin-top:2px}
 .clients-hover-empty{font-size:11px;color:#9fb3c8;padding:6px}
 @media(max-width:800px){.clients-metric .clients-hover-card{right:auto;left:0;width:250px}}
+
+.clients-hover-item.clickable{cursor:pointer;border-radius:9px}
+.clients-hover-item.clickable:hover{background:rgba(56,189,248,.08)}
+.client-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.client-detail-box{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:10px}
+.client-detail-box span{display:block;font-size:10px;color:#9fb3c8;margin-bottom:4px}
+.client-detail-box strong{font-size:12px;color:#fff;word-break:break-word}
+.comments-list{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto;margin-top:10px}
+.comment-item{background:#0d1b2d;border:1px solid #29415f;border-radius:12px;padding:10px}
+.comment-meta{font-size:10px;color:#9fb3c8;margin-bottom:5px}
+.comment-text{font-size:12px;color:#e5eef8;white-space:pre-wrap}
+.comment-compose{margin-top:12px}
+.comment-compose textarea{width:100%;min-height:80px}
+@media(max-width:700px){.client-detail-grid{grid-template-columns:1fr}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -168,6 +182,18 @@
 
   <div class="field"><label>Observações da venda</label><textarea id="saleNotes" rows="4"></textarea></div>
   <div class="modal-actions"><button class="btn secondary" onclick="closeModal('saleFormModal')">Cancelar</button><button class="btn" onclick="saveSaleFormAndPdf()">Concluir venda e gerar PDF</button></div>
+</div></div>
+
+<div class="modal" id="clientDetailModal"><div class="modal-box" style="width:min(96%,760px)">
+  <div class="modal-head"><div><h2 id="clientDetailTitle">Cliente</h2><div class="desc" id="clientDetailSubtitle"></div></div><button class="x" onclick="closeModal('clientDetailModal')">×</button></div>
+  <input type="hidden" id="clientDetailId">
+  <div id="clientDetailContent"></div>
+  <div style="margin-top:16px"><strong>Histórico de comentários</strong><div class="desc">Comentários registrados no atendimento.</div></div>
+  <div id="clientComments" class="comments-list"><div class="empty">Carregando...</div></div>
+  <div class="comment-compose">
+    <textarea id="newClientComment" placeholder="Adicionar novo comentário sobre este atendimento..."></textarea>
+    <div class="modal-actions"><button class="btn" onclick="addClientComment()">Adicionar comentário</button></div>
+  </div>
 </div></div>
 
 <div class="modal" id="transferClientModal"><div class="modal-box" style="width:min(94%,520px)">
@@ -531,6 +557,68 @@ function renderRanking(){const list=byPeriod().map(v=>v);const data=sellers.map(
 function renderFunnel(){const mc=metricClients(),a=count("Contatado",mc),b=count("Confirmado",mc),c=count("Compareceu",mc),d=count("Vendido",mc);kContacted.textContent=fContacted.textContent=a;kConfirmed.textContent=fConfirmed.textContent=b;kShowed.textContent=fShowed.textContent=c;kSold.textContent=fSold.textContent=d;conversion.textContent=(mc.length?d/mc.length*100:0).toFixed(1)+"%"}
 function renderSmart(){const goal=sellers.reduce((a,s)=>a+(Number(s.metaDiaria)||25),0),done=sellers.reduce((a,s)=>a+todayFor(s.id),0);document.getElementById("teamGoal").textContent=(goal?Math.min(100,done/goal*100):0).toFixed(0)+"%";document.getElementById("teamGoalDetail").textContent=done+" de "+goal+" contatos";document.getElementById("forgotten").textContent=clients.filter(isForgotten).length;document.getElementById("followToday").textContent=clients.filter(c=>c.proximoFollowup>=dayStart()&&c.proximoFollowup<=dayEnd()&&!["Vendido","Perdido"].includes(status(c))).length;const mc=metricClients(),confirmed=mc.filter(c=>["Confirmado","Compareceu","Vendido"].includes(status(c))).length,showed=mc.filter(c=>["Compareceu","Vendido"].includes(status(c))).length;document.getElementById("showRate").textContent=(confirmed?showed/confirmed*100:0).toFixed(1)+"%"}
 function streak(s){const meta=Number(s.metaDiaria)||25,days={};metricClients().filter(c=>c.vendedorId===s.id&&c.dataContato).forEach(c=>{const d=new Date(c.dataContato),k=d.toISOString().slice(0,10);days[k]=(days[k]||0)+1});let n=0,d=new Date();for(let i=0;i<365;i++){const k=d.toISOString().slice(0,10);if((days[k]||0)>=meta)n++;else if(i>0)break;d.setDate(d.getDate()-1)}return n}
+
+function clientDetailCanOpen(lead){
+  if(!lead||!currentUser)return false;
+  if(isManager())return true;
+  return currentUser.rawRole==="seller"&&String(lead.vendedorId)===String(mySellerId())
+}
+function clientDetailValue(v){return v===null||v===undefined||v===""?"-":String(v)}
+async function loadClientComments(leadId){
+  const box=document.getElementById("clientComments");
+  box.innerHTML='<div class="empty">Carregando comentários...</div>';
+  const {data,error}=await sb.from("lead_comments").select("id,lead_id,author_id,comment,created_at").eq("lead_id",leadId).order("created_at",{ascending:false});
+  if(error){box.innerHTML='<div class="empty">Não foi possível carregar os comentários.</div>';return}
+  if(!data||!data.length){box.innerHTML='<div class="empty">Nenhum comentário registrado.</div>';return}
+  box.innerHTML=data.map(x=>{
+    const author=sellers.find(s=>String(s.id)===String(x.author_id));
+    let authorName=author?author.nome:"Usuário";
+    if(String(x.author_id)===String(currentUser.id))authorName=currentUser.nome||authorName;
+    const dt=new Date(x.created_at);
+    return '<div class="comment-item"><div class="comment-meta">'+esc(authorName)+' • '+dt.toLocaleDateString("pt-BR")+' '+dt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div class="comment-text">'+esc(x.comment)+'</div></div>'
+  }).join("")
+}
+async function openClientDetail(id){
+  const lead=clients.find(x=>String(x.id)===String(id));
+  if(!clientDetailCanOpen(lead))return alert("Você não tem acesso aos dados deste cliente.");
+  const seller=sellers.find(x=>String(x.id)===String(lead.vendedorId));
+  clientDetailId.value=lead.id;
+  clientDetailTitle.textContent=lead.nome||"Cliente";
+  clientDetailSubtitle.textContent=(seller?seller.nome:"Vendedor")+" • "+status(lead);
+  const follow=lead.proximoFollowup?new Date(lead.proximoFollowup).toLocaleString("pt-BR"):"-";
+  const contact=lead.dataContato?new Date(lead.dataContato).toLocaleString("pt-BR"):"-";
+  clientDetailContent.innerHTML=
+    '<div class="client-detail-grid">'+
+      '<div class="client-detail-box"><span>Telefone</span><strong>'+esc(clientDetailValue(lead.telefone))+'</strong></div>'+
+      '<div class="client-detail-box"><span>Vendedor</span><strong>'+esc(clientDetailValue(seller?seller.nome:"-"))+'</strong></div>'+
+      '<div class="client-detail-box"><span>Etapa</span><strong>'+esc(status(lead))+'</strong></div>'+
+      '<div class="client-detail-box"><span>Origem</span><strong>'+esc(clientDetailValue(lead.origem))+'</strong></div>'+
+      '<div class="client-detail-box"><span>Interesse / veículo</span><strong>'+esc(clientDetailValue(lead.interesse))+'</strong></div>'+
+      '<div class="client-detail-box"><span>Último contato</span><strong>'+esc(contact)+'</strong></div>'+
+      '<div class="client-detail-box"><span>Próximo follow-up</span><strong>'+esc(follow)+'</strong></div>'+
+      '<div class="client-detail-box"><span>Observação atual</span><strong>'+esc(clientDetailValue(lead.observacao))+'</strong></div>'+
+    '</div>';
+  newClientComment.value="";
+  clientDetailModal.classList.add("show");
+  await loadClientComments(lead.id)
+}
+async function addClientComment(){
+  const id=String(clientDetailId.value||"");
+  const lead=clients.find(x=>String(x.id)===id);
+  if(!clientDetailCanOpen(lead))return alert("Você não tem acesso a este cliente.");
+  const comment=newClientComment.value.trim();
+  if(!comment)return alert("Digite o comentário.");
+  const {error}=await sb.from("lead_comments").insert({
+    lead_id:id,
+    organization_id:currentUser.organization_id,
+    store_id:lead.storeId||currentUser.store_id,
+    author_id:currentUser.id,
+    comment
+  });
+  if(error)return alert("Não foi possível salvar o comentário: "+error.message);
+  newClientComment.value="";
+  await loadClientComments(id)
+}
 function renderPerformance(){
   const mc=metricClients();
   document.getElementById("performance").innerHTML=sellers.map(s=>{
@@ -551,7 +639,7 @@ function renderPerformance(){
     const clientList=canSeeNames
       ? (namedClients.length
           ? namedClients.slice().sort((a,b)=>b.criadoEm-a.criadoEm).map(c=>
-              '<div class="clients-hover-item"><strong>'+esc(c.nome)+'</strong><span>'+esc(status(c))+(c.interesse?' • '+esc(c.interesse):'')+'</span></div>'
+              '<div class="clients-hover-item clickable" onclick="openClientDetail(\''+c.id+'\')"><strong>'+esc(c.nome)+'</strong><span>'+esc(status(c))+(c.interesse?' • '+esc(c.interesse):'')+'</span></div>'
             ).join("")
           : '<div class="clients-hover-empty">Nenhum cliente cadastrado.</div>')
       : '<div class="clients-hover-empty">Os dados dos clientes deste vendedor são restritos.</div>';
@@ -656,7 +744,7 @@ function renderClients(){
     const actions=canManage
       ? '<div class="manager-actions"><button class="icon-btn" onclick="openTransferClient(\''+c.id+'\')">🔁 Transferir</button><button class="icon-btn danger" onclick="deleteClient(\''+c.id+'\')">🗑 Excluir</button></div>'
       : '-';
-    return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong>'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+phoneHtml+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+["Contatado","Confirmado","Compareceu","Vendido","Perdido"].map(x=>'<option '+(status(c)===x?"selected":"")+'>'+x+'</option>').join("")+'</select></td><td>'+actions+'</td></tr>'
+    return '<tr><td>'+new Date(c.criadoEm).toLocaleDateString("pt-BR")+'</td><td><strong style="cursor:pointer" onclick="openClientDetail(\''+c.id+'\')">'+esc(c.nome)+'</strong>'+(c.observacao?'<div class="desc">'+esc(c.observacao)+'</div>':'')+(c.motivoPerda?'<div class="warn">Motivo: '+esc(c.motivoPerda)+'</div>':'')+(isForgotten(c)?'<div class="warn">⚠️ Sem movimentação há +2 dias</div>':'')+'</td><td>'+phoneHtml+'</td><td>'+esc(s?s.nome:"-")+'</td><td><span class="tag">'+esc(c.origem||"-")+'</span></td><td>'+esc(c.interesse||"-")+'</td><td>'+(c.dataContato?new Date(c.dataContato).toLocaleString("pt-BR"):"-")+'</td><td><input class="follow" type="datetime-local" value="'+dtLocal(c.proximoFollowup)+'" onchange="changeFollow(\''+c.id+'\',this.value)"></td><td><select class="status" onchange="changeStatus(\''+c.id+'\',this.value)">'+["Contatado","Confirmado","Compareceu","Vendido","Perdido"].map(x=>'<option '+(status(c)===x?"selected":"")+'>'+x+'</option>').join("")+'</select></td><td>'+actions+'</td></tr>'
   }).join("");
   document.getElementById("clients").innerHTML=(canManage?'<div class="desc" style="margin:0 0 10px">Gestor: use WhatsApp para acompanhar o atendimento, ou as ações para transferir/excluir clientes.</div>':'')+'<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Cliente</th><th>Celular</th><th>Vendedor</th><th>Origem</th><th>Interesse</th><th>Contato</th><th>Follow-up</th><th>Etapa</th><th>Ações</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
 }
