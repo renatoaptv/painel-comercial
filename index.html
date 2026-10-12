@@ -662,6 +662,65 @@ async function confirmReceptionAttendance(){
   resultBox.innerHTML='<div class="reception-success"><strong>✅ '+esc(r.message||"Comparecimento confirmado.")+'</strong><div>'+esc(r.customer_name||"Cliente")+'</div><div class="desc">Vendedor: '+esc(r.seller_name||"-")+(dt?' • '+esc(dt):'')+'</div></div>';
   if(input){input.value="";input.focus()}
 }
+
+const VAPID_PUBLIC_KEY="BNqc2oKYPB5T9sVDNMZKva1GRI6t9leeYit_COZ83OR8K2i8XzfH3yLMf8uLuO8Iup8h8PBrwcUk5cPuSCD7wOo";
+function urlBase64ToUint8Array(base64String){
+  const padding="=".repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(base64);
+  return Uint8Array.from([...raw].map(ch=>ch.charCodeAt(0)))
+}
+async function registerPushWorker(){
+  if(!("serviceWorker" in navigator))return null;
+  return await navigator.serviceWorker.register("./sw.js")
+}
+async function syncPushButton(){
+  const btn=document.getElementById("pushPermissionBtn");
+  if(!btn||!isManager())return;
+  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){
+    btn.textContent="Push indisponível";btn.disabled=true;return
+  }
+  if(Notification.permission==="denied"){btn.textContent="🔕 Push bloqueado";return}
+  try{
+    const reg=await registerPushWorker();
+    const sub=await reg.pushManager.getSubscription();
+    btn.textContent=sub?"✅ Push ativo":"📲 Ativar push"
+  }catch(e){btn.textContent="📲 Ativar push"}
+}
+async function enablePushNotifications(){
+  if(!isManager())return;
+  if(!("Notification" in window)||!("serviceWorker" in navigator)||!("PushManager" in window)){
+    return alert("Este navegador não oferece suporte a notificações push.")
+  }
+  const permission=await Notification.requestPermission();
+  if(permission!=="granted"){
+    await syncPushButton();
+    return alert("As notificações não foram autorizadas no navegador.")
+  }
+  try{
+    const reg=await registerPushWorker();
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({
+        userVisibleOnly:true,
+        applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      })
+    }
+    const j=sub.toJSON();
+    const {error}=await sb.rpc("save_push_subscription",{
+      p_endpoint:j.endpoint,
+      p_p256dh:(j.keys&&j.keys.p256dh)||"",
+      p_auth:(j.keys&&j.keys.auth)||"",
+      p_user_agent:navigator.userAgent
+    });
+    if(error)throw error;
+    await syncPushButton();
+    alert("Notificações push ativadas neste dispositivo.")
+  }catch(e){
+    console.error(e);
+    alert("Não foi possível ativar o push: "+((e&&e.message)||e))
+  }
+}
 async function showApp(){
   loginScreen.style.display="none";
   if(currentUser.rawRole==="receptionist"){
@@ -680,6 +739,7 @@ async function showApp(){
   await loadCloudData();
   renderAll();
   startRealtime();
+  if(isManager())syncPushButton();
 }
 async function logout(){if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null}await sb.auth.signOut();currentUser=null;showLogin()}
 async function openUsers(){
