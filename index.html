@@ -1309,7 +1309,6 @@ function renderSellerInsightsHtml(){
     '<div class="insight-detail-table"><table><thead><tr><th>Data</th><th>Vendedor</th><th>Cliente</th><th>Temperatura</th><th>Não veio por quê?</th><th>Objeção</th><th>Concorrente</th><th>Próxima ação</th><th>Próximo contato</th><th>Comentário</th></tr></thead><tbody>'+
       (detail||'<tr><td colspan="10">Sem registros no período.</td></tr>')+
     '</tbody></table></div>'+
-    renderSellerInsightsHtml()+
   '</div>'
 }
 function renderSellerReport(){
@@ -1346,7 +1345,8 @@ function renderSellerReport(){
     '</div>'+
     '<div class="seller-report-table"><table><thead><tr><th>Vendedor</th><th>Contatos</th><th>Confirmados</th><th>Compareceram</th><th>Vendidos</th><th>Perdidos</th><th>Contato→Conf.</th><th>Conf.→Comp.</th><th>Comp.→Venda</th><th>Conversão final</th></tr></thead><tbody>'+
       metrics.map(x=>'<tr><td><strong>'+esc(x.seller.nome)+'</strong></td><td>'+x.m.contacted+'</td><td>'+x.m.confirmed+'</td><td>'+x.m.showed+'</td><td>'+x.m.sold+'</td><td>'+x.m.lost+'</td><td>'+x.m.contactToConfirm.toFixed(1)+'%</td><td>'+x.m.confirmToShow.toFixed(1)+'%</td><td>'+x.m.showToSale.toFixed(1)+'%</td><td>'+x.m.finalConversion.toFixed(1)+'%</td></tr>').join("")+
-    '</tbody></table></div>'
+    '</tbody></table></div>'+
+    renderSellerInsightsHtml()
 }
 function generateSellerPerformancePdf(){
   if(!isManager())return alert("Acesso disponível apenas para gestão.");
@@ -1403,7 +1403,7 @@ function generateSellerPerformancePdf(){
       10,y
     ); y+=5;
     doc.text(
-      "Conversões: Contato→Confirmado "+x.m.contactToConfirm.toFixed(1)+"% | Confirmado→Compareceu "+x.m.confirmToShow.toFixed(1)+"% | Compareceu→Venda "+x.m.showToSale.toFixed(1)+"% | Final "+x.m.finalConversion.toFixed(1)+"%",
+      "Conversões: Contato -> Confirmado "+x.m.contactToConfirm.toFixed(1)+"% | Confirmado -> Compareceu "+x.m.confirmToShow.toFixed(1)+"% | Compareceu -> Venda "+x.m.showToSale.toFixed(1)+"% | Final "+x.m.finalConversion.toFixed(1)+"%",
       10,y
     ); y+=8;
   });
