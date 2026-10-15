@@ -238,7 +238,7 @@
 <div class="container app-hidden" id="app">
 <header class="hero">
 <div><h1>Painel Comercial</h1><p>Ranking de prospecção, acompanhamento e conversão em vendas.</p><div class="date">📅 <span id="dateNow"></span></div></div>
-<div class="hero-leader"><img id="leaderPhoto" src=""><div><span>🏆 Líder atual</span><strong id="leaderName">-</strong><small id="leaderScore">0 pontos</small></div></div>
+<div class="hero-leader"><img id="leaderPhoto" src=""><div><span id="leaderLabel">🏆 Líder atual</span><strong id="leaderName">-</strong><small id="leaderScore">0 pontos</small></div></div>
 <div class="actions">
   <div class="user-chip"><div><b id="sessionName">-</b><span id="sessionRole">-</span></div></div>
   <button class="btn secondary manager-only notification-btn" onclick="openManagerNotifications()">🔔 Notificações<span id="managerNotificationBadge" class="notification-badge">0</span></button>
@@ -281,7 +281,7 @@
 
 <section class="grid">
 <div class="section">
-<div class="section-head"><div><h2>🏆 Ranking da Equipe</h2><p class="muted">Compareceu 5 pontos • Vendido 15 pontos.</p><div class="filters"><button class="filter active" onclick="setPeriod('hoje',this)">Hoje</button><button class="filter" onclick="setPeriod('semana',this)">Semana</button><button class="filter" onclick="setPeriod('mes',this)">Mês</button><button class="filter" onclick="setPeriod('geral',this)">Geral</button></div></div><span class="muted" id="sellerCount"></span></div>
+<div class="section-head"><div><h2>🏆 Ranking da Equipe</h2><p class="muted">Compareceu 5 pontos • Vendido 15 pontos.</p><div class="filters"><button class="filter ranking-period-btn active" onclick="setPeriod('hoje',this)">Hoje</button><button class="filter ranking-period-btn" onclick="setPeriod('semana',this)">Semana</button><button class="filter ranking-period-btn" onclick="setPeriod('mes',this)">Mês</button><button class="filter ranking-period-btn" onclick="setPeriod('geral',this)">Geral</button></div></div><span class="muted" id="sellerCount"></span></div>
 <div class="ranking" id="ranking"></div>
 </div>
 <div class="section">
@@ -487,6 +487,7 @@ let currentUser=null;
 let realtimeChannel=null;
 let celebratedSaleIds=new Set();
 let period="hoje";
+let featuredSellerId=null; // Destaque ilustrativo estável durante a sessão, sem vendas falsas.
 let performancePeriod="geral"; // Independente do período do ranking e do relatório
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function fallback(name){const t=(name||"?").trim().split(/\s+/).slice(0,2).map(x=>x[0]).join("").toUpperCase();return "data:image/svg+xml;charset=UTF-8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="100%" height="100%" fill="#334155"/><text x="50%" y="55%" text-anchor="middle" font-family="Arial" font-size="70" font-weight="700" fill="white">'+t+"</text></svg>")}
@@ -961,7 +962,7 @@ function todayFor(id){return contactEvents.filter(e=>e.sellerId===String(id)&&e.
 function isForgotten(c){if(["Vendido","Perdido"].includes(status(c)))return false;return Date.now()-Number(c.ultimaAtualizacao||c.dataContato||c.criadoEm||0)>172800000}
 function normalizePhone(v){let n=String(v||"").replace(/\D/g,"");if(n.startsWith("55")&&n.length>11)n=n.slice(2);return n}
 function duplicatePhone(v){const n=normalizePhone(v);return clients.find(c=>normalizePhone(c.telefone)===n)}
-function setPeriod(p,b){period=p;document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderRanking()}
+function setPeriod(p,b){period=p;document.querySelectorAll(".ranking-period-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderRanking()}
 function renderAll(){renderLastSale();renderRanking();renderFunnel();renderSmart();renderPerformance();renderAgenda();renderClients();renderDaily();fillSellers()}
 function renderLastSale(){
   let sold=metricClients().filter(c=>status(c)==="Vendido");
@@ -979,23 +980,61 @@ function renderLastSale(){
   lastSaleWhen.textContent=when.toLocaleDateString("pt-BR")+" • "+when.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
   lastSaleScope.textContent=currentUser.rawRole==="seller"?"Venda mais recente da equipe":(currentUser.rawRole==="manager"?"Venda mais recente da loja":"Venda mais recente da rede");
 }
-function renderRanking(){
-  const all=metricClients(),start=periodStart(period);
-  const data=sellers.map(s=>{
-    const sellerAll=all.filter(c=>c.vendedorId===s.id);
+function rankingDataForPeriod(all,selectedPeriod){
+  const start=periodStart(selectedPeriod);
+  return sellers.map(s=>{
+    const sellerAll=all.filter(c=>String(c.vendedorId)===String(s.id));
     const compareceram=sellerAll.filter(c=>c.showedAt&&c.showedAt>=start).length;
-    const pontos=sellerAll.reduce((a,c)=>a+scoreForPeriod(c,period),0);
-    const vendas=sellerAll.filter(c=>soldInPeriod(c,period)).length;
-    return {...s,compareceram,pontos,vendas}
+    const pontos=sellerAll.reduce((total,c)=>total+scoreForPeriod(c,selectedPeriod),0);
+    const vendas=sellerAll.filter(c=>soldInPeriod(c,selectedPeriod)).length;
+    return {...s,compareceram,pontos,vendas};
   }).sort((a,b)=>b.pontos-a.pontos||b.vendas-a.vendas||b.compareceram-a.compareceram);
+}
+function rankingLeaderWithFallback(all,selectedPeriod){
+  // Sem pontos hoje: exibe o líder real da semana, mês ou histórico.
+  const options={
+    hoje:["hoje","semana","mes","geral"],
+    semana:["semana","mes","geral"],
+    mes:["mes","geral"],
+    geral:["geral"]
+  };
+  for(const p of (options[selectedPeriod]||options.hoje)){
+    const candidate=rankingDataForPeriod(all,p)[0];
+    if(candidate&&candidate.pontos>0)return {seller:candidate,period:p};
+  }
+  // Sem vendas/comparecimentos reais em nenhum período: apenas foto ilustrativa.
+  // Este destaque não altera pontuação, vendas ou registros de clientes.
+  const available=sellers.filter(s=>s.foto);
+  const pool=available.length?available:sellers;
+  if(!pool.length)return {seller:null,period:null};
+  if(!pool.some(s=>String(s.id)===String(featuredSellerId))){
+    featuredSellerId=pool[Math.floor(Math.random()*pool.length)].id;
+  }
+  return {seller:pool.find(s=>String(s.id)===String(featuredSellerId)),period:null};
+}
+function renderRanking(){
+  const all=metricClients();
+  const data=rankingDataForPeriod(all,period);
   sellerCount.textContent=sellers.length+" vendedores";
-  const leader=data[0];
-  if(leader&&leader.pontos>0){
+  const featured=rankingLeaderWithFallback(all,period);
+  const leader=featured.seller;
+  const periodLabels={hoje:"🏆 Líder de hoje",semana:"🏆 Líder da semana",mes:"🏆 Líder do mês",geral:"🏆 Líder geral"};
+  const title=document.getElementById("leaderLabel");
+  if(leader&&featured.period){
+    title.textContent=periodLabels[featured.period];
     leaderName.textContent=leader.nome;
     leaderScore.textContent=leader.pontos+" pontos • "+leader.vendas+" vendas";
-    leaderPhoto.src=leader.foto||fallback(leader.nome)
+    leaderPhoto.src=leader.foto||fallback(leader.nome);
+  }else if(leader){
+    title.textContent="⭐ Destaque da equipe";
+    leaderName.textContent=leader.nome;
+    leaderScore.textContent="Aguardando primeira pontuação";
+    leaderPhoto.src=leader.foto||fallback(leader.nome);
   }else{
-    leaderName.textContent="-";leaderScore.textContent="0 pontos";leaderPhoto.src=fallback("L")
+    title.textContent="🏆 Líder atual";
+    leaderName.textContent="-";
+    leaderScore.textContent="0 pontos";
+    leaderPhoto.src=fallback("L");
   }
   document.getElementById("ranking").innerHTML=data.length?data.map((s,i)=>
     '<div class="seller"><div class="rank">'+(["🥇","🥈","🥉"][i]||((i+1)+"º"))+'</div>'+
