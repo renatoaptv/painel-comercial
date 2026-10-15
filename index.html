@@ -18,6 +18,19 @@
 .ranking{padding:10px}.seller{display:grid;grid-template-columns:48px 82px 1fr 82px 105px;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line);border-radius:14px}.seller:hover{background:rgba(255,255,255,.025)}.rank{font-size:20px;font-weight:900;text-align:center}.photo-wrap{position:relative;width:74px;height:74px;border-radius:50%;overflow:hidden;cursor:pointer}.photo{width:74px;height:74px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.12)}.photo-wrap:after{content:"Alterar foto";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);font-size:9px;font-weight:800;opacity:0;transition:.2s}.photo-wrap:hover:after{opacity:1}.name{font-weight:800}.desc{color:var(--muted);font-size:11px;margin-top:3px}.score{display:inline-block;margin-top:5px;padding:4px 7px;border-radius:999px;background:rgba(34,197,94,.12);color:#86efac;font-size:10px;font-weight:900}.points{text-align:center;background:rgba(34,197,94,.09);padding:8px;border-radius:12px}.points strong{display:block;color:#4ade80;font-size:22px}.points span{font-size:9px;color:var(--muted)}
 .funnel{padding:20px}.stage{margin:0 auto 10px;padding:13px 16px;border-radius:14px;display:flex;justify-content:space-between;align-items:center;font-weight:800}.stage b{font-size:22px}.s1{width:100%;background:linear-gradient(90deg,#0891b2,#06b6d4)}.s2{width:84%;background:linear-gradient(90deg,#0284c7,#0ea5e9)}.s3{width:68%;background:linear-gradient(90deg,#ca8a04,#eab308);color:#172033}.s4{width:52%;background:linear-gradient(90deg,#16a34a,#22c55e)}.conv{margin-top:14px;padding:13px;border-radius:14px;background:#0b1626;border:1px solid var(--line)}.conv strong{display:block;font-size:22px;margin-top:4px}
 .performance{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px;padding:0 18px 18px}.perf{background:#0b1626;border:1px solid var(--line);border-radius:18px;padding:15px}.perf-top{display:flex;align-items:center;gap:10px}.perf-top img{width:48px;height:48px;border-radius:50%;object-fit:cover}.bar{height:9px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin:8px 0}.bar div{height:100%;background:linear-gradient(90deg,#2563eb,#22c55e)}.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}.mini div{text-align:center;background:rgba(255,255,255,.04);border-radius:10px;padding:8px}.mini b{display:block}.mini span{font-size:9px;color:var(--muted)}
+/* Funis de vendas individuais: disponíveis apenas para o gestor */
+.manager-on .performance{grid-template-columns:repeat(auto-fit,minmax(310px,1fr))}
+.perf-funnel{margin-top:16px;padding-top:13px;border-top:1px solid var(--line)}
+.perf-funnel-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.perf-funnel-label strong{font-size:12px;color:#e2e8f0}
+.perf-funnel-label span{font-size:10px;color:var(--muted);text-align:right}
+.perf-funnel .funnel{padding:0}
+.perf-funnel .stage{padding:10px 11px;border-radius:11px;margin-bottom:8px;gap:7px;font-size:12px;min-width:0}
+.perf-funnel .stage b{font-size:17px}
+.perf-funnel .conv{margin-top:10px;padding:10px 12px;border-radius:11px}
+.perf-funnel .conv span{font-size:11px}
+.perf-funnel .conv strong{font-size:18px;margin-top:3px}
+@media(max-width:650px){.manager-on .performance{grid-template-columns:1fr}}
 .agenda{padding:0 18px 18px;display:grid;gap:9px}.agenda-item{display:grid;grid-template-columns:145px 1fr auto;gap:12px;align-items:center;background:#0b1626;border:1px solid var(--line);border-radius:14px;padding:11px 13px}.agenda-time{color:#38bdf8;font-weight:800;font-size:12px}.warn{color:#fbbf24;font-size:10px;font-weight:800;margin-top:4px}
 .daily{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;padding:16px 18px 4px}.day{background:#0b1626;border:1px solid var(--line);border-radius:14px;padding:13px}.day span{display:block;color:var(--muted);font-size:10px}.day strong{display:block;font-size:22px;color:#38bdf8;margin:4px 0}
 .clients{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1000px}th,td{text-align:left;padding:12px;border-top:1px solid var(--line);font-size:12px;vertical-align:top}th{color:#cbd5e1;background:rgba(255,255,255,.02)}.tag{display:inline-block;padding:5px 7px;border-radius:999px;background:rgba(59,130,246,.12);color:#93c5fd;font-size:10px}.status,input.follow{background:#0b1626;color:#fff;border:1px solid var(--line);border-radius:9px;padding:7px}.empty{padding:24px;color:var(--muted);text-align:center}
@@ -1292,6 +1305,24 @@ async function addClientComment(){
   if(commentInput)commentInput.value="";
   await loadClientComments(id)
 }
+// Mesmo visual e mesma regra de contagem do funil geral; sem alterar os dados.
+function renderIndividualFunnel(rows){
+  if(!isManager())return "";
+  const contacted=rows.filter(c=>reachedStage(c,"Contatado")).length;
+  const confirmed=rows.filter(c=>reachedStage(c,"Confirmado")).length;
+  const showed=rows.filter(c=>reachedStage(c,"Compareceu")).length;
+  const sold=rows.filter(c=>reachedStage(c,"Vendido")).length;
+  const conversion=(contacted?sold/contacted*100:0).toFixed(1)+"%";
+  return '<div class="perf-funnel">'+
+    '<div class="perf-funnel-label"><strong>🔻 Funil de Vendas</strong><span>Carteira do vendedor</span></div>'+
+    '<div class="funnel">'+
+      '<div class="stage s1"><span>Contatados</span><b>'+contacted+'</b></div>'+
+      '<div class="stage s2"><span>Confirmados</span><b>'+confirmed+'</b></div>'+
+      '<div class="stage s3"><span>Compareceram</span><b>'+showed+'</b></div>'+
+      '<div class="stage s4"><span>Vendidos</span><b>'+sold+'</b></div>'+
+      '<div class="conv"><span class="muted">Conversão total</span><strong>'+conversion+'</strong></div>'+
+    '</div></div>'
+}
 function renderPerformance(){
   const mc=metricClients();
   document.getElementById("performance").innerHTML=sellers.map(s=>{
@@ -1317,7 +1348,7 @@ function renderPerformance(){
           : '<div class="clients-hover-empty">Nenhum cliente cadastrado.</div>')
       : '<div class="clients-hover-empty">Os dados dos clientes deste vendedor são restritos.</div>';
 
-    return '<div class="perf"><div class="perf-top"><img src="'+s.foto+'" onerror="this.src=fallback(\''+esc(s.nome)+'\')"><div><strong>'+esc(s.nome)+'</strong><div class="desc">🔥 '+streak(s)+' dias de sequência</div></div></div><div style="font-size:11px;margin-top:10px">Meta hoje: '+done+'/'+goal+'</div><div class="bar"><div style="width:'+pct+'%"></div></div><div class="mini"><div><b>'+conv.toFixed(1)+'%</b><span>Conversão</span></div><div><b>'+rate.toFixed(1)+'%</b><span>Comparecimento</span></div><div class="clients-metric" tabindex="0"><b>'+cs.length+'</b><span>Clientes</span><div class="clients-hover-card"><div class="clients-hover-title">Clientes de '+esc(s.nome)+'</div>'+clientList+'</div></div></div></div>'
+    return '<div class="perf"><div class="perf-top"><img src="'+s.foto+'" onerror="this.src=fallback(\''+esc(s.nome)+'\')"><div><strong>'+esc(s.nome)+'</strong><div class="desc">🔥 '+streak(s)+' dias de sequência</div></div></div><div style="font-size:11px;margin-top:10px">Meta hoje: '+done+'/'+goal+'</div><div class="bar"><div style="width:'+pct+'%"></div></div><div class="mini"><div><b>'+conv.toFixed(1)+'%</b><span>Conversão</span></div><div><b>'+rate.toFixed(1)+'%</b><span>Comparecimento</span></div><div class="clients-metric" tabindex="0"><b>'+cs.length+'</b><span>Clientes</span><div class="clients-hover-card"><div class="clients-hover-title">Clientes de '+esc(s.nome)+'</div>'+clientList+'</div></div></div>'+(isManager()?renderIndividualFunnel(cs):'')+'</div>'
   }).join("")
 }
 function renderAgenda(){const a=clients.filter(c=>c.proximoFollowup&&!["Vendido","Perdido"].includes(status(c))).sort((x,y)=>x.proximoFollowup-y.proximoFollowup).slice(0,20);document.getElementById("agenda").innerHTML=a.length?a.map(c=>{const s=sellers.find(x=>x.id===c.vendedorId),d=new Date(c.proximoFollowup),late=c.proximoFollowup<Date.now();return '<div class="agenda-item"><div class="agenda-time">'+d.toLocaleDateString("pt-BR")+' • '+d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})+'</div><div><strong>'+esc(c.nome)+'</strong><div class="desc">'+esc(s?s.nome:"-")+' • '+esc(c.telefone||"Sem telefone")+'</div>'+(late?'<div class="warn">⚠️ Follow-up atrasado</div>':'')+'</div><span class="tag">'+esc(status(c))+'</span></div>'}).join(""):'<div class="empty">Nenhum follow-up agendado.</div>'}
