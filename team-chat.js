@@ -31,8 +31,8 @@ async function initTeamChat(){
       filter:"store_id=eq."+currentUser.store_id
     },async()=>{
       if(teamChatOpen()){
-        await loadTeamChatMessages();
-        await markTeamChatRead();
+        const loaded=await loadTeamChatMessages();
+        if(loaded)await markTeamChatRead();
       }else{
         await refreshTeamChatUnread();
       }
@@ -63,8 +63,8 @@ async function openTeamChat(){
   document.getElementById("teamChatModal").classList.add("show");
   teamChatFeedback("");
   await loadTeamChatPeople();
-  await loadTeamChatMessages();
-  await markTeamChatRead();
+  const loaded=await loadTeamChatMessages();
+  if(loaded)await markTeamChatRead();
   document.getElementById("teamChatInput").focus();
 }
 function closeTeamChat(){document.getElementById("teamChatModal").classList.remove("show")}
