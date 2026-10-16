@@ -2,6 +2,21 @@
 let teamChatBlocked=false;
 let teamChatBanMap=new Map();
 let teamChatModerationBusy=false;
+let teamChatModerationMode=false;
+
+// O perfil pode moderar, mas os controles so aparecem quando o botao
+// "Moderar chat" e usado. O chat comum e sempre aberto no modo limpo.
+function teamChatIsModerationMode(){
+  return teamChatModerationMode && canModerateTeamChat();
+}
+function setTeamChatModerationMode(enabled){
+  teamChatModerationMode=!!enabled && canModerateTeamChat();
+  const tools=document.getElementById("teamChatMemberTools");
+  const panel=document.getElementById("teamChatMemberPanel");
+  tools.hidden=!teamChatModerationMode;
+  if(!teamChatModerationMode)panel.hidden=true;
+  document.getElementById("teamChatModal").classList.toggle("chat-moderation-active",teamChatModerationMode);
+}
 
 function canModerateTeamChat(){
   return !!(isTeamChatMember() && ["manager","super_admin"].includes(currentUser.rawRole));
@@ -39,18 +54,18 @@ function renderTeamChatModerationState(){
     teamChatStopTyping();
     input.value="";
   }
-  document.getElementById("teamChatMemberTools").hidden=!canModerateTeamChat();
-  if(!canModerateTeamChat())document.getElementById("teamChatMemberPanel").hidden=true;
+  document.getElementById("teamChatMemberTools").hidden=!teamChatIsModerationMode();
+  if(!teamChatIsModerationMode())document.getElementById("teamChatMemberPanel").hidden=true;
   renderTeamChatModerationMembers();
 }
 async function openTeamChatModeration(){
   if(!canModerateTeamChat())return;
-  await openTeamChat();
-  document.getElementById("teamChatMemberPanel").hidden=false;
-  document.getElementById("teamChatMemberPanel").scrollIntoView({block:"nearest",behavior:"smooth"});
+  await openTeamChat(true);
+  if(teamChatIsModerationMode())
+    document.getElementById("teamChatMemberPanel").scrollIntoView({block:"nearest",behavior:"smooth"});
 }
 function toggleTeamChatMemberPanel(){
-  if(!canModerateTeamChat())return;
+  if(!teamChatIsModerationMode())return;
   const panel=document.getElementById("teamChatMemberPanel");
   panel.hidden=!panel.hidden;
   if(!panel.hidden)renderTeamChatModerationMembers();
@@ -79,7 +94,7 @@ function renderTeamChatModerationMembers(){
   }).join("");
 }
 async function toggleTeamChatMemberBlock(userId){
-  if(!canModerateTeamChat()||teamChatModerationBusy)return;
+  if(!teamChatIsModerationMode()||teamChatModerationBusy)return;
   const target=teamChatPeople.get(String(userId));
   if(!target||target.role!=="seller")return;
   const current=teamChatBanMap.get(String(userId));
@@ -114,7 +129,7 @@ async function toggleTeamChatMemberBlock(userId){
   }finally{teamChatModerationBusy=false;renderTeamChatModerationMembers()}
 }
 async function deleteTeamChatMessage(messageId){
-  if(!canModerateTeamChat()||teamChatModerationBusy)return;
+  if(!teamChatIsModerationMode()||teamChatModerationBusy)return;
   if(!/^[0-9a-f-]{36}$/i.test(String(messageId)))return;
   if(!confirm("Excluir definitivamente esta mensagem do vendedor para toda a equipe? O conteúdo será removido do chat, mas a ação ficará registrada na auditoria."))return;
   teamChatModerationBusy=true;teamChatFeedback("");
@@ -142,6 +157,8 @@ async function onTeamChatModerationEvent(row){
   }
 }
 function resetTeamChatModeration(){
+  teamChatModerationMode=false;
+  document.getElementById("teamChatModal").classList.remove("chat-moderation-active");
   teamChatBlocked=false;
   teamChatBanMap.clear();
   teamChatModerationBusy=false;
