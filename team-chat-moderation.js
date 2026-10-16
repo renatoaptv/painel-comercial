@@ -4,7 +4,7 @@ let teamChatBanMap=new Map();
 let teamChatModerationBusy=false;
 
 function canModerateTeamChat(){
-  return !!(isTeamChatMember() && currentUser.rawRole==="manager");
+  return !!(isTeamChatMember() && ["manager","super_admin"].includes(currentUser.rawRole));
 }
 async function loadTeamChatModerationState(){
   if(!isTeamChatMember())return false;
@@ -43,6 +43,12 @@ function renderTeamChatModerationState(){
   if(!canModerateTeamChat())document.getElementById("teamChatMemberPanel").hidden=true;
   renderTeamChatModerationMembers();
 }
+async function openTeamChatModeration(){
+  if(!canModerateTeamChat())return;
+  await openTeamChat();
+  document.getElementById("teamChatMemberPanel").hidden=false;
+  document.getElementById("teamChatMemberPanel").scrollIntoView({block:"nearest",behavior:"smooth"});
+}
 function toggleTeamChatMemberPanel(){
   if(!canModerateTeamChat())return;
   const panel=document.getElementById("teamChatMemberPanel");
@@ -65,7 +71,7 @@ function renderTeamChatModerationMembers(){
       '<img class="team-chat-member-avatar" src="'+esc(p.avatar_url||fallback(p.full_name))+'" alt="">'+
       '<div class="team-chat-member-name">'+esc(p.full_name)+
       '<small class="'+(blocked?'team-chat-member-blocked':'team-chat-member-allowed')+'">'+
-      (blocked?'Bloqueado no chat':'Pode enviar mensagens')+'</small></div>'+
+      (blocked?'Envio bloqueado':'Pode enviar mensagens')+'</small></div>'+
       '<button type="button" class="team-chat-member-action'+(blocked?' is-blocked':'')+
       '" data-team-chat-user="'+esc(p.id)+'" onclick="toggleTeamChatMemberBlock(this.dataset.teamChatUser)"'+
       (teamChatModerationBusy?' disabled':'')+'>'+
@@ -80,7 +86,7 @@ async function toggleTeamChatMemberBlock(userId){
   const shouldBlock=!current?.active;
   const name=target.full_name;
   const question=shouldBlock
-    ? "Bloquear "+name+" de enviar mensagens no chat da loja? Ele continuará usando o Painel Comercial e vendo os avisos."
+    ? "Bloquear "+name+" de enviar mensagens no chat da loja? Ele continuará usando o Painel Comercial e vendo a conversa."
     : "Desbloquear "+name+" e permitir que volte a enviar mensagens no chat?";
   if(!confirm(question))return;
   teamChatModerationBusy=true;renderTeamChatModerationMembers();teamChatFeedback("");
@@ -117,7 +123,6 @@ async function deleteTeamChatMessage(messageId){
       .delete().eq("id",messageId).eq("store_id",currentUser.store_id).select("id");
     if(error)throw error;
     if(!data?.length)throw new Error("Mensagem não encontrada ou sem permissão para excluir.");
-    await loadTeamChatPins();
     await loadTeamChatMessages();
     teamChatFeedback("Mensagem excluída do chat. A ação foi registrada.");
   }catch(e){
@@ -127,7 +132,6 @@ async function deleteTeamChatMessage(messageId){
 async function onTeamChatModerationEvent(row){
   if(!isTeamChatMember()||row.store_id!==currentUser.store_id)return;
   if(row.event_type==="message_deleted"){
-    await loadTeamChatPins();
     if(teamChatOpen())await loadTeamChatMessages();
     // Contador reflete exclusões mesmo com chat minimizado.
     await refreshTeamChatUnread();
