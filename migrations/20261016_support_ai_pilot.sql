@@ -15,6 +15,8 @@ END $$;
 
 ALTER TABLE public.support_threads
   ADD COLUMN IF NOT EXISTS last_sender_is_ai boolean NOT NULL DEFAULT false;
+ALTER TABLE public.support_threads
+  ADD COLUMN IF NOT EXISTS needs_human boolean NOT NULL DEFAULT false;
 
 CREATE OR REPLACE FUNCTION public.support_assign_message()
 RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER
@@ -54,7 +56,11 @@ BEGIN
   UPDATE public.support_threads
     SET last_message_at=NEW.created_at,
         last_sender_id=NEW.sender_id,
-        last_sender_is_ai=NEW.is_ai
+        last_sender_is_ai=NEW.is_ai,
+        needs_human=CASE WHEN NEW.is_ai THEN needs_human
+          WHEN EXISTS (SELECT 1 FROM public.profiles p WHERE p.id=NEW.sender_id AND p.role='super_admin')
+            THEN false
+          ELSE needs_human END
   WHERE id=NEW.thread_id;
   RETURN NEW;
 END $$;
