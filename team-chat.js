@@ -145,7 +145,7 @@ async function loadTeamChatMessages(){
       '<img class="team-chat-avatar" src="'+esc(photo)+'" alt="">'+
       '<div class="team-chat-bubble"><div class="team-chat-who">'+esc(name)+'</div>'+
       '<div class="team-chat-body">'+esc(m.body)+'</div>'+
-      '<div class="team-chat-message-footer"><div class="team-chat-when">'+esc(when)+'</div><div class="team-chat-message-actions">'+deleteAction+blockAction+'</div></div></div>';
+      '<div class="team-chat-message-footer"><div class="team-chat-when">'+esc(when)+'</div><div class="team-chat-message-actions">'+deleteAction+blockAction+'</div></div></div></div>';
   }).join("");
   box.scrollTop=box.scrollHeight;
   return true;
