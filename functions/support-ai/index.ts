@@ -115,7 +115,11 @@ Deno.serve(async(req:Request)=>{
     const needsHuman=!reply||reply.includes("ENCAMINHAR_SUPORTE")||
       reply.length>2500;
     status=needsHuman?"escalated":"answered";
-    if(needsHuman)reply="Vou encaminhar sua dúvida para o suporte humano. Ele poderá verificar o problema e responder por aqui.";
+    if(needsHuman){
+      reply="Vou encaminhar sua dúvida para o suporte humano. Ele poderá verificar o problema e responder por aqui.";
+      const escalate=await admin.from("support_threads").update({needs_human:true}).eq("id",thread.id);
+      if(escalate.error)throw escalate.error;
+    }
     const sent=await admin.from("support_messages").insert({
       thread_id:thread.id,body:reply,is_ai:true
     });
