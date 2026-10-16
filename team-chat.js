@@ -186,6 +186,103 @@ async function sendTeamChatMessage(){
     btn.disabled=false;
   }
 }
+
+/* Balão minimizado, prévia de novas mensagens e indicador de digitação. */
+function teamChatHidePreview(){
+  document.getElementById("teamChatPeek").hidden=true;
+  if(teamChatPreviewTimer){clearTimeout(teamChatPreviewTimer);teamChatPreviewTimer=null}
+}
+function teamChatIncomingMessage(row){
+  if(!isTeamChatMember()||teamChatOpen())return;
+  const sender=teamChatPeople.get(String(row.sender_id));
+  document.getElementById("teamChatPeekName").textContent=sender?.full_name||"Alguém da equipe";
+  document.getElementById("teamChatPeekText").textContent=String(row.body||"Nova mensagem").slice(0,100);
+  document.getElementById("teamChatPeek").hidden=false;
+  if(teamChatPreviewTimer)clearTimeout(teamChatPreviewTimer);
+  teamChatPreviewTimer=setTimeout(teamChatHidePreview,7000);
+  const f=document.getElementById("teamChatFloat");
+  f.classList.add("new-message");
+  if(teamChatPulseTimer)clearTimeout(teamChatPulseTimer);
+  teamChatPulseTimer=setTimeout(()=>{
+    f.classList.remove("new-message");
+    teamChatPulseTimer=null;
+  },7500);
+}
+async function loadTeamChatTypingSnapshot(){
+  if(!isTeamChatMember())return;
+  const since=new Date(Date.now()-6500).toISOString();
+  const {data,error}=await sb.from("team_chat_typing")
+    .select("user_id,updated_at,is_typing").eq("store_id",currentUser.store_id)
+    .eq("is_typing",true).gte("updated_at",since);
+  if(error){console.warn("Chat: indicador de digitação indisponível",error.message);return}
+  for(const row of data||[])teamChatTypingEvent(row);
+}
+function teamChatTypingEvent(row){
+  if(!row.user_id||!isTeamChatMember()||String(row.user_id)===String(currentUser.id))return;
+  const until=Date.parse(row.updated_at)+6500;
+  if(row.is_typing&&Number.isFinite(until)&&until>Date.now())
+    teamChatTypingMap.set(String(row.user_id),until);
+  else teamChatTypingMap.delete(String(row.user_id));
+  teamChatRenderTyping();
+}
+function teamChatRenderTyping(){
+  if(teamChatTypingExpiryTimer){clearTimeout(teamChatTypingExpiryTimer);teamChatTypingExpiryTimer=null}
+  const now=Date.now();
+  for(const [id,expiresAt] of teamChatTypingMap){
+    if(expiresAt<=now)teamChatTypingMap.delete(id);
+  }
+  const ids=[...teamChatTypingMap.keys()];
+  let label="";
+  if(ids.length===1){
+    const p=teamChatPeople.get(ids[0]);
+    label=(p?.full_name||"Alguém")+" está digitando...";
+  }else if(ids.length>1)label=ids.length+" pessoas estão digitando...";
+  const bubble=document.getElementById("teamChatFloat");
+  bubble.classList.toggle("typing",ids.length>0);
+  document.getElementById("teamChatTypingStatus").textContent=label;
+  const hint=document.getElementById("teamChatFloatHint");
+  if(label)hint.textContent=label;
+  else if(bubble.classList.contains("has-unread"))hint.textContent="Novas mensagens";
+  else hint.textContent="Chat da equipe";
+  if(ids.length){
+    const next=Math.min(...teamChatTypingMap.values())-now;
+    teamChatTypingExpiryTimer=setTimeout(teamChatRenderTyping,Math.max(100,next+30));
+  }
+}
+function teamChatOnInput(){
+  if(!isTeamChatMember()||!teamChatOpen())return;
+  const field=document.getElementById("teamChatInput");
+  const typing=field.value.trim().length>0;
+  if(teamChatTypingStopTimer){clearTimeout(teamChatTypingStopTimer);teamChatTypingStopTimer=null}
+  if(!typing){teamChatStopTyping();return}
+  const now=Date.now();
+  if(now-teamChatTypingLastSent>=2000)teamChatSendTyping(true);
+  teamChatTypingStopTimer=setTimeout(teamChatStopTyping,3500);
+}
+function teamChatSendTyping(typing){
+  if(!isTeamChatMember())return;
+  teamChatTypingLastSent=typing?Date.now():0;
+  const payload={
+    user_id:currentUser.id,
+    organization_id:currentUser.organization_id,
+    store_id:currentUser.store_id,
+    is_typing:!!typing
+  };
+  // Envia na ordem correta para não deixar "digitando" preso após parar.
+  teamChatTypingQueue=teamChatTypingQueue.catch(()=>{}).then(async()=>{
+    const {error}=await sb.from("team_chat_typing").upsert(payload,{onConflict:"user_id"});
+    if(error)console.warn("Chat: digitação não sincronizada",error.message);
+  });
+}
+function teamChatStopTyping(){
+  if(teamChatTypingStopTimer){clearTimeout(teamChatTypingStopTimer);teamChatTypingStopTimer=null}
+  if(teamChatTypingLastSent)teamChatSendTyping(false);
+}
+function teamChatVisibilityChanged(){
+  if(document.hidden){teamChatStopTyping();return}
+  if(isTeamChatMember())refreshTeamChatUnread();
+}
+
 async function stopTeamChat(){
   teamChatStopTyping();
   if(teamChatVisibilityBound){
