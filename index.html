@@ -192,10 +192,9 @@
 .sale-quick-btn{white-space:nowrap}
 @media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
-<link rel="stylesheet" href="./team-chat.css?v=7">
+<link rel="stylesheet" href="./support-chat.css?v=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./team-chat.js?v=8"></script>
-<script src="./team-chat-moderation.js?v=3"></script>
+<script src="./support-chat.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -249,8 +248,7 @@
   <button class="btn secondary manager-only" onclick="openUsers()">Usuários</button>
   <button class="btn secondary manager-only" onclick="openManagerClients()">👥 Clientes</button>
   <button class="btn secondary manager-only" onclick="openSellerReport()">📊 Relatório vendedores</button>
-  <button type="button" id="teamChatButton" class="btn secondary team-chat-trigger" onclick="openTeamChat()">💬 Chat <span id="teamChatUnread" class="team-chat-unread">0</span></button>
-  <button type="button" id="teamChatModerationShortcut" class="btn secondary team-chat-mod-shortcut" onclick="openTeamChatModeration()">🛡️ Moderar chat</button>
+  <button type="button" id="supportButton" class="btn secondary support-trigger" onclick="openSupportChat()"><span id="supportButtonText">🛟 Pedir suporte</span><span id="supportUnread" class="support-badge">0</span></button>
   <button class="btn secondary manager-only" onclick="openSeller()">+ Vendedor</button>
   <button class="btn" onclick="openClient()">+ Cadastrar cliente</button>
   <button class="btn secondary" onclick="logout()">Sair</button>
@@ -422,38 +420,32 @@
 </div></div>
 <div id="managerNotificationToast" class="notification-toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<div class="modal" id="teamChatModal" role="dialog" aria-modal="true" aria-label="Chat da equipe">
-  <div class="modal-box team-chat-box">
-    <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><div class="team-chat-head-actions"><button class="team-chat-minimize" type="button" onclick="minimizeTeamChat()" title="Minimizar para balão" aria-label="Minimizar chat">−</button><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div></div>
-    <div id="teamChatMemberTools" class="team-chat-member-tools" hidden>
-      <button class="team-chat-members-toggle" type="button" onclick="toggleTeamChatMemberPanel()">🛡️ Bloquear / desbloquear vendedores</button>
+<div class="modal" id="supportModal" role="dialog" aria-modal="true" aria-label="Atendimento de suporte">
+  <div class="modal-box support-modal-box">
+    <div class="modal-head"><div><h2>🛟 Suporte Painel Comercial</h2><div class="desc">Atendimento privado entre o usuário e o administrador do sistema.</div></div>
+      <div class="support-modal-actions"><button type="button" class="support-modal-head-btn" title="Minimizar" onclick="closeSupportChat()">−</button><button class="x" type="button" onclick="closeSupportChat()" aria-label="Fechar suporte">×</button></div>
     </div>
-    <div id="teamChatMemberPanel" class="team-chat-member-panel" hidden>
-      <strong>🛡️ Controle de acesso ao chat</strong>
-      <p>Escolha um vendedor abaixo para bloquear ou desbloquear o envio de mensagens. O acesso aos clientes e às vendas não muda.</p>
-      <div id="teamChatMemberList" class="team-chat-member-list"></div>
+    <div class="support-layout" id="supportLayout">
+      <aside class="support-inbox" id="supportInbox" hidden>
+        <div class="support-inbox-title">Chamados recebidos</div>
+        <div class="support-thread-list" id="supportThreadList"></div>
+      </aside>
+      <div class="support-conversation">
+        <div id="supportTitle" class="support-conversation-title">Conversa com o suporte</div>
+        <div id="supportMessages" class="support-messages" aria-live="polite"><div class="support-empty">Carregando atendimento...</div></div>
+        <div id="supportCompose" class="support-compose">
+          <textarea id="supportInput" maxlength="2000" rows="2" placeholder="Escreva sua mensagem para o suporte..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupportMessage()}"></textarea>
+          <button id="supportSend" class="btn" type="button" onclick="sendSupportMessage()">Enviar</button>
+        </div>
+        <div id="supportStatus" class="support-status" role="status" aria-live="polite"></div>
+      </div>
     </div>
-    <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"><div class="empty">Carregando mensagens...</div></div>
-    <div id="teamChatTypingStatus" class="team-chat-typing-status" aria-live="polite"></div>
-    <div id="teamChatBlockedBanner" class="team-chat-blocked-banner" role="status" hidden>O gestor restringiu seu envio de mensagens neste chat. Você ainda pode acompanhar as conversas da equipe.</div>
-    <div class="team-chat-compose">
-      <textarea id="teamChatInput" maxlength="2000" rows="2" placeholder="Escreva para a equipe..." oninput="teamChatOnInput()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage()}"></textarea>
-      <button id="teamChatSend" class="btn" type="button" onclick="sendTeamChatMessage()">Enviar</button>
-    </div>
-    <div id="teamChatStatus" class="team-chat-status" role="status" aria-live="polite"></div>
   </div>
 </div>
-<div id="teamChatFloat" class="team-chat-float" aria-label="Atalho do chat da equipe">
-  <button type="button" id="teamChatPeek" class="team-chat-peek" hidden onclick="openTeamChat()" aria-label="Ler nova mensagem do chat">
-    <div id="teamChatPeekName" class="team-chat-peek-name"></div>
-    <div id="teamChatPeekText" class="team-chat-peek-text"></div>
-  </button>
-  <button type="button" id="teamChatFloatButton" class="team-chat-float-btn" onclick="openTeamChat()" aria-label="Abrir chat da equipe">
-    <span aria-hidden="true">💬</span><span id="teamChatFloatBadge" class="team-chat-float-badge">0</span>
-  </button>
-  <div id="teamChatFloatHint" class="team-chat-float-hint" role="status">Chat da equipe</div>
-</div>
-
+<button id="supportToast" type="button" class="support-toast" hidden onclick="supportOpenFromToast()">
+  <strong id="supportToastTitle">🛟 Nova mensagem</strong>
+  <span id="supportToastBody">Você recebeu uma nova mensagem de suporte.</span>
+</button>
 
 <div class="modal" id="clientDetailModal"><div class="modal-box" style="width:min(96%,760px)">
   <div class="modal-head"><div><h2 id="clientDetailTitle">Cliente</h2><div class="desc" id="clientDetailSubtitle"></div></div><button class="x" onclick="closeModal('clientDetailModal')">×</button></div>
@@ -758,8 +750,10 @@ async function syncPushButton(){
   try{
     const reg=await registerPushWorker();
     const sub=await reg.pushManager.getSubscription();
-    btn.textContent=sub?"✅ Push ativo":"📲 Ativar push"
-  }catch(e){btn.textContent="📲 Ativar push"}
+    btn.textContent=currentUser?.rawRole==="super_admin"
+      ? (sub?"✅ Push do suporte ativo":"📲 Ativar push do suporte")
+      : (sub?"✅ Push ativo":"📲 Ativar push")
+  }catch(e){btn.textContent=currentUser?.rawRole==="super_admin"?"📲 Ativar push do suporte":"📲 Ativar push"}
 }
 async function enablePushNotifications(){
   if(!isManager())return;
@@ -838,7 +832,7 @@ async function showApp(){
   await loadCloudData();
   renderAll();
   startRealtime();
-  initTeamChat().catch(e=>console.error("Chat: falha ao iniciar",e));
+  initTeamChat().catch(e=>console.error("Suporte: falha ao iniciar",e));
   if(managerNotificationRefreshTimer)clearInterval(managerNotificationRefreshTimer);
   managerNotificationRefreshTimer=null;
   if(isManager()){
