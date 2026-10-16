@@ -97,6 +97,8 @@ async function openTeamChat(){
   teamChatFeedback("");
   await loadTeamChatPeople();
   await loadTeamChatModerationState();
+  // O gestor já encontra os vendedores e os bloqueios ao abrir o chat.
+  if(canModerateTeamChat())document.getElementById("teamChatMemberPanel").hidden=false;
   const loaded=await loadTeamChatMessages();
   if(loaded)await markTeamChatRead();
   if(!teamChatBlocked)document.getElementById("teamChatInput").focus();
