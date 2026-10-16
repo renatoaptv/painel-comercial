@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     const notice=JSON.stringify({
       title:"🛟 Nova mensagem de suporte",
       body:"Um usuário solicitou ajuda no Painel Comercial.",
-      url:"./",
+      url:"./?suporte="+encodeURIComponent(msg.thread_id),
       event:"support",
       thread_id:msg.thread_id,
       tag:"support-"+msg.id
