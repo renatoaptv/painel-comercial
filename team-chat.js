@@ -83,8 +83,10 @@ async function loadTeamChatPeople(){
   if(error){teamChatFeedback("Não foi possível atualizar a lista de participantes.");return}
   teamChatPeople=new Map((data||[]).map(p=>[String(p.id),p]));
 }
-async function openTeamChat(){
+async function openTeamChat(moderation=false){
   if(!isTeamChatMember())return;
+  // Sem argumento: chat simples. So o atalho do gestor passa true.
+  setTeamChatModerationMode(moderation===true);
   document.getElementById("teamChatModal").classList.add("show");
   document.getElementById("teamChatFloat").classList.add("chat-open");
   teamChatHidePreview();
@@ -93,8 +95,8 @@ async function openTeamChat(){
   teamChatFeedback("");
   await loadTeamChatPeople();
   await loadTeamChatModerationState();
-  // O gestor já encontra os vendedores e os bloqueios ao abrir o chat.
-  if(canModerateTeamChat())document.getElementById("teamChatMemberPanel").hidden=false;
+  // A lista de bloqueios fica visivel apenas no modo Moderar chat.
+  document.getElementById("teamChatMemberPanel").hidden=!teamChatIsModerationMode();
   const loaded=await loadTeamChatMessages();
   if(loaded)await markTeamChatRead();
   if(!teamChatBlocked)document.getElementById("teamChatInput").focus();
@@ -102,6 +104,7 @@ async function openTeamChat(){
 function minimizeTeamChat(){
   document.getElementById("teamChatModal").classList.remove("show");
   document.getElementById("teamChatFloat").classList.remove("chat-open");
+  setTeamChatModerationMode(false);
   teamChatStopTyping();
 }
 function closeTeamChat(){minimizeTeamChat()}
@@ -129,7 +132,7 @@ async function loadTeamChatMessages(){
     const when=new Date(m.created_at).toLocaleString("pt-BR",{
       day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"
     });
-    const isSellerMessage=canModerateTeamChat()&&p?.role==="seller";
+    const isSellerMessage=teamChatIsModerationMode()&&p?.role==="seller";
     const deleteAction=isSellerMessage
       ? '<button type="button" class="team-chat-delete-action" data-team-chat-delete="'+esc(m.id)+'" onclick="deleteTeamChatMessage(this.dataset.teamChatDelete)" title="Excluir esta mensagem da conversa">🗑️ Excluir mensagem</button>'
       : '';
