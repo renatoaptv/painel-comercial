@@ -137,6 +137,10 @@ Deno.serve(async(req:Request)=>{
   }catch(e){
     console.error("suporte-ai-failure",String((e as Error)?.message||"unknown").slice(0,170));
     status="failed";
+    // Erros de modelo, credenciais ou saldo nao podem deixar o chamado sem atendimento.
+    const escalated=await admin.from("support_threads")
+      .update({needs_human:true}).eq("id",thread.id);
+    if(escalated.error)console.warn("suporte-ai-escalation",escalated.error.message);
     return json({ok:false,human_support:true},200);
   }finally{
     const {error:logErr}=await admin.rpc("support_ai_complete",{
