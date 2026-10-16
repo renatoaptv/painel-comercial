@@ -4,7 +4,15 @@ type RequestJson={message_id?:string};
 const projectUrl=Deno.env.get("SUPABASE_URL")||"";
 const serviceKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
 const modelId="gpt-5.6-luna";
-const responseHeaders={"Content-Type":"application/json","Cache-Control":"no-store"};
+// Requisicoes fetch do site GitHub Pages enviam um preflight OPTIONS.
+const corsHeaders={
+  "Access-Control-Allow-Origin":"https://renatoaptv.github.io",
+  "Access-Control-Allow-Methods":"POST, OPTIONS",
+  "Access-Control-Allow-Headers":"authorization,apikey,x-client-info,content-type,x-retry-count,traceparent,tracestate,baggage",
+  "Access-Control-Max-Age":"600",
+  "Vary":"Origin"
+};
+const responseHeaders={"Content-Type":"application/json","Cache-Control":"no-store",...corsHeaders};
 function json(data:unknown,status=200){
   return new Response(JSON.stringify(data),{status,headers:responseHeaders});
 }
@@ -31,6 +39,7 @@ const guidance=[
 ].join("\n");
 
 Deno.serve(async(req:Request)=>{
+  if(req.method==="OPTIONS")return new Response(null,{status:204,headers:corsHeaders});
   if(req.method!=="POST")return json({error:"method_not_allowed"},405);
   const token=(req.headers.get("Authorization")||"").replace(/^Bearer\s+/i,"").trim();
   if(!token||!projectUrl||!serviceKey)return json({error:"unauthorized"},401);
