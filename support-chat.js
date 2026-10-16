@@ -269,14 +269,35 @@ async function sendSupportMessage(){
       .insert({thread_id:supportCurrentThread,body}).select("id").single();
     if(result.error)throw result.error;
     input.value="";
-    // A chave da API nao fica no navegador. Apenas solicitamos a funcao protegida.
+    // A chave da API nunca fica no navegador: apenas chama a funcao autenticada.
+    // Nao deixar falhas de rede/API sem explicacao para o usuario.
     if(!isSupportAgent()&&result.data?.id){
       const messageId=result.data.id;
+      const threadId=supportCurrentThread;
+      const sameThread=()=>String(supportCurrentThread)===String(threadId)&&supportIsOpen();
+      if(sameThread())supportStatus("Mensagem enviada. Assistente IA verificando sua dúvida...");
       sb.functions.invoke("support-ai",{body:{message_id:messageId}})
-        .then(({error})=>{
-          if(error)console.warn("Assistente de IA indisponível. Atendimento humano preservado.");
+        .then(async({data,error})=>{
+          if(error){
+            console.warn("Suporte: chamada de IA indisponivel",error.message);
+            if(sameThread())supportStatus("Sua mensagem foi enviada, mas a IA não conseguiu responder. O suporte humano poderá ajudar.");
+            return;
+          }
+          if(sameThread()&&data?.ai_enabled===false){
+            supportStatus("Sua mensagem foi enviada. A IA está temporariamente indisponível; aguarde o suporte humano.");
+          }else if(sameThread()&&data?.human_support){
+            supportStatus("A IA não conseguiu concluir sua resposta. O suporte humano continuará o atendimento.");
+          }else if(sameThread()&&data?.skipped){
+            supportStatus("Não foi possível iniciar uma resposta automática. O suporte humano continuará o atendimento.");
+          }else if(sameThread()&&data?.ok){
+            supportStatus(data.escalated?"Atendimento encaminhado para o suporte humano.":"Resposta da Assistente IA recebida.");
+          }
+          if(sameThread()&&data?.ok)await supportLoadMessages();
         })
-        .catch(()=>console.warn("Assistente de IA indisponível. Atendimento humano preservado."));
+        .catch(e=>{
+          console.warn("Suporte: chamada de IA falhou",e?.message||"erro");
+          if(sameThread())supportStatus("Sua mensagem foi enviada. A IA não respondeu; o suporte humano poderá ajudar.");
+        });
     }
     await supportRefreshThreads();
     const loaded=await supportLoadMessages();
