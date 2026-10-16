@@ -750,8 +750,10 @@ async function syncPushButton(){
   try{
     const reg=await registerPushWorker();
     const sub=await reg.pushManager.getSubscription();
-    btn.textContent=sub?"✅ Push ativo":"📲 Ativar push"
-  }catch(e){btn.textContent="📲 Ativar push"}
+    btn.textContent=currentUser?.rawRole==="super_admin"
+      ? (sub?"✅ Push do suporte ativo":"📲 Ativar push do suporte")
+      : (sub?"✅ Push ativo":"📲 Ativar push")
+  }catch(e){btn.textContent=currentUser?.rawRole==="super_admin"?"📲 Ativar push do suporte":"📲 Ativar push"}
 }
 async function enablePushNotifications(){
   if(!isManager())return;
