@@ -76,6 +76,17 @@ async function initTeamChat(){
     .subscribe(status=>{
       if(status==="CHANNEL_ERROR")console.warn("Suporte: conexao em tempo real instavel");
     });
+  // Quando o suporte e aberto pela notificacao push, selecionar o chamado correto.
+  if(isSupportAgent() && typeof window!=="undefined"){
+    const address=new URL(window.location.href);
+    const ticket=address.searchParams.get("suporte");
+    if(ticket){
+      address.searchParams.delete("suporte");
+      window.history.replaceState(window.history.state,"",
+        address.pathname+address.search+address.hash);
+      if(/^[0-9a-f-]{36}$/i.test(ticket))await openSupportChat(ticket);
+    }
+  }
 }
 async function supportRefreshThreads(){
   if(!canUseSupport())return false;
