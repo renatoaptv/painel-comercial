@@ -223,12 +223,21 @@ async function supportLoadMessages(){
 }
 async function supportMarkRead(){
   if(!supportCurrentThread||!currentUser)return;
-  const read=await sb.from("support_reads").upsert({
-    thread_id:supportCurrentThread,user_id:currentUser.id,
-    last_read_at:new Date().toISOString()
-  },{onConflict:"thread_id,user_id"}).select("last_read_at").single();
+  const key=String(supportCurrentThread);
+  const payload={last_read_at:new Date().toISOString()};
+  const existing=supportReadTimes.has(key);
+  let read=existing
+    ? await sb.from("support_reads").update(payload).eq("thread_id",key)
+        .eq("user_id",currentUser.id).select("last_read_at").single()
+    : await sb.from("support_reads")
+        .insert({thread_id:key,user_id:currentUser.id})
+        .select("last_read_at").single();
+  if(!existing && read.error?.code==="23505"){
+    read=await sb.from("support_reads").update(payload).eq("thread_id",key)
+      .eq("user_id",currentUser.id).select("last_read_at").single();
+  }
   if(read.error){console.warn("Suporte: falha ao marcar leitura",read.error.message);return}
-  supportReadTimes.set(String(supportCurrentThread),read.data?.last_read_at||new Date().toISOString());
+  supportReadTimes.set(key,read.data?.last_read_at||new Date().toISOString());
   supportRenderThreads();supportUpdateBadge();
 }
 async function sendSupportMessage(){
