@@ -49,3 +49,8 @@
 .support-compose{padding:8px;gap:5px}
 .support-compose .btn{padding:10px 9px}
 }
+
+/* Respostas transparentes da assistente virtual e fila de suporte humano */
+.support-ai-message{background:#17344b;border:1px solid rgba(56,189,248,.3)}
+.support-ai-message .support-message-name{color:#a5f3fc}
+.support-escalated{display:inline-block;background:rgba(245,158,11,.16);color:#fde68a;border-radius:6px;font-size:9px;padding:2px 5px;white-space:nowrap}
