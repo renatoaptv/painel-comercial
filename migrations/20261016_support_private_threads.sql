@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS public.support_threads (
   organization_id uuid NOT NULL REFERENCES public.organizations(id),
   store_id uuid REFERENCES public.stores(id),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-  last_message_at timestamptz NOT NULL DEFAULT clock_timestamp()
+  last_message_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  last_sender_id uuid REFERENCES public.profiles(id)
 );
 
 CREATE INDEX IF NOT EXISTS support_threads_recent_idx
@@ -136,7 +137,7 @@ CREATE TABLE IF NOT EXISTS public.support_reads (
 ALTER TABLE public.support_reads ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.support_reads FROM anon,authenticated;
 GRANT SELECT ON public.support_reads TO authenticated;
-GRANT INSERT(thread_id,user_id) ON public.support_reads TO authenticated;
+GRANT INSERT(thread_id,user_id,last_read_at) ON public.support_reads TO authenticated;
 GRANT UPDATE(last_read_at) ON public.support_reads TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.support_assign_read_time()
@@ -188,7 +189,7 @@ CREATE OR REPLACE FUNCTION public.support_touch_thread()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
 SET search_path=pg_catalog,public AS $$
 BEGIN
-  UPDATE public.support_threads SET last_message_at=NEW.created_at WHERE id=NEW.thread_id;
+  UPDATE public.support_threads SET last_message_at=NEW.created_at,last_sender_id=NEW.sender_id WHERE id=NEW.thread_id;
   RETURN NEW;
 END $$;
 REVOKE ALL ON FUNCTION public.support_touch_thread() FROM PUBLIC,anon,authenticated;
@@ -236,3 +237,11 @@ REVOKE INSERT(body),DELETE ON public.team_chat_messages FROM authenticated;
 REVOKE INSERT,UPDATE ON public.team_chat_typing FROM authenticated;
 REVOKE INSERT,UPDATE ON public.team_chat_bans FROM authenticated;
 REVOKE INSERT,UPDATE ON public.team_chat_reads FROM authenticated;
+
+-- Revogacao de recursos de escrita do chat antigo, inclusive privilegios por coluna.
+DROP POLICY IF EXISTS team_chat_messages_insert_same_store ON public.team_chat_messages;
+DROP POLICY IF EXISTS team_chat_messages_delete_seller_by_manager ON public.team_chat_messages;
+DROP POLICY IF EXISTS team_chat_typing_insert_self ON public.team_chat_typing;
+DROP POLICY IF EXISTS team_chat_typing_update_self ON public.team_chat_typing;
+DROP POLICY IF EXISTS team_chat_bans_insert_manager ON public.team_chat_bans;
+DROP POLICY IF EXISTS team_chat_bans_update_manager ON public.team_chat_bans;
