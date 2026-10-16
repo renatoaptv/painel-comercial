@@ -192,7 +192,9 @@
 .sale-quick-btn{white-space:nowrap}
 @media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
+<link rel="stylesheet" href="./team-chat.css?v=1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./team-chat.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -246,6 +248,7 @@
   <button class="btn secondary manager-only" onclick="openUsers()">Usuários</button>
   <button class="btn secondary manager-only" onclick="openManagerClients()">👥 Clientes</button>
   <button class="btn secondary manager-only" onclick="openSellerReport()">📊 Relatório vendedores</button>
+  <button type="button" id="teamChatButton" class="btn secondary team-chat-trigger" onclick="openTeamChat()">💬 Chat <span id="teamChatUnread" class="team-chat-unread">0</span></button>
   <button class="btn secondary manager-only" onclick="openSeller()">+ Vendedor</button>
   <button class="btn" onclick="openClient()">+ Cadastrar cliente</button>
   <button class="btn secondary" onclick="logout()">Sair</button>
@@ -416,6 +419,20 @@
   <div class="modal-actions"><button class="btn secondary" onclick="markAllManagerNotificationsRead()">Marcar todas como lidas</button></div>
 </div></div>
 <div id="managerNotificationToast" class="notification-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<div class="modal" id="teamChatModal" role="dialog" aria-modal="true" aria-label="Chat da equipe">
+  <div class="modal-box team-chat-box">
+    <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div>
+    <div id="teamChatPeople" class="team-chat-people"></div>
+    <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"><div class="empty">Carregando mensagens...</div></div>
+    <div class="team-chat-compose">
+      <textarea id="teamChatInput" maxlength="2000" rows="2" placeholder="Escreva para a equipe..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage()}"></textarea>
+      <button id="teamChatSend" class="btn" type="button" onclick="sendTeamChatMessage()">Enviar</button>
+    </div>
+    <div id="teamChatStatus" class="team-chat-status" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
 
 <div class="modal" id="clientDetailModal"><div class="modal-box" style="width:min(96%,760px)">
   <div class="modal-head"><div><h2 id="clientDetailTitle">Cliente</h2><div class="desc" id="clientDetailSubtitle"></div></div><button class="x" onclick="closeModal('clientDetailModal')">×</button></div>
@@ -800,6 +817,7 @@ async function showApp(){
   await loadCloudData();
   renderAll();
   startRealtime();
+  initTeamChat().catch(e=>console.error("Chat: falha ao iniciar",e));
   if(managerNotificationRefreshTimer)clearInterval(managerNotificationRefreshTimer);
   managerNotificationRefreshTimer=null;
   if(isManager()){
@@ -811,6 +829,7 @@ async function showApp(){
   }
 }
 async function logout(){
+  await stopTeamChat();
   if(realtimeChannel){await sb.removeChannel(realtimeChannel);realtimeChannel=null}
   if(managerNotificationRefreshTimer){clearInterval(managerNotificationRefreshTimer);managerNotificationRefreshTimer=null}
   if(managerNotificationToastTimer){clearTimeout(managerNotificationToastTimer);managerNotificationToastTimer=null}
