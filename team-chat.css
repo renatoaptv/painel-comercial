@@ -22,3 +22,26 @@
 .team-chat-compose textarea{min-height:42px;max-height:130px;resize:vertical;flex:1;background:#0b1626;color:#fff;border:1px solid var(--line);border-radius:12px;padding:11px}
 .team-chat-status{min-height:18px;color:var(--muted);font-size:11px;margin-top:5px}
 @media(max-width:520px){.team-chat-box{width:100%!important;padding:13px}.team-chat-messages{height:55vh;max-height:55vh}.team-chat-compose .btn{padding:11px}}
+
+
+/* Balão flutuante quando chat minimizado */
+.team-chat-float{display:none;position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom, 0px));z-index:950;align-items:flex-end;flex-direction:column;gap:8px;max-width:min(90vw,310px)}
+.team-chat-float.available:not(.chat-open){display:flex}
+.team-chat-float-btn{position:relative;width:66px;height:66px;border-radius:50%;border:2px solid rgba(125,211,252,.55);color:#fff;background:linear-gradient(145deg,#2563eb,#0e7490);display:flex;justify-content:center;align-items:center;font-size:27px;cursor:pointer;box-shadow:0 8px 24px rgba(14,116,144,.45);transition:transform .2s,box-shadow .2s}
+.team-chat-float-btn:hover{transform:scale(1.05)}
+.team-chat-float-badge{display:none;position:absolute;right:-5px;top:-5px;min-width:24px;height:24px;border-radius:100px;background:#ef4444;border:2px solid #fff;color:white;font-size:11px;font-weight:900;align-items:center;justify-content:center;padding:0 4px}
+.team-chat-float-hint{background:#102036;color:#e2e8f0;border:1px solid rgba(125,211,252,.4);border-radius:100px;padding:7px 12px;font-size:11px;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 5px 14px rgba(0,0,0,.22)}
+.team-chat-float.has-unread .team-chat-float-btn{border-color:#facc15;box-shadow:0 0 0 4px rgba(250,204,21,.18),0 8px 24px rgba(0,0,0,.25)}
+.team-chat-float.typing .team-chat-float-btn{animation:team-chat-typing-glow 1.25s ease-in-out infinite alternate}
+.team-chat-float.new-message .team-chat-float-btn{animation:team-chat-new-message .85s ease-in-out 4}
+@keyframes team-chat-typing-glow{from{box-shadow:0 0 4px 1px rgba(56,189,248,.45),0 8px 22px rgba(14,116,144,.4);transform:scale(1)}to{box-shadow:0 0 22px 9px rgba(34,211,238,.7),0 8px 22px rgba(14,116,144,.45);transform:scale(1.065)}}
+@keyframes team-chat-new-message{0%,100%{transform:scale(1)}50%{transform:scale(1.1);box-shadow:0 0 25px 8px rgba(250,204,21,.65)}}
+.team-chat-peek{background:#13243b;color:#fff;border:1px solid rgba(56,189,248,.5);box-shadow:0 8px 30px rgba(0,0,0,.35);border-radius:15px;padding:10px 12px;width:260px;max-width:calc(100vw - 36px);cursor:pointer;text-align:left}
+.team-chat-peek[hidden]{display:none!important}
+.team-chat-peek-name{font-weight:850;color:#7dd3fc;font-size:12px;margin-bottom:4px}
+.team-chat-peek-text{font-size:12px;line-height:1.4;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.team-chat-head-actions{display:flex;align-items:center;gap:7px}
+.team-chat-minimize{background:#1e293b;border:1px solid rgba(255,255,255,.2);border-radius:9px;color:#fff;font-size:22px;line-height:1;padding:5px 11px;cursor:pointer}
+.team-chat-typing-status{font-size:11px;color:#7dd3fc;min-height:17px;margin-top:5px}
+@media(max-width:520px){.team-chat-float{right:13px;bottom:calc(14px + env(safe-area-inset-bottom, 0px))}.team-chat-float-btn{width:58px;height:58px;font-size:24px}}
+@media(prefers-reduced-motion:reduce){.team-chat-float.typing .team-chat-float-btn,.team-chat-float.new-message .team-chat-float-btn{animation:none;outline:3px solid #38bdf8}}

@@ -4,6 +4,14 @@ let teamChatChannel=null;
 let teamChatPeople=new Map();
 let teamChatLastReadAt=null;
 let teamChatBusy=false;
+let teamChatTypingMap=new Map();
+let teamChatTypingLastSent=0;
+let teamChatTypingStopTimer=null;
+let teamChatTypingExpiryTimer=null;
+let teamChatPreviewTimer=null;
+let teamChatPulseTimer=null;
+let teamChatTypingQueue=Promise.resolve();
+let teamChatVisibilityBound=false;
 
 function isTeamChatMember(){
   return !!(currentUser && currentUser.organization_id && currentUser.store_id
@@ -19,7 +27,16 @@ async function initTeamChat(){
   const btn=document.getElementById("teamChatButton");
   if(!isTeamChatMember()){btn.classList.remove("available");return}
   btn.classList.add("available");
+  document.getElementById("teamChatFloat").classList.add("available");
+  document.getElementById("teamChatFloat").classList.remove("chat-open");
+  teamChatTypingMap.clear();
   teamChatLastReadAt=null;
+  await loadTeamChatPeople();
+  await loadTeamChatTypingSnapshot();
+  if(!teamChatVisibilityBound){
+    document.addEventListener("visibilitychange",teamChatVisibilityChanged);
+    teamChatVisibilityBound=true;
+  }
   const {data,error}=await sb.from("team_chat_reads").select("last_read_at")
     .eq("user_id",currentUser.id).maybeSingle();
   if(!error)teamChatLastReadAt=data?.last_read_at||null;
@@ -29,14 +46,21 @@ async function initTeamChat(){
     .on("postgres_changes",{
       event:"INSERT",schema:"public",table:"team_chat_messages",
       filter:"store_id=eq."+currentUser.store_id
-    },async()=>{
+    },async(payload)=>{
+      const row=payload.new||{};
       if(teamChatOpen()){
         const loaded=await loadTeamChatMessages();
         if(loaded)await markTeamChatRead();
       }else{
         await refreshTeamChatUnread();
+        if(String(row.sender_id)!==String(currentUser?.id))
+          teamChatIncomingMessage(row);
       }
     })
+    .on("postgres_changes",{
+      event:"*",schema:"public",table:"team_chat_typing",
+      filter:"store_id=eq."+currentUser.store_id
+    },payload=>teamChatTypingEvent(payload.new||{}))
     .subscribe(status=>{
       if(teamChatOpen()&&status==="CHANNEL_ERROR")
         teamChatFeedback("Conexão instável. Reabra o chat para atualizar.");
@@ -61,13 +85,22 @@ async function loadTeamChatPeople(){
 async function openTeamChat(){
   if(!isTeamChatMember())return;
   document.getElementById("teamChatModal").classList.add("show");
+  document.getElementById("teamChatFloat").classList.add("chat-open");
+  teamChatHidePreview();
+  document.getElementById("teamChatFloat").classList.remove("new-message");
+  if(teamChatPulseTimer){clearTimeout(teamChatPulseTimer);teamChatPulseTimer=null}
   teamChatFeedback("");
   await loadTeamChatPeople();
   const loaded=await loadTeamChatMessages();
   if(loaded)await markTeamChatRead();
   document.getElementById("teamChatInput").focus();
 }
-function closeTeamChat(){document.getElementById("teamChatModal").classList.remove("show")}
+function minimizeTeamChat(){
+  document.getElementById("teamChatModal").classList.remove("show");
+  document.getElementById("teamChatFloat").classList.remove("chat-open");
+  teamChatStopTyping();
+}
+function closeTeamChat(){minimizeTeamChat()}
 async function loadTeamChatMessages(){
   if(!isTeamChatMember())return;
   const box=document.getElementById("teamChatMessages");
@@ -122,6 +155,11 @@ async function refreshTeamChatUnread(){
   const badge=document.getElementById("teamChatUnread");
   badge.textContent=(count||0)>99?"99+":String(count||0);
   badge.style.display=count>0?"inline-flex":"none";
+  const floatBadge=document.getElementById("teamChatFloatBadge");
+  floatBadge.textContent=(count||0)>99?"99+":String(count||0);
+  floatBadge.style.display=count>0?"inline-flex":"none";
+  document.getElementById("teamChatFloat").classList.toggle("has-unread",count>0);
+  teamChatRenderTyping();
 }
 async function sendTeamChatMessage(){
   if(!isTeamChatMember()||teamChatBusy)return;
@@ -137,6 +175,7 @@ async function sendTeamChatMessage(){
     const {error}=await sb.from("team_chat_messages").insert({body});
     if(error)throw error;
     field.value="";
+    teamChatStopTyping();
     const loaded=await loadTeamChatMessages();
     if(loaded)await markTeamChatRead();
     field.focus();
@@ -147,7 +186,115 @@ async function sendTeamChatMessage(){
     btn.disabled=false;
   }
 }
+
+/* Balão minimizado, prévia de novas mensagens e indicador de digitação. */
+function teamChatHidePreview(){
+  document.getElementById("teamChatPeek").hidden=true;
+  if(teamChatPreviewTimer){clearTimeout(teamChatPreviewTimer);teamChatPreviewTimer=null}
+}
+function teamChatIncomingMessage(row){
+  if(!isTeamChatMember()||teamChatOpen())return;
+  const sender=teamChatPeople.get(String(row.sender_id));
+  document.getElementById("teamChatPeekName").textContent=sender?.full_name||"Alguém da equipe";
+  document.getElementById("teamChatPeekText").textContent=String(row.body||"Nova mensagem").slice(0,100);
+  document.getElementById("teamChatPeek").hidden=false;
+  if(teamChatPreviewTimer)clearTimeout(teamChatPreviewTimer);
+  teamChatPreviewTimer=setTimeout(teamChatHidePreview,7000);
+  const f=document.getElementById("teamChatFloat");
+  f.classList.add("new-message");
+  if(teamChatPulseTimer)clearTimeout(teamChatPulseTimer);
+  teamChatPulseTimer=setTimeout(()=>{
+    f.classList.remove("new-message");
+    teamChatPulseTimer=null;
+  },7500);
+}
+async function loadTeamChatTypingSnapshot(){
+  if(!isTeamChatMember())return;
+  const since=new Date(Date.now()-6500).toISOString();
+  const {data,error}=await sb.from("team_chat_typing")
+    .select("user_id,updated_at,is_typing").eq("store_id",currentUser.store_id)
+    .eq("is_typing",true).gte("updated_at",since);
+  if(error){console.warn("Chat: indicador de digitação indisponível",error.message);return}
+  for(const row of data||[])teamChatTypingEvent(row);
+}
+function teamChatTypingEvent(row){
+  if(!row.user_id||!isTeamChatMember()||String(row.user_id)===String(currentUser.id))return;
+  const until=Date.parse(row.updated_at)+6500;
+  if(row.is_typing&&Number.isFinite(until)&&until>Date.now())
+    teamChatTypingMap.set(String(row.user_id),until);
+  else teamChatTypingMap.delete(String(row.user_id));
+  teamChatRenderTyping();
+}
+function teamChatRenderTyping(){
+  if(teamChatTypingExpiryTimer){clearTimeout(teamChatTypingExpiryTimer);teamChatTypingExpiryTimer=null}
+  const now=Date.now();
+  for(const [id,expiresAt] of teamChatTypingMap){
+    if(expiresAt<=now)teamChatTypingMap.delete(id);
+  }
+  const ids=[...teamChatTypingMap.keys()];
+  let label="";
+  if(ids.length===1){
+    const p=teamChatPeople.get(ids[0]);
+    label=(p?.full_name||"Alguém")+" está digitando...";
+  }else if(ids.length>1)label=ids.length+" pessoas estão digitando...";
+  const bubble=document.getElementById("teamChatFloat");
+  bubble.classList.toggle("typing",ids.length>0);
+  document.getElementById("teamChatTypingStatus").textContent=label;
+  const hint=document.getElementById("teamChatFloatHint");
+  if(label)hint.textContent=label;
+  else if(bubble.classList.contains("has-unread"))hint.textContent="Novas mensagens";
+  else hint.textContent="Chat da equipe";
+  if(ids.length){
+    const next=Math.min(...teamChatTypingMap.values())-now;
+    teamChatTypingExpiryTimer=setTimeout(teamChatRenderTyping,Math.max(100,next+30));
+  }
+}
+function teamChatOnInput(){
+  if(!isTeamChatMember()||!teamChatOpen())return;
+  const field=document.getElementById("teamChatInput");
+  const typing=field.value.trim().length>0;
+  if(teamChatTypingStopTimer){clearTimeout(teamChatTypingStopTimer);teamChatTypingStopTimer=null}
+  if(!typing){teamChatStopTyping();return}
+  const now=Date.now();
+  if(now-teamChatTypingLastSent>=2000)teamChatSendTyping(true);
+  teamChatTypingStopTimer=setTimeout(teamChatStopTyping,3500);
+}
+function teamChatSendTyping(typing){
+  if(!isTeamChatMember())return;
+  teamChatTypingLastSent=typing?Date.now():0;
+  const payload={
+    user_id:currentUser.id,
+    organization_id:currentUser.organization_id,
+    store_id:currentUser.store_id,
+    is_typing:!!typing
+  };
+  // Envia na ordem correta para não deixar "digitando" preso após parar.
+  teamChatTypingQueue=teamChatTypingQueue.catch(()=>{}).then(async()=>{
+    const {error}=await sb.from("team_chat_typing").upsert(payload,{onConflict:"user_id"});
+    if(error)console.warn("Chat: digitação não sincronizada",error.message);
+  });
+}
+function teamChatStopTyping(){
+  if(teamChatTypingStopTimer){clearTimeout(teamChatTypingStopTimer);teamChatTypingStopTimer=null}
+  if(teamChatTypingLastSent)teamChatSendTyping(false);
+}
+function teamChatVisibilityChanged(){
+  if(document.hidden){teamChatStopTyping();return}
+  if(isTeamChatMember())refreshTeamChatUnread();
+}
+
 async function stopTeamChat(){
+  teamChatStopTyping();
+  if(teamChatVisibilityBound){
+    document.removeEventListener("visibilitychange",teamChatVisibilityChanged);
+    teamChatVisibilityBound=false;
+  }
+  if(teamChatTypingExpiryTimer)clearTimeout(teamChatTypingExpiryTimer);
+  if(teamChatPreviewTimer)clearTimeout(teamChatPreviewTimer);
+  if(teamChatPulseTimer)clearTimeout(teamChatPulseTimer);
+  teamChatTypingMap.clear();
+  teamChatTypingLastSent=0;
+  teamChatHidePreview();
   if(teamChatChannel){
     await sb.removeChannel(teamChatChannel);
     teamChatChannel=null;
@@ -158,4 +305,8 @@ async function stopTeamChat(){
   document.getElementById("teamChatModal").classList.remove("show");
   document.getElementById("teamChatButton").classList.remove("available");
   document.getElementById("teamChatUnread").style.display="none";
+  document.getElementById("teamChatFloat").classList.remove("available","chat-open","new-message","typing","has-unread");
+  document.getElementById("teamChatFloatBadge").style.display="none";
+  document.getElementById("teamChatFloatHint").textContent="Chat da equipe";
+  document.getElementById("teamChatTypingStatus").textContent="";
 }
