@@ -1,0 +1,50 @@
+
+/* Atendimento privado ao suporte no Painel Comercial */
+.support-trigger{display:none;position:relative;gap:7px;align-items:center}
+.support-trigger.available{display:inline-flex}
+.support-badge{display:none;background:#ef4444;color:#fff;border-radius:999px;min-width:19px;height:19px;font-size:10px;font-weight:900;align-items:center;justify-content:center;padding:0 5px}
+.support-has-unread{box-shadow:0 0 0 2px rgba(239,68,68,.35)}
+.support-modal-box{width:min(96vw,980px)!important;max-height:94vh;display:flex;flex-direction:column;overflow:hidden}
+.support-modal-box .modal-head{flex:0 0 auto}
+.support-modal-box .modal-head h2{margin:0}
+.support-modal-head-btn{border:1px solid rgba(255,255,255,.18);background:#1f2937;color:#f8fafc;border-radius:9px;padding:5px 12px;cursor:pointer;font-size:20px}
+.support-modal-actions{display:flex;gap:8px}
+.support-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-height:0;flex:1}
+.support-layout.agent{grid-template-columns:minmax(185px,240px) minmax(0,1fr)}
+.support-inbox{display:flex;flex-direction:column;min-width:0;min-height:0;border:1px solid var(--line);border-radius:13px;background:rgba(15,23,42,.5);overflow:hidden}
+.support-inbox-title{font-weight:800;font-size:12px;padding:13px;border-bottom:1px solid var(--line);color:#a5f3fc}
+.support-thread-list{overflow-y:auto;min-height:0;flex:1;padding:7px;display:flex;flex-direction:column;gap:5px}
+.support-thread{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:10px;padding:10px;cursor:pointer;color:#e5e7eb}
+.support-thread:hover,.support-thread.selected{background:rgba(14,116,144,.2);border-color:rgba(56,189,248,.4)}
+.support-thread-name{font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;overflow-wrap:anywhere}
+.support-thread-info{font-size:10px;color:#94a3b8}
+.support-dot{width:9px;height:9px;background:#ef4444;border-radius:50%;box-shadow:0 0 7px rgba(239,68,68,.5);flex:0 0 9px}
+.support-conversation{min-width:0;min-height:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#071626}
+.support-conversation-title{font-size:12px;font-weight:800;color:#e0f2fe;padding:11px 14px;border-bottom:1px solid var(--line);background:#102338}
+.support-messages{flex:1;min-height:220px;height:48vh;max-height:57vh;overflow-y:auto;overflow-x:hidden;padding:14px;display:flex;flex-direction:column;gap:11px}
+.support-message{align-self:flex-start;flex:0 0 auto;min-width:0;max-width:min(87%,570px);padding:10px 12px;background:#1a3047;color:#f8fafc;border-radius:13px;overflow-wrap:anywhere}
+.support-message.mine{align-self:flex-end;background:#155b42}
+.support-message-name{font-size:10px;font-weight:800;color:#7dd3fc;margin-bottom:5px}
+.support-message.mine .support-message-name{color:#bbf7d0}
+.support-message-text{white-space:pre-wrap;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.support-message-date{font-size:9px;color:#cbd5e1;text-align:right;opacity:.8;margin-top:5px}
+.support-compose{display:flex;gap:9px;align-items:flex-end;padding:11px 12px;border-top:1px solid var(--line)}
+.support-compose[hidden]{display:none!important}
+.support-compose textarea{flex:1;min-width:0;background:#0d1d30;color:#fff;border:1px solid var(--line);border-radius:11px;padding:10px;resize:vertical;min-height:43px;max-height:115px}
+.support-status{min-height:15px;color:#fbbf24;font-size:11px;padding:0 12px 6px}
+.support-empty{color:#94a3b8;text-align:center;font-size:12px;padding:25px 12px;margin:auto}
+.support-toast{position:fixed;right:18px;bottom:20px;width:min(335px,calc(100vw - 36px));z-index:9998;color:#e2e8f0;background:#0d2338;border:1px solid #38bdf8;box-shadow:0 10px 30px rgba(0,0,0,.45);border-radius:14px;padding:13px 15px;text-align:left;cursor:pointer}
+.support-toast[hidden]{display:none!important}
+.support-toast strong{display:block;color:#7dd3fc;margin-bottom:4px}
+.support-toast span{font-size:12px}
+@media(max-width:640px){
+.support-modal-box{width:100%!important;max-height:96vh;padding:12px}
+.support-layout.agent{grid-template-columns:minmax(105px,34%) minmax(0,1fr);gap:6px}
+.support-thread{padding:8px 6px}
+.support-thread-name{font-size:11px}
+.support-thread-info{font-size:9px}
+.support-messages{min-height:140px;height:55vh;padding:9px;gap:7px}
+.support-message{max-width:95%;padding:8px 9px}
+.support-compose{padding:8px;gap:5px}
+.support-compose .btn{padding:10px 9px}
+}
