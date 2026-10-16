@@ -82,10 +82,6 @@ async function loadTeamChatPeople(){
     .order("full_name");
   if(error){teamChatFeedback("Não foi possível atualizar a lista de participantes.");return}
   teamChatPeople=new Map((data||[]).map(p=>[String(p.id),p]));
-  const box=document.getElementById("teamChatPeople");
-  box.innerHTML=(data||[]).map(p=>'<div class="team-chat-person">'+
-    '<img src="'+esc(p.avatar_url||fallback(p.full_name))+'" alt="">'+
-    '<span title="'+esc(p.full_name)+'">'+esc(p.full_name)+'</span></div>').join("");
 }
 async function openTeamChat(){
   if(!isTeamChatMember())return;
