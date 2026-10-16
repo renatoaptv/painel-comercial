@@ -85,3 +85,30 @@
 .team-chat-message-actions .team-chat-member-action{font-size:10px;padding:6px 8px}
 .team-chat-member-list{max-height:146px}
 @media(max-width:520px){.team-chat-mod-shortcut.available{font-size:12px}.team-chat-message-actions{justify-content:flex-start}}
+
+/* Corrige o encaixe dos balões e impede rolagem horizontal das mensagens. */
+.team-chat-box{min-width:0;max-width:calc(100vw - 24px);overflow-x:hidden}
+.team-chat-people{width:100%;max-width:100%;min-width:0}
+.team-chat-messages{
+  display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;
+  box-sizing:border-box;width:100%;min-width:0;overflow-x:hidden;overflow-y:auto;
+}
+.team-chat-row{
+  display:flex;flex-direction:row;align-items:flex-end;
+  width:fit-content;max-width:94%;min-width:0;flex:0 0 auto;align-self:flex-start;
+}
+.team-chat-row.mine{align-self:flex-end;flex-direction:row-reverse}
+.team-chat-row .team-chat-bubble{min-width:0;max-width:100%;width:auto;box-sizing:border-box;flex:0 1 auto}
+.team-chat-row .team-chat-body{overflow-wrap:anywhere;word-break:normal;white-space:pre-wrap}
+.team-chat-message-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}
+.team-chat-message-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;min-width:0;max-width:100%}
+.team-chat-message-actions button{white-space:normal;overflow-wrap:normal;line-height:1.2;text-align:center}
+.team-chat-compose{min-width:0}
+.team-chat-compose textarea{min-width:0;width:100%}
+@media(max-width:520px){
+  .team-chat-box{width:100%!important;max-width:100%;overflow-x:hidden}
+  .team-chat-row{max-width:100%}
+  .team-chat-row .team-chat-bubble{max-width:100%}
+  .team-chat-message-actions{justify-content:flex-start}
+  .team-chat-message-actions button{font-size:10px;padding:6px 7px}
+}
