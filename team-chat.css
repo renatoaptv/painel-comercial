@@ -4,10 +4,6 @@
 .team-chat-trigger.available{display:inline-flex;align-items:center;gap:7px}
 .team-chat-unread{display:none;align-items:center;justify-content:center;border-radius:999px;min-width:18px;height:18px;padding:0 5px;background:#ef4444;color:white;font-size:10px;font-weight:900}
 .team-chat-box{width:min(96%,800px)!important;display:flex;flex-direction:column;max-height:94vh}
-.team-chat-people{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:0 0 11px}
-.team-chat-person{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;color:#cbd5e1;font-size:10px;max-width:150px}
-.team-chat-person img{width:25px;height:25px;border-radius:50%;object-fit:cover}
-.team-chat-person span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .team-chat-messages{background:#091626;border:1px solid var(--line);border-radius:16px;flex:1;min-height:260px;height:52vh;max-height:52vh;overflow-y:auto;padding:13px;display:flex;flex-direction:column;gap:10px}
 .team-chat-row{display:flex;align-items:flex-end;gap:7px;max-width:92%}
 .team-chat-row.mine{align-self:flex-end;flex-direction:row-reverse}
@@ -88,7 +84,6 @@
 
 /* Corrige o encaixe dos balões e impede rolagem horizontal das mensagens. */
 .team-chat-box{min-width:0;max-width:calc(100vw - 24px);overflow-x:hidden}
-.team-chat-people{width:100%;max-width:100%;min-width:0}
 .team-chat-messages{
   display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;
   box-sizing:border-box;width:100%;min-width:0;overflow-x:hidden;overflow-y:auto;
