@@ -71,3 +71,27 @@
 .team-chat-box{overflow-y:auto}
 .team-chat-messages{min-height:175px}
 @media(max-width:520px){.team-chat-pinned-list{max-height:125px}.team-chat-messages{min-height:160px}.team-chat-notice-actions .btn{padding:9px 11px}}
+
+
+/* Moderação: gerente exclui mensagens inadequadas e bloqueia envio do vendedor. */
+.team-chat-member-tools[hidden],.team-chat-member-panel[hidden],.team-chat-blocked-banner[hidden]{display:none!important}
+.team-chat-member-tools{display:flex;justify-content:flex-end;margin:0 0 10px}
+.team-chat-members-toggle{border:1px solid rgba(56,189,248,.4);color:#c7e8ff;background:rgba(30,64,104,.28);border-radius:10px;padding:8px 11px;font-size:11px;font-weight:800;cursor:pointer}
+.team-chat-member-panel{margin:0 0 10px;padding:12px;border-radius:12px;border:1px solid rgba(56,189,248,.3);background:#102035}
+.team-chat-member-panel>strong{font-size:12px;color:#bfdbfe}
+.team-chat-member-panel>p{font-size:11px;color:#94a3b8;margin:6px 0 9px;line-height:1.5}
+.team-chat-member-list{max-height:185px;overflow-y:auto;display:flex;flex-direction:column;gap:5px}
+.team-chat-member-row{display:flex;align-items:center;gap:9px;padding:8px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.03)}
+.team-chat-member-avatar{width:31px;height:31px;object-fit:cover;border-radius:50%;flex-shrink:0}
+.team-chat-member-name{font-weight:800;font-size:12px;flex:1;min-width:0;overflow-wrap:anywhere}
+.team-chat-member-name small{display:block;font-size:10px;margin-top:2px}
+.team-chat-member-blocked{color:#fca5a5}.team-chat-member-allowed{color:#86efac}
+.team-chat-member-action{font-weight:800;font-size:11px;padding:7px 9px;border-radius:9px;background:rgba(248,113,113,.14);border:1px solid rgba(248,113,113,.5);color:#fca5a5;cursor:pointer;flex-shrink:0}
+.team-chat-member-action.is-blocked{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.4);color:#bbf7d0}
+.team-chat-member-action:disabled{opacity:.5;cursor:not-allowed}
+.team-chat-message-actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+.team-chat-delete-action{font-size:10px;font-weight:800;border-radius:7px;border:1px solid rgba(248,113,113,.4);color:#fecaca;padding:4px 7px;background:rgba(185,28,28,.12);cursor:pointer}
+.team-chat-delete-action:hover,.team-chat-member-action:hover{filter:brightness(1.2)}
+.team-chat-blocked-banner{background:rgba(127,29,29,.32);color:#fecaca;border:1px solid rgba(248,113,113,.36);border-radius:11px;padding:10px 12px;font-size:12px;line-height:1.5;margin-top:10px}
+.team-chat-compose textarea:disabled,.team-chat-compose button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:520px){.team-chat-member-row{gap:6px}.team-chat-member-action{padding:6px 8px}.team-chat-member-panel{padding:9px}}
