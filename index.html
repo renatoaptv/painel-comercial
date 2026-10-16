@@ -192,9 +192,10 @@
 .sale-quick-btn{white-space:nowrap}
 @media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
-<link rel="stylesheet" href="./team-chat.css?v=3">
+<link rel="stylesheet" href="./team-chat.css?v=4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./team-chat.js?v=3"></script>
+<script src="./team-chat.js?v=4"></script>
+<script src="./team-chat-moderation.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -424,6 +425,14 @@
   <div class="modal-box team-chat-box">
     <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><div class="team-chat-head-actions"><button class="team-chat-minimize" type="button" onclick="minimizeTeamChat()" title="Minimizar para balão" aria-label="Minimizar chat">−</button><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div></div>
     <div id="teamChatPeople" class="team-chat-people"></div>
+    <div id="teamChatMemberTools" class="team-chat-member-tools" hidden>
+      <button class="team-chat-members-toggle" type="button" onclick="toggleTeamChatMemberPanel()">🛡️ Gerenciar participantes</button>
+    </div>
+    <div id="teamChatMemberPanel" class="team-chat-member-panel" hidden>
+      <strong>Controle de participação</strong>
+      <p>O bloqueio impede o envio de mensagens, mas o vendedor continua com acesso ao CRM e pode ler os avisos.</p>
+      <div id="teamChatMemberList" class="team-chat-member-list"></div>
+    </div>
     <div id="teamChatPinned" class="team-chat-pinned" hidden>
       <div class="team-chat-pinned-head"><strong>📌 Avisos fixados</strong><span id="teamChatPinCount" class="team-chat-pin-count">0</span></div>
       <div id="teamChatPinnedList" class="team-chat-pinned-list"></div>
@@ -441,6 +450,7 @@
     </div>
     <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"><div class="empty">Carregando mensagens...</div></div>
     <div id="teamChatTypingStatus" class="team-chat-typing-status" aria-live="polite"></div>
+    <div id="teamChatBlockedBanner" class="team-chat-blocked-banner" role="status" hidden>O gestor restringiu seu envio de mensagens neste chat. Você ainda pode acompanhar as conversas e os avisos da equipe.</div>
     <div class="team-chat-compose">
       <textarea id="teamChatInput" maxlength="2000" rows="2" placeholder="Escreva para a equipe..." oninput="teamChatOnInput()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage()}"></textarea>
       <button id="teamChatSend" class="btn" type="button" onclick="sendTeamChatMessage()">Enviar</button>

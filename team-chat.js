@@ -39,6 +39,7 @@ async function initTeamChat(){
   teamChatTypingMap.clear();
   teamChatLastReadAt=null;
   await loadTeamChatPeople();
+  await loadTeamChatModerationState();
   document.getElementById("teamChatNoticeTools").hidden=!canManageTeamChatPins();
   document.getElementById("teamChatNoticeCompose").hidden=true;
   await loadTeamChatPins();
@@ -75,6 +76,10 @@ async function initTeamChat(){
       if(teamChatOpen())await loadTeamChatMessages();
     })
     .on("postgres_changes",{
+      event:"INSERT",schema:"public",table:"team_chat_moderation_events",
+      filter:"store_id=eq."+currentUser.store_id
+    },payload=>onTeamChatModerationEvent(payload.new||{}))
+    .on("postgres_changes",{
       event:"*",schema:"public",table:"team_chat_typing",
       filter:"store_id=eq."+currentUser.store_id
     },payload=>teamChatTypingEvent(payload.new||{}))
@@ -108,10 +113,11 @@ async function openTeamChat(){
   if(teamChatPulseTimer){clearTimeout(teamChatPulseTimer);teamChatPulseTimer=null}
   teamChatFeedback("");
   await loadTeamChatPeople();
+  await loadTeamChatModerationState();
   await loadTeamChatPins();
   const loaded=await loadTeamChatMessages();
   if(loaded)await markTeamChatRead();
-  document.getElementById("teamChatInput").focus();
+  if(!teamChatBlocked)document.getElementById("teamChatInput").focus();
 }
 function minimizeTeamChat(){
   document.getElementById("teamChatModal").classList.remove("show");
@@ -148,11 +154,14 @@ async function loadTeamChatMessages(){
       ? '<button type="button" class="team-chat-pin-action" data-team-chat-pin="'+esc(m.id)+'" onclick="toggleTeamChatPin(this.dataset.teamChatPin)">'+
         (pin?'Desafixar':'📌 Fixar')+'</button>'
       : '';
+    const deleteAction=canModerateTeamChat()&&p?.role==="seller"
+      ? '<button type="button" class="team-chat-delete-action" data-team-chat-delete="'+esc(m.id)+'" onclick="deleteTeamChatMessage(this.dataset.teamChatDelete)" title="Excluir mensagem inadequada deste vendedor">Excluir</button>'
+      : '';
     return '<div class="team-chat-row'+(mine?' mine':'')+'">'+
       '<img class="team-chat-avatar" src="'+esc(photo)+'" alt="">'+
       '<div class="team-chat-bubble"><div class="team-chat-who">'+esc(name)+'</div>'+
       '<div class="team-chat-body">'+esc(m.body)+'</div>'+
-      '<div class="team-chat-message-footer"><div class="team-chat-when">'+esc(when)+'</div>'+pinAction+'</div></div></div>';
+      '<div class="team-chat-message-footer"><div class="team-chat-when">'+esc(when)+'</div><div class="team-chat-message-actions">'+pinAction+deleteAction+'</div></div></div>';
   }).join("");
   box.scrollTop=box.scrollHeight;
   return true;
@@ -185,7 +194,10 @@ async function refreshTeamChatUnread(){
   teamChatRenderTyping();
 }
 async function sendTeamChatMessage(){
-  if(!isTeamChatMember()||teamChatBusy)return;
+  if(!isTeamChatMember()||teamChatBusy||teamChatBlocked){
+    if(teamChatBlocked)teamChatFeedback("Você está bloqueado para enviar mensagens no chat pela gestão.");
+    return;
+  }
   const field=document.getElementById("teamChatInput");
   const btn=document.getElementById("teamChatSend");
   const body=field.value.trim();
@@ -206,7 +218,7 @@ async function sendTeamChatMessage(){
     teamChatFeedback("Não foi possível enviar a mensagem: "+(e.message||"Tente novamente."));
   }finally{
     teamChatBusy=false;
-    btn.disabled=false;
+    btn.disabled=teamChatBlocked;
   }
 }
 
@@ -274,7 +286,7 @@ function teamChatRenderTyping(){
   }
 }
 function teamChatOnInput(){
-  if(!isTeamChatMember()||!teamChatOpen())return;
+  if(!isTeamChatMember()||!teamChatOpen()||teamChatBlocked)return;
   const field=document.getElementById("teamChatInput");
   const typing=field.value.trim().length>0;
   if(teamChatTypingStopTimer){clearTimeout(teamChatTypingStopTimer);teamChatTypingStopTimer=null}
@@ -461,6 +473,7 @@ async function stopTeamChat(){
   document.getElementById("teamChatNoticeTools").hidden=true;
   document.getElementById("teamChatNoticeCompose").hidden=true;
   document.getElementById("teamChatPinned").hidden=true;
+  resetTeamChatModeration();
   teamChatHidePreview();
   if(teamChatChannel){
     await sb.removeChannel(teamChatChannel);
