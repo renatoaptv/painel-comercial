@@ -192,10 +192,10 @@
 .sale-quick-btn{white-space:nowrap}
 @media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
-<link rel="stylesheet" href="./team-chat.css?v=4">
+<link rel="stylesheet" href="./team-chat.css?v=5">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./team-chat.js?v=4"></script>
-<script src="./team-chat-moderation.js?v=1"></script>
+<script src="./team-chat.js?v=5"></script>
+<script src="./team-chat-moderation.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -250,6 +250,7 @@
   <button class="btn secondary manager-only" onclick="openManagerClients()">👥 Clientes</button>
   <button class="btn secondary manager-only" onclick="openSellerReport()">📊 Relatório vendedores</button>
   <button type="button" id="teamChatButton" class="btn secondary team-chat-trigger" onclick="openTeamChat()">💬 Chat <span id="teamChatUnread" class="team-chat-unread">0</span></button>
+  <button type="button" id="teamChatModerationShortcut" class="btn secondary team-chat-mod-shortcut" onclick="openTeamChatModeration()">🛡️ Moderar chat</button>
   <button class="btn secondary manager-only" onclick="openSeller()">+ Vendedor</button>
   <button class="btn" onclick="openClient()">+ Cadastrar cliente</button>
   <button class="btn secondary" onclick="logout()">Sair</button>
@@ -426,31 +427,16 @@
     <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><div class="team-chat-head-actions"><button class="team-chat-minimize" type="button" onclick="minimizeTeamChat()" title="Minimizar para balão" aria-label="Minimizar chat">−</button><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div></div>
     <div id="teamChatPeople" class="team-chat-people"></div>
     <div id="teamChatMemberTools" class="team-chat-member-tools" hidden>
-      <button class="team-chat-members-toggle" type="button" onclick="toggleTeamChatMemberPanel()">🛡️ Gerenciar participantes</button>
+      <button class="team-chat-members-toggle" type="button" onclick="toggleTeamChatMemberPanel()">🛡️ Bloquear / desbloquear vendedores</button>
     </div>
     <div id="teamChatMemberPanel" class="team-chat-member-panel" hidden>
-      <strong>Controle de participação</strong>
-      <p>O bloqueio impede o envio de mensagens, mas o vendedor continua com acesso ao CRM e pode ler os avisos.</p>
+      <strong>🛡️ Controle de acesso ao chat</strong>
+      <p>Escolha um vendedor abaixo para bloquear ou desbloquear o envio de mensagens. O acesso aos clientes e às vendas não muda.</p>
       <div id="teamChatMemberList" class="team-chat-member-list"></div>
-    </div>
-    <div id="teamChatPinned" class="team-chat-pinned" hidden>
-      <div class="team-chat-pinned-head"><strong>📌 Avisos fixados</strong><span id="teamChatPinCount" class="team-chat-pin-count">0</span></div>
-      <div id="teamChatPinnedList" class="team-chat-pinned-list"></div>
-    </div>
-    <div id="teamChatNoticeTools" class="team-chat-notice-tools" hidden>
-      <button type="button" class="team-chat-new-notice-btn" onclick="toggleTeamChatNoticeComposer()">📌 Criar aviso para a equipe</button>
-    </div>
-    <div id="teamChatNoticeCompose" class="team-chat-notice-compose" hidden>
-      <label for="teamChatNoticeText">Novo aviso para fixar no chat</label>
-      <textarea id="teamChatNoticeText" maxlength="2000" rows="3" placeholder="Ex.: Reunião de equipe amanhã às 8h30..."></textarea>
-      <div class="team-chat-notice-actions">
-        <button id="teamChatNoticeSend" type="button" class="btn" onclick="postTeamChatNotice()">Publicar e fixar</button>
-        <button type="button" class="btn secondary" onclick="toggleTeamChatNoticeComposer(false)">Cancelar</button>
-      </div>
     </div>
     <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"><div class="empty">Carregando mensagens...</div></div>
     <div id="teamChatTypingStatus" class="team-chat-typing-status" aria-live="polite"></div>
-    <div id="teamChatBlockedBanner" class="team-chat-blocked-banner" role="status" hidden>O gestor restringiu seu envio de mensagens neste chat. Você ainda pode acompanhar as conversas e os avisos da equipe.</div>
+    <div id="teamChatBlockedBanner" class="team-chat-blocked-banner" role="status" hidden>O gestor restringiu seu envio de mensagens neste chat. Você ainda pode acompanhar as conversas da equipe.</div>
     <div class="team-chat-compose">
       <textarea id="teamChatInput" maxlength="2000" rows="2" placeholder="Escreva para a equipe..." oninput="teamChatOnInput()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage()}"></textarea>
       <button id="teamChatSend" class="btn" type="button" onclick="sendTeamChatMessage()">Enviar</button>
