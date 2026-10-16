@@ -12,6 +12,7 @@
 .support-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-height:0;flex:1}
 .support-layout.agent{grid-template-columns:minmax(185px,240px) minmax(0,1fr)}
 .support-inbox{display:flex;flex-direction:column;min-width:0;min-height:0;border:1px solid var(--line);border-radius:13px;background:rgba(15,23,42,.5);overflow:hidden}
+.support-inbox[hidden]{display:none!important}
 .support-inbox-title{font-weight:800;font-size:12px;padding:13px;border-bottom:1px solid var(--line);color:#a5f3fc}
 .support-thread-list{overflow-y:auto;min-height:0;flex:1;padding:7px;display:flex;flex-direction:column;gap:5px}
 .support-thread{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:10px;padding:10px;cursor:pointer;color:#e5e7eb}
