@@ -12,6 +12,13 @@ let teamChatPreviewTimer=null;
 let teamChatPulseTimer=null;
 let teamChatTypingQueue=Promise.resolve();
 let teamChatVisibilityBound=false;
+let teamChatPins=[];
+let teamChatPinByMessage=new Map();
+let teamChatPinBusy=false;
+let teamChatNoticeBusy=false;
+function canManageTeamChatPins(){
+  return !!(isTeamChatMember() && currentUser.rawRole==="manager");
+}
 
 function isTeamChatMember(){
   return !!(currentUser && currentUser.organization_id && currentUser.store_id
@@ -32,6 +39,9 @@ async function initTeamChat(){
   teamChatTypingMap.clear();
   teamChatLastReadAt=null;
   await loadTeamChatPeople();
+  document.getElementById("teamChatNoticeTools").hidden=!canManageTeamChatPins();
+  document.getElementById("teamChatNoticeCompose").hidden=true;
+  await loadTeamChatPins();
   await loadTeamChatTypingSnapshot();
   if(!teamChatVisibilityBound){
     document.addEventListener("visibilitychange",teamChatVisibilityChanged);
@@ -56,6 +66,13 @@ async function initTeamChat(){
         if(String(row.sender_id)!==String(currentUser?.id))
           teamChatIncomingMessage(row);
       }
+    })
+    .on("postgres_changes",{
+      event:"*",schema:"public",table:"team_chat_pins",
+      filter:"store_id=eq."+currentUser.store_id
+    },async()=>{
+      await loadTeamChatPins();
+      if(teamChatOpen())await loadTeamChatMessages();
     })
     .on("postgres_changes",{
       event:"*",schema:"public",table:"team_chat_typing",
@@ -91,6 +108,7 @@ async function openTeamChat(){
   if(teamChatPulseTimer){clearTimeout(teamChatPulseTimer);teamChatPulseTimer=null}
   teamChatFeedback("");
   await loadTeamChatPeople();
+  await loadTeamChatPins();
   const loaded=await loadTeamChatMessages();
   if(loaded)await markTeamChatRead();
   document.getElementById("teamChatInput").focus();
@@ -125,11 +143,16 @@ async function loadTeamChatMessages(){
     const when=new Date(m.created_at).toLocaleString("pt-BR",{
       day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"
     });
+    const pin=teamChatPinByMessage.get(String(m.id));
+    const pinAction=canManageTeamChatPins()
+      ? '<button type="button" class="team-chat-pin-action" data-team-chat-pin="'+esc(m.id)+'" onclick="toggleTeamChatPin(this.dataset.teamChatPin)">'+
+        (pin?'Desafixar':'📌 Fixar')+'</button>'
+      : '';
     return '<div class="team-chat-row'+(mine?' mine':'')+'">'+
       '<img class="team-chat-avatar" src="'+esc(photo)+'" alt="">'+
       '<div class="team-chat-bubble"><div class="team-chat-who">'+esc(name)+'</div>'+
       '<div class="team-chat-body">'+esc(m.body)+'</div>'+
-      '<div class="team-chat-when">'+esc(when)+'</div></div></div>';
+      '<div class="team-chat-message-footer"><div class="team-chat-when">'+esc(when)+'</div>'+pinAction+'</div></div></div>';
   }).join("");
   box.scrollTop=box.scrollHeight;
   return true;
@@ -243,6 +266,7 @@ function teamChatRenderTyping(){
   const hint=document.getElementById("teamChatFloatHint");
   if(label)hint.textContent=label;
   else if(bubble.classList.contains("has-unread"))hint.textContent="Novas mensagens";
+  else if(teamChatPins.length)hint.textContent=teamChatPins.length+(teamChatPins.length===1?" aviso fixado":" avisos fixados");
   else hint.textContent="Chat da equipe";
   if(ids.length){
     const next=Math.min(...teamChatTypingMap.values())-now;
@@ -294,6 +318,13 @@ async function stopTeamChat(){
   if(teamChatPulseTimer)clearTimeout(teamChatPulseTimer);
   teamChatTypingMap.clear();
   teamChatTypingLastSent=0;
+  teamChatPins=[];
+  teamChatPinByMessage.clear();
+  teamChatPinBusy=false;
+  teamChatNoticeBusy=false;
+  document.getElementById("teamChatNoticeTools").hidden=true;
+  document.getElementById("teamChatNoticeCompose").hidden=true;
+  document.getElementById("teamChatPinned").hidden=true;
   teamChatHidePreview();
   if(teamChatChannel){
     await sb.removeChannel(teamChatChannel);
