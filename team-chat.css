@@ -46,32 +46,14 @@
 @media(max-width:520px){.team-chat-float{right:13px;bottom:calc(14px + env(safe-area-inset-bottom, 0px))}.team-chat-float-btn{width:58px;height:58px;font-size:24px}}
 @media(prefers-reduced-motion:reduce){.team-chat-float.typing .team-chat-float-btn,.team-chat-float.new-message .team-chat-float-btn{animation:none;outline:3px solid #38bdf8}}
 
-/* Avisos fixados, administrados exclusivamente pelo gerente */
-.team-chat-pinned[hidden],.team-chat-notice-tools[hidden],.team-chat-notice-compose[hidden]{display:none!important}
-.team-chat-pinned{border:1px solid rgba(250,204,21,.35);border-radius:14px;background:linear-gradient(120deg,rgba(120,93,15,.19),rgba(15,27,45,.96));margin-bottom:11px;overflow:hidden;flex-shrink:0}
-.team-chat-pinned-head{padding:9px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(250,204,21,.21);color:#fef08a;font-size:12px}
-.team-chat-pin-count{display:inline-flex;background:rgba(250,204,21,.15);border:1px solid rgba(250,204,21,.25);color:#fef08a;border-radius:100px;padding:2px 7px;font-size:10px;font-weight:800}
-.team-chat-pinned-list{max-height:165px;overflow-y:auto;overscroll-behavior:contain;padding:4px 10px}
-.team-chat-pin-item{padding:9px 4px 9px 10px;margin:5px 0;border-left:3px solid #eab308;border-radius:4px;background:rgba(255,255,255,.035)}
-.team-chat-pin-item-head{display:flex;align-items:center;flex-wrap:wrap;column-gap:9px;row-gap:4px;margin-bottom:5px}
-.team-chat-pin-item-head strong{font-size:11px;color:#fef08a}
-.team-chat-pin-item-head small{font-size:10px;color:#94a3b8}
-.team-chat-pin-body{white-space:pre-wrap;overflow-wrap:anywhere;color:#e2e8f0;font-size:12px;line-height:1.45}
-.team-chat-unpin{margin-left:auto;font-size:10px;font-weight:800;background:rgba(239,68,68,.14);border:1px solid rgba(248,113,113,.4);color:#fecaca;border-radius:7px;cursor:pointer;padding:5px 8px}
-.team-chat-notice-tools{display:flex;justify-content:flex-end;margin:-2px 0 9px;flex-shrink:0}
-.team-chat-new-notice-btn{background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.3);border-radius:10px;padding:8px 12px;color:#fef08a;font-weight:800;font-size:11px;cursor:pointer}
-.team-chat-notice-compose{padding:10px;border:1px solid rgba(250,204,21,.3);border-radius:12px;margin-bottom:10px;background:#122134;flex-shrink:0}
-.team-chat-notice-compose label{display:block;font-size:11px;font-weight:800;color:#fef08a;margin-bottom:7px}
-.team-chat-notice-compose textarea{width:100%;background:#091626;border:1px solid var(--line);color:#fff;resize:vertical;border-radius:10px;padding:11px;min-height:75px;max-height:160px}
-.team-chat-notice-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.team-chat-message-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px}
+
+/* Chat simplificado: sem fixação, moderação sempre fácil de acessar. */
+.team-chat-mod-shortcut{display:none}
+.team-chat-mod-shortcut.available{display:inline-flex;align-items:center;gap:6px;border-color:rgba(56,189,248,.55);color:#e0f2fe;background:#134069}
+.team-chat-message-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:6px}
 .team-chat-message-footer .team-chat-when{margin-top:0}
-.team-chat-pin-action{background:none;border:1px solid rgba(125,211,252,.3);color:#93c5fd;font-size:10px;border-radius:7px;padding:4px 8px;cursor:pointer;white-space:nowrap}
-.team-chat-pin-action:hover,.team-chat-new-notice-btn:hover{filter:brightness(1.18)}
 .team-chat-box{overflow-y:auto}
 .team-chat-messages{min-height:175px}
-@media(max-width:520px){.team-chat-pinned-list{max-height:125px}.team-chat-messages{min-height:160px}.team-chat-notice-actions .btn{padding:9px 11px}}
-
 
 /* Moderação: gerente exclui mensagens inadequadas e bloqueia envio do vendedor. */
 .team-chat-member-tools[hidden],.team-chat-member-panel[hidden],.team-chat-blocked-banner[hidden]{display:none!important}
@@ -95,3 +77,11 @@
 .team-chat-blocked-banner{background:rgba(127,29,29,.32);color:#fecaca;border:1px solid rgba(248,113,113,.36);border-radius:11px;padding:10px 12px;font-size:12px;line-height:1.5;margin-top:10px}
 .team-chat-compose textarea:disabled,.team-chat-compose button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:520px){.team-chat-member-row{gap:6px}.team-chat-member-action{padding:6px 8px}.team-chat-member-panel{padding:9px}}
+
+.team-chat-member-tools{justify-content:flex-start}
+.team-chat-members-toggle{font-size:12px;background:#154b78;color:#e0f2fe;border-color:#38bdf8;padding:10px 13px}
+.team-chat-member-panel{background:#112b42;border-color:#38bdf8}
+.team-chat-delete-action{font-size:11px;padding:7px 9px;background:rgba(190,24,24,.2)}
+.team-chat-message-actions .team-chat-member-action{font-size:10px;padding:6px 8px}
+.team-chat-member-list{max-height:146px}
+@media(max-width:520px){.team-chat-mod-shortcut.available{font-size:12px}.team-chat-message-actions{justify-content:flex-start}}
