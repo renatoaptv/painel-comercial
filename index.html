@@ -192,9 +192,9 @@
 .sale-quick-btn{white-space:nowrap}
 @media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
-<link rel="stylesheet" href="./team-chat.css?v=6">
+<link rel="stylesheet" href="./team-chat.css?v=7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./team-chat.js?v=6"></script>
+<script src="./team-chat.js?v=7"></script>
 <script src="./team-chat-moderation.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
@@ -425,7 +425,6 @@
 <div class="modal" id="teamChatModal" role="dialog" aria-modal="true" aria-label="Chat da equipe">
   <div class="modal-box team-chat-box">
     <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><div class="team-chat-head-actions"><button class="team-chat-minimize" type="button" onclick="minimizeTeamChat()" title="Minimizar para balão" aria-label="Minimizar chat">−</button><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div></div>
-    <div id="teamChatPeople" class="team-chat-people"></div>
     <div id="teamChatMemberTools" class="team-chat-member-tools" hidden>
       <button class="team-chat-members-toggle" type="button" onclick="toggleTeamChatMemberPanel()">🛡️ Bloquear / desbloquear vendedores</button>
     </div>
