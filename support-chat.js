@@ -21,6 +21,7 @@ function supportEl(id){return document.getElementById(id)}
 function supportIsOpen(){return supportEl("supportModal").classList.contains("show")}
 function supportStatus(text){supportEl("supportStatus").textContent=text||""}
 function supportDisplayName(uid){
+  if(uid==null)return "Assistente IA";
   if(String(uid)===String(currentUser?.id))return "Você";
   const p=supportPeople.get(String(uid));
   if(p?.role==="super_admin")return "Suporte";
@@ -91,7 +92,7 @@ async function initTeamChat(){
 async function supportRefreshThreads(){
   if(!canUseSupport())return false;
   let q=sb.from("support_threads")
-    .select("id,requester_id,organization_id,store_id,last_message_at,last_sender_id")
+    .select("id,requester_id,organization_id,store_id,last_message_at,last_sender_id,last_sender_is_ai,needs_human")
     .order("last_message_at",{ascending:false}).limit(200);
   if(!isSupportAgent())q=q.eq("requester_id",currentUser.id);
   const {data,error}=await q;
@@ -113,7 +114,9 @@ async function supportRefreshThreads(){
   return true;
 }
 function supportIsUnread(t){
-  return !!(t.last_sender_id &&
+  if(isSupportAgent()&&t.needs_human)return true;
+  if(isSupportAgent()&&t.last_sender_is_ai)return false;
+  return !!((t.last_sender_is_ai || t.last_sender_id) &&
     String(t.last_sender_id)!==String(currentUser?.id) &&
     (!supportReadTimes.get(String(t.id)) ||
       Date.parse(t.last_message_at)>Date.parse(supportReadTimes.get(String(t.id)))));
@@ -141,7 +144,8 @@ function supportRenderThreads(){
     return '<button type="button" class="support-thread'+(selected?' selected':'')+
       '" data-support-thread="'+esc(t.id)+'" onclick="supportSelectThread(this.dataset.supportThread)">'+
       '<span class="support-thread-name">'+esc(name)+
-      (supportIsUnread(t)?'<span class="support-dot"></span>':'')+'</span>'+
+      (supportIsUnread(t)?'<span class="support-dot"></span>':'')+
+      (t.needs_human?'<span class="support-escalated">Precisa de você</span>':'')+'</span>'+
       '<span class="support-thread-info">'+esc(p?.role==="seller"?"Vendedor":p?.role==="manager"?"Gestor":"Usuário")+' • '+esc(when)+'</span></button>';
   }).join("");
 }
@@ -209,7 +213,7 @@ async function supportLoadMessages(){
     ? (supportPeople.get(String(chosen?.requester_id))?.full_name||"Atendimento")
     : "Conversa com o suporte";
   const {data,error}=await sb.from("support_messages")
-    .select("id,thread_id,sender_id,body,created_at")
+    .select("id,thread_id,sender_id,body,created_at,is_ai")
     .eq("thread_id",supportCurrentThread)
     .order("created_at",{ascending:false}).limit(150);
   if(error){
@@ -224,9 +228,9 @@ async function supportLoadMessages(){
   }
   box.innerHTML=msgs.map(m=>{
     const mine=String(m.sender_id)===String(currentUser.id);
-    const name=supportDisplayName(m.sender_id);
+    const name=m.is_ai?"Assistente IA":supportDisplayName(m.sender_id);
     const when=new Date(m.created_at).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
-    return '<div class="support-message'+(mine?' mine':'')+'"><div class="support-message-name">'+esc(name)+'</div>'+
+    return '<div class="support-message'+(mine?' mine':'')+(m.is_ai?' support-ai-message':'')+'"><div class="support-message-name">'+esc(name)+'</div>'+
       '<div class="support-message-text">'+esc(m.body)+'</div><div class="support-message-date">'+esc(when)+'</div></div>';
   }).join("");
   box.scrollTop=box.scrollHeight;
@@ -261,9 +265,19 @@ async function sendSupportMessage(){
   supportBusy=true;button.disabled=true;supportStatus("");
   try{
     if(!isSupportAgent())await supportEnsureThread();
-    const result=await sb.from("support_messages").insert({thread_id:supportCurrentThread,body});
+    const result=await sb.from("support_messages")
+      .insert({thread_id:supportCurrentThread,body}).select("id").single();
     if(result.error)throw result.error;
     input.value="";
+    // A chave da API nao fica no navegador. Apenas solicitamos a funcao protegida.
+    if(!isSupportAgent()&&result.data?.id){
+      const messageId=result.data.id;
+      sb.functions.invoke("support-ai",{body:{message_id:messageId}})
+        .then(({error})=>{
+          if(error)console.warn("Assistente de IA indisponível. Atendimento humano preservado.");
+        })
+        .catch(()=>console.warn("Assistente de IA indisponível. Atendimento humano preservado."));
+    }
     await supportRefreshThreads();
     const loaded=await supportLoadMessages();
     if(loaded)await supportMarkRead();
