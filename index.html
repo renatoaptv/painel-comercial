@@ -192,9 +192,9 @@
 .sale-quick-btn{white-space:nowrap}
 @media(max-width:700px){.sale-quick-action{width:100%;justify-content:flex-start}.sale-quick-note{max-width:none}}
 </style>
-<link rel="stylesheet" href="./team-chat.css?v=1">
+<link rel="stylesheet" href="./team-chat.css?v=2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./team-chat.js?v=1"></script>
+<script src="./team-chat.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -422,15 +422,26 @@
 
 <div class="modal" id="teamChatModal" role="dialog" aria-modal="true" aria-label="Chat da equipe">
   <div class="modal-box team-chat-box">
-    <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div>
+    <div class="modal-head"><div><h2>💬 Chat da equipe</h2><div class="desc">Converse com vendedores e gerentes da sua loja.</div></div><div class="team-chat-head-actions"><button class="team-chat-minimize" type="button" onclick="minimizeTeamChat()" title="Minimizar para balão" aria-label="Minimizar chat">−</button><button class="x" type="button" onclick="closeTeamChat()" aria-label="Fechar chat">×</button></div></div>
     <div id="teamChatPeople" class="team-chat-people"></div>
     <div id="teamChatMessages" class="team-chat-messages" aria-live="polite"><div class="empty">Carregando mensagens...</div></div>
+    <div id="teamChatTypingStatus" class="team-chat-typing-status" aria-live="polite"></div>
     <div class="team-chat-compose">
-      <textarea id="teamChatInput" maxlength="2000" rows="2" placeholder="Escreva para a equipe..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage()}"></textarea>
+      <textarea id="teamChatInput" maxlength="2000" rows="2" placeholder="Escreva para a equipe..." oninput="teamChatOnInput()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTeamChatMessage()}"></textarea>
       <button id="teamChatSend" class="btn" type="button" onclick="sendTeamChatMessage()">Enviar</button>
     </div>
     <div id="teamChatStatus" class="team-chat-status" role="status" aria-live="polite"></div>
   </div>
+</div>
+<div id="teamChatFloat" class="team-chat-float" aria-label="Atalho do chat da equipe">
+  <button type="button" id="teamChatPeek" class="team-chat-peek" hidden onclick="openTeamChat()" aria-label="Ler nova mensagem do chat">
+    <div id="teamChatPeekName" class="team-chat-peek-name"></div>
+    <div id="teamChatPeekText" class="team-chat-peek-text"></div>
+  </button>
+  <button type="button" id="teamChatFloatButton" class="team-chat-float-btn" onclick="openTeamChat()" aria-label="Abrir chat da equipe">
+    <span aria-hidden="true">💬</span><span id="teamChatFloatBadge" class="team-chat-float-badge">0</span>
+  </button>
+  <div id="teamChatFloatHint" class="team-chat-float-hint" role="status">Chat da equipe</div>
 </div>
 
 
@@ -2331,7 +2342,7 @@ function launchFireworks(){
   },i*120));
 }
 function celebrateSale(s,c){if(!s)return;celebratePhoto.src=s.foto||fallback(s.nome);celebrateText.textContent=s.nome+" fechou a venda com "+c.nome+"!";celebrate.classList.add("show");launchFireworks()}function closeCelebrate(){celebrate.classList.remove("show")}
-document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("show")}));
+document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m){if(m.id==="teamChatModal")minimizeTeamChat();else m.classList.remove("show")}}));
 function updateDate(){dateNow.textContent=new Date().toLocaleDateString("pt-BR")}updateDate();setInterval(updateDate,60000);initAuth();
 </script>
 </body>
