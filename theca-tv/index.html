@@ -18,10 +18,15 @@
     .brand-title span{color:#7fe8c3}
     .mascot{width:clamp(72px,7.7vw,108px);height:clamp(72px,7.7vw,108px);object-fit:cover;object-position:center 20%;border-radius:50%;border:3px solid #dbeae7;background:#d8efe1}
     .channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2.4vw,32px);width:100%}
-    .channel{display:flex;align-items:center;justify-content:center;min-height:clamp(215px,32vh,355px);border-radius:24px;border:4px solid transparent;text-decoration:none;color:#fff;font-size:clamp(42px,4.5vw,78px);font-weight:900;line-height:1.1;text-align:center;letter-spacing:-.025em;box-shadow:0 9px 22px rgba(0,0,0,.22);cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
-    .globo{background:#166d5d}
-    .sbt{background:#235b9f}
-    .record{background:#963e43}
+    .channel{display:flex;flex-direction:column;gap:clamp(14px,2vw,27px);align-items:center;justify-content:center;min-height:clamp(215px,32vh,355px);border-radius:24px;border:4px solid transparent;text-decoration:none;color:#fff;text-align:center;box-shadow:0 9px 22px rgba(0,0,0,.22);cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s}
+    .channel-name{font-size:clamp(35px,3.3vw,58px);font-weight:900;line-height:1.15;letter-spacing:-.025em}
+    .channel-symbol{display:grid;place-items:center;width:clamp(89px,8.5vw,118px);height:clamp(89px,8.5vw,118px);flex:none;border-radius:50%;font-size:clamp(45px,4.3vw,64px);line-height:1;font-weight:900;box-shadow:inset 0 0 0 4px rgba(255,255,255,.45),0 9px 20px rgba(0,0,0,.18);color:#fff}
+    .globo{background:#135c54}
+    .globo .channel-symbol{background:radial-gradient(circle at 30% 25%,#9bf6df 0%,#20b69b 43%,#0c6559 100%);text-shadow:0 2px 5px #03544666}
+    .sbt{background:#21538c}
+    .sbt .channel-symbol{background:linear-gradient(135deg,#fce775 0%,#ef6a8a 45%,#449cf4 82%);text-shadow:0 2px 6px #29385066}
+    .record{background:#784655}
+    .record .channel-symbol{background:linear-gradient(135deg,#9ed8fa 0%,#5289cf 48%,#a85c7f 100%);text-shadow:0 2px 5px #30375866}
     .channel:hover{border-color:#fff}
     .channel:focus-visible,.channel.selected{outline:6px solid #fff;outline-offset:5px;border-color:#fff;box-shadow:0 0 0 13px #ffffff23;transform:translateY(-3px)}
     .channel:active{transform:scale(.98)}
@@ -32,11 +37,15 @@
       .brand-title{font-size:clamp(32px,7vw,50px)}
       .mascot{width:74px;height:74px}
       .channels{grid-template-columns:1fr;max-width:520px;gap:15px}
-      .channel{min-height:clamp(110px,19vh,155px);border-radius:20px;font-size:clamp(35px,8vw,52px)}
+      .channel{min-height:clamp(110px,19vh,155px);flex-direction:row;justify-content:flex-start;gap:clamp(18px,5vw,27px);padding:15px 24px;border-radius:20px}
+      .channel-symbol{width:clamp(68px,19vw,85px);height:clamp(68px,19vw,85px);font-size:clamp(35px,11vw,48px)}
+      .channel-name{font-size:clamp(30px,7vw,42px)}
     }
     @media(max-height:510px) and (min-width:801px){
       .screen{gap:18px}
       .channel{min-height:160px}
+      .channel-symbol{height:74px;width:74px;font-size:39px}
+      .channel-name{font-size:35px}
       .mascot{height:70px;width:70px}
       .brand-title{font-size:37px}
     }
@@ -51,9 +60,9 @@
     </header>
     <p class="sr-only" id="instructions">Escolha o canal com as setas do controle remoto e aperte OK.</p>
     <nav class="channels" aria-label="Escolher canal" aria-describedby="instructions">
-      <a class="channel globo" href="https://globoplay.globo.com/tv-globo/ao-vivo/7832875/" aria-label="Assistir à Globo ao vivo">GLOBO</a>
-      <a class="channel sbt" href="https://sbt.com.br/ao-vivo" aria-label="Assistir ao SBT ao vivo">SBT</a>
-      <a class="channel record" href="https://www.recordplus.com/" aria-label="Assistir à Record">RECORD</a>
+      <a class="channel globo" href="https://globoplay.globo.com/tv-globo/ao-vivo/7832875/" aria-label="Assistir à Globo ao vivo"><span class="channel-symbol" aria-hidden="true">G</span><span class="channel-name">GLOBO</span></a>
+      <a class="channel sbt" href="https://sbt.com.br/ao-vivo" aria-label="Assistir ao SBT ao vivo"><span class="channel-symbol" aria-hidden="true">S</span><span class="channel-name">SBT</span></a>
+      <a class="channel record" href="https://www.recordplus.com/" aria-label="Assistir à Record"><span class="channel-symbol" aria-hidden="true">R</span><span class="channel-name">RECORD</span></a>
     </nav>
   </main>
   <script>
