@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1628">
+  <meta name="description" content="THECA TV: Globo, SBT e Record com botões grandes e interface simples para idosos.">
+  <title>THECA TV — Simples de assistir</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#0b1628;color:#fff}
+    *{box-sizing:border-box}
+    html{font-size:16px;height:100%}
+    body{margin:0;min-height:100%;min-height:100dvh;background:radial-gradient(ellipse at 50% -10%,#243f63 0,#101e32 53%,#081421 100%);display:flex;flex-direction:column}
+    a{color:inherit}
+    button{font:inherit}
+    .wrap{width:min(1500px,100%);margin:0 auto;padding:clamp(20px,4.5vw,60px) clamp(18px,4.5vw,65px);flex:1;display:flex;flex-direction:column}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{display:flex;align-items:center;gap:13px}
+    .brand-logo{display:grid;place-items:center;background:#41e6ae;color:#0b2932;height:48px;width:48px;border-radius:14px;font-size:26px;font-weight:900}
+    .brand-name{font-size:clamp(24px,2.3vw,37px);font-weight:900;letter-spacing:-.8px}
+    .brand-name span{color:#5ef8c2}
+    .tool{background:#17283f;border:1px solid #50708e;color:#fff;border-radius:12px;cursor:pointer;padding:12px 15px;font-size:15px;font-weight:700;min-height:48px}
+    .tool:hover,.tool:focus-visible{outline:3px solid #9febff;outline-offset:3px}
+    .headline{text-align:center;margin:clamp(44px,8vh,110px) 0 clamp(24px,5vh,56px)}
+    h1{font-size:clamp(34px,4.5vw,75px);line-height:1.09;letter-spacing:-1.6px;margin:0 0 15px;font-weight:900}
+    .subtitle{font-size:clamp(17px,2vw,27px);font-weight:550;line-height:1.4;color:#cbd9e9;margin:0}
+    .channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2.2vw,29px)}
+    .channel{--base:#223a56;--glow:#4aa2ee;text-decoration:none;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:clamp(210px,28vh,320px);border:3px solid #ffffff21;border-radius:27px;background:linear-gradient(155deg,rgba(255,255,255,.14),transparent 45%),var(--base);box-shadow:0 17px 36px #0005;position:relative;cursor:pointer;padding:20px;text-align:center;transition:transform .12s,border-color .12s,box-shadow .12s}
+    .channel::after{content:"";position:absolute;inset:8px;border-radius:18px;border:1px solid #ffffff20;pointer-events:none}
+    .channel .round{width:clamp(73px,8vw,115px);height:clamp(73px,8vw,115px);display:grid;place-items:center;border-radius:50%;background:#ffffff27;border:3px solid #ffffff55;font-size:clamp(43px,4vw,66px);font-weight:900;line-height:1;margin-bottom:22px}
+    .channel strong{font-size:clamp(30px,3vw,49px);font-weight:900;line-height:1.08;letter-spacing:-1px}
+    .channel small{font-size:clamp(13px,1.45vw,22px);font-weight:600;color:#f6faffdf;margin-top:11px}
+    .globo{--base:#126d64;--glow:#73ffdb}
+    .sbt{--base:#15559d;--glow:#a9d5ff}
+    .record{--base:#9d3a36;--glow:#ffd2b9}
+    .channel:focus-visible,.channel.selected{outline:6px solid var(--glow);outline-offset:5px;border-color:#fff;box-shadow:0 0 0 12px #ffffff1a,0 20px 40px #0008;transform:translateY(-5px)}
+    .channel:hover{transform:translateY(-5px);border-color:#ffffffbd}
+    .channel:active{transform:scale(.98)}
+    .hint{display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;margin:clamp(30px,5vh,52px) auto 0;color:#d6e6f4;font-size:clamp(15px,1.65vw,23px);font-weight:650}
+    .hint svg{flex:none}
+    .footer{margin-top:auto;padding-top:clamp(24px,5vh,65px);display:flex;align-items:center;justify-content:center;text-align:center;color:#a9bbd0;font-size:clamp(13px,1.15vw,16px);line-height:1.5}
+    .footer p{margin:0}
+    .alert{max-width:800px;margin:14px auto 0;font-size:13px;color:#9fb2c8;text-align:center}
+    .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+    @media(max-width:800px){
+      .wrap{padding:22px 18px 28px}
+      .headline{margin:38px 0 30px}
+      h1{letter-spacing:-.5px}
+      .channels{grid-template-columns:1fr;max-width:590px;width:100%;margin:0 auto;gap:15px}
+      .channel{min-height:115px;flex-direction:row;justify-content:flex-start;padding:19px 20px;border-radius:18px;text-align:left;gap:18px}
+      .channel .round{width:64px;height:64px;font-size:32px;margin:0;flex:none}
+      .channel .channel-label{display:flex;flex-direction:column}
+      .channel strong{font-size:clamp(26px,7vw,36px)}
+      .channel small{font-size:15px;margin-top:3px}
+      .hint{font-size:14px;gap:10px;margin-top:26px}
+      .hint svg{width:24px}
+      .footer{padding-top:30px}
+      .tool{font-size:12px;padding:10px}
+      .brand-logo{width:40px;height:40px;font-size:21px}
+    }
+    @media(max-width:360px){.brand-name{font-size:20px}.tool{max-width:105px}}
+    @media(prefers-reduced-motion:reduce){.channel{transition:none}}
+  
+    /* Theca TV: acolhimento sem abrir mão de botões grandes para idosos */
+    body{background:radial-gradient(ellipse at 55% -20%,#24465b 0,#101e32 55%,#081421 100%)}
+    .brand-logo{background:#f6d79b;color:#122b37}
+    .brand-name span{color:#f3d39f}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,280px);align-items:center;column-gap:clamp(20px,4vw,68px);margin:clamp(20px,4vh,60px) auto clamp(20px,4vh,46px);width:min(1040px,100%)}
+    .hero .headline{margin:0;text-align:left}
+    .hero .subtitle{color:#d4e5f0}
+    .hero-instruction{color:#7bf0ca;font-size:clamp(17px,1.8vw,25px);font-weight:750;margin:22px 0 0}
+    .host{display:flex;flex-direction:column;align-items:center;justify-content:end;background:linear-gradient(145deg,#dff8ea 0,#e9eee1 38%,#9accb9 100%);border-radius:30px;box-shadow:0 14px 35px #0007;overflow:hidden;padding:12px 12px 18px;position:relative}
+    .host-image{display:block;height:clamp(210px,27vh,300px);width:auto;max-width:100%;object-fit:contain;border-radius:20px}
+    .host-message{margin-top:10px;color:#173d3d;font-size:clamp(14px,1.2vw,17px);font-weight:800;text-align:center;line-height:1.35}
+    .host-message strong{color:#0d5c53}
+    .channel:focus-visible,.channel.selected{outline-width:7px}
+    @media(max-width:800px){
+      .hero{grid-template-columns:minmax(0,1fr) 115px;gap:15px;margin:22px auto 26px}
+      .hero .headline{text-align:left}
+      .hero h1{font-size:clamp(26px,6vw,45px);letter-spacing:-.6px}
+      .hero .subtitle{font-size:clamp(15px,3vw,18px)}
+      .hero-instruction{font-size:14px;margin-top:12px}
+      .host{padding:6px 6px 10px;border-radius:18px}
+      .host-image{height:150px;max-width:100%}
+      .host-message{font-size:11px;margin-top:6px}
+    }
+    @media(max-width:420px){
+      .hero{grid-template-columns:minmax(0,1fr) 108px}
+      .host-image{height:137px}
+      .hero h1{font-size:28px}
+      .hero .subtitle{font-size:14px}
+    }
+  </style>
+  <link rel="canonical" href="https://renatoaptv.github.io/painel-comercial/theca-tv/">
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div class="brand" aria-label="THECA TV">
+        <div class="brand-logo" aria-hidden="true">TV</div>
+        <div class="brand-name">THECA <span>TV</span></div>
+      </div>
+      <button class="tool" type="button" id="fullscreen" aria-label="Expandir TV Fácil para tela cheia">⛶ Tela cheia</button>
+    </header>
+    <div class="hero">
+    <section class="headline" aria-labelledby="page-title">
+      <h1 id="page-title">O que vamos assistir hoje?</h1>
+      <p class="subtitle">Com a Theca, assistir TV ficou mais fácil.</p>
+      <p class="hero-instruction">Escolha seu canal favorito e aperte OK.</p>
+    </section>
+    <aside class="host" aria-label="Dona Theca apresenta os canais">
+      <img class="host-image" src="data:image/webp;base64,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" alt="Ilustração da Dona Theca sorrindo, com cabelo castanho e óculos pretos">
+      <div class="host-message">Olá, eu sou a <strong>Theca!</strong> 💚</div>
+    </aside>
+    </div>
+    <nav class="channels" aria-label="Escolher canal">
+      <a class="channel globo" id="canal-globo"
+        href="https://globoplay.globo.com/tv-globo/ao-vivo/7832875/" aria-label="Abrir Globo no Globoplay">
+        <span class="round" aria-hidden="true">G</span>
+        <span class="channel-label"><strong>GLOBO</strong><small>Assistir à Globo ao vivo</small></span>
+      </a>
+      <a class="channel sbt" id="canal-sbt"
+        href="https://sbt.com.br/ao-vivo" aria-label="Assistir ao SBT ao vivo">
+        <span class="round" aria-hidden="true">S</span>
+        <span class="channel-label"><strong>SBT</strong><small>Assistir ao vivo</small></span>
+      </a>
+      <a class="channel record" id="canal-record"
+        href="https://www.recordplus.com/" aria-label="Abrir Record no RecordPlus">
+        <span class="round" aria-hidden="true">R</span>
+        <span class="channel-label"><strong>RECORD</strong><small>Abrir no RecordPlus</small></span>
+      </a>
+    </nav>
+    <div class="hint" aria-label="Use as setas do controle remoto e pressione OK">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M18 3V33M3 18H33" stroke="#d6e6f4" stroke-width="3" stroke-linecap="round"/>
+        <path d="m12 9 6-6 6 6M12 27l6 6 6-6M9 12l-6 6 6 6m18-12 6 6-6 6" stroke="#d6e6f4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Use as setas para escolher e aperte OK
+    </div>
+    <footer class="footer">
+      <p>Versão de teste • Para retornar a esta tela, use a tecla Voltar do navegador.<br>
+      O acesso ao vídeo depende do serviço oficial, da região e de eventual login.</p>
+    </footer>
+  </main>
+  <script>
+    (function(){
+      "use strict";
+      var choices=Array.prototype.slice.call(document.querySelectorAll(".channel"));
+      var tool=document.getElementById("fullscreen");
+      var current=0;
+      var usingKeyboard=false;
+      function mark(index){
+        current=(index+choices.length)%choices.length;
+        choices.forEach(function(el,i){el.classList.toggle("selected",i===current&&usingKeyboard)});
+        choices[current].focus({preventScroll:true});
+      }
+      document.addEventListener("keydown",function(e){
+        var key=e.key;
+        if(["ArrowLeft","ArrowUp","ArrowRight","ArrowDown"].indexOf(key)>=0){
+          e.preventDefault();usingKeyboard=true;
+          var active=choices.indexOf(document.activeElement);
+          mark((active>=0?active:current)+(["ArrowLeft","ArrowUp"].indexOf(key)>=0?-1:1));
+        } else if(key==="1"||key==="2"||key==="3"){
+          e.preventDefault();usingKeyboard=true;mark(Number(key)-1);
+        } else if((key==="Enter"||key===" ")&&choices.indexOf(document.activeElement)>=0){
+          if(key===" "){e.preventDefault();document.activeElement.click()}
+        }
+      });
+      choices.forEach(function(el,i){
+        el.addEventListener("focus",function(){current=i});
+        el.addEventListener("pointerdown",function(){usingKeyboard=false});
+      });
+      tool.addEventListener("click",function(){
+        if(document.fullscreenElement){document.exitFullscreen&&document.exitFullscreen()}
+        else if(document.documentElement.requestFullscreen){
+          document.documentElement.requestFullscreen().catch(function(){});
+        } else {tool.textContent="Tela cheia não disponível"}
+      });
+      document.addEventListener("fullscreenchange",function(){
+        tool.textContent=document.fullscreenElement?"⛶ Sair da tela cheia":"⛶ Tela cheia";
+      });
+      // No controle remoto, OK age como Enter; o foco começa na Globo.
+      window.addEventListener("load",function(){
+        if(!("ontouchstart" in window)){
+          usingKeyboard=true;mark(0);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
