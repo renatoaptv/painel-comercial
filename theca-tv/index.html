@@ -70,6 +70,18 @@
       "use strict";
       var items=Array.prototype.slice.call(document.querySelectorAll(".channel"));
       var index=0,keyboard=false;
+      // No Android, o navegador compatível pode delegar o link ao app oficial.
+      // Se não houver deep link BROWSABLE válido, o Chrome retorna ao site.
+      // Esta técnica não equivale a um lançador Android nativo (APK).
+      if (/Android/i.test(navigator.userAgent)) {
+        var globoplay = document.querySelector(".channel.globo");
+        var tvGloboWeb = "https://globoplay.globo.com/tv-globo/ao-vivo/7832875/";
+        globoplay.setAttribute("href",
+          "intent://globoplay.globo.com/tv-globo/ao-vivo/7832875/" +
+          "#Intent;scheme=https;package=com.globo.globotv;" +
+          "S.browser_fallback_url=" + encodeURIComponent(tvGloboWeb) + ";end");
+        globoplay.setAttribute("aria-label", "Tentar abrir o aplicativo Globoplay no Android");
+      }
       function select(i){
         index=(i+items.length)%items.length;
         items.forEach(function(el,j){el.classList.toggle("selected",keyboard&&j===index)});
