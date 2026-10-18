@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b1628">
-  <meta name="description" content="TV Fácil: escolha Globo, SBT ou Record em uma interface com botões grandes, pensada para idosos.">
-  <title>TV Fácil — Escolha seu canal</title>
+  <meta name="description" content="THECA TV: Globo, SBT e Record com botões grandes e interface simples para idosos.">
+  <title>THECA TV — Simples de assistir</title>
   <style>
     :root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#0b1628;color:#fff}
     *{box-sizing:border-box}
@@ -60,21 +60,58 @@
     }
     @media(max-width:360px){.brand-name{font-size:20px}.tool{max-width:105px}}
     @media(prefers-reduced-motion:reduce){.channel{transition:none}}
+  
+    /* Theca TV: acolhimento sem abrir mão de botões grandes para idosos */
+    body{background:radial-gradient(ellipse at 55% -20%,#24465b 0,#101e32 55%,#081421 100%)}
+    .brand-logo{background:#f6d79b;color:#122b37}
+    .brand-name span{color:#f3d39f}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(200px,280px);align-items:center;column-gap:clamp(20px,4vw,68px);margin:clamp(20px,4vh,60px) auto clamp(20px,4vh,46px);width:min(1040px,100%)}
+    .hero .headline{margin:0;text-align:left}
+    .hero .subtitle{color:#d4e5f0}
+    .hero-instruction{color:#7bf0ca;font-size:clamp(17px,1.8vw,25px);font-weight:750;margin:22px 0 0}
+    .host{display:flex;flex-direction:column;align-items:center;justify-content:end;background:linear-gradient(145deg,#dff8ea 0,#e9eee1 38%,#9accb9 100%);border-radius:30px;box-shadow:0 14px 35px #0007;overflow:hidden;padding:12px 12px 18px;position:relative}
+    .host-image{display:block;height:clamp(210px,27vh,300px);width:auto;max-width:100%;object-fit:contain;border-radius:20px}
+    .host-message{margin-top:10px;color:#173d3d;font-size:clamp(14px,1.2vw,17px);font-weight:800;text-align:center;line-height:1.35}
+    .host-message strong{color:#0d5c53}
+    .channel:focus-visible,.channel.selected{outline-width:7px}
+    @media(max-width:800px){
+      .hero{grid-template-columns:minmax(0,1fr) 115px;gap:15px;margin:22px auto 26px}
+      .hero .headline{text-align:left}
+      .hero h1{font-size:clamp(26px,6vw,45px);letter-spacing:-.6px}
+      .hero .subtitle{font-size:clamp(15px,3vw,18px)}
+      .hero-instruction{font-size:14px;margin-top:12px}
+      .host{padding:6px 6px 10px;border-radius:18px}
+      .host-image{height:150px;max-width:100%}
+      .host-message{font-size:11px;margin-top:6px}
+    }
+    @media(max-width:420px){
+      .hero{grid-template-columns:minmax(0,1fr) 108px}
+      .host-image{height:137px}
+      .hero h1{font-size:28px}
+      .hero .subtitle{font-size:14px}
+    }
   </style>
 </head>
 <body>
   <main class="wrap">
     <header class="top">
-      <div class="brand" aria-label="TV Fácil">
+      <div class="brand" aria-label="THECA TV">
         <div class="brand-logo" aria-hidden="true">TV</div>
-        <div class="brand-name">TV <span>FÁCIL</span></div>
+        <div class="brand-name">THECA <span>TV</span></div>
       </div>
       <button class="tool" type="button" id="fullscreen" aria-label="Expandir TV Fácil para tela cheia">⛶ Tela cheia</button>
     </header>
+    <div class="hero">
     <section class="headline" aria-labelledby="page-title">
-      <h1 id="page-title">O que vamos assistir?</h1>
-      <p class="subtitle">Escolha seu canal favorito e aperte OK.</p>
+      <h1 id="page-title">O que vamos assistir hoje?</h1>
+      <p class="subtitle">Com a Theca, assistir TV ficou mais fácil.</p>
+      <p class="hero-instruction">Escolha seu canal favorito e aperte OK.</p>
     </section>
+    <aside class="host" aria-label="Dona Theca apresenta os canais">
+      <img class="host-image" src="__THECA_MASCOT_IMAGE__" alt="Ilustração da Dona Theca sorrindo, com cabelo castanho e óculos pretos">
+      <div class="host-message">Olá, eu sou a <strong>Theca!</strong> 💚</div>
+    </aside>
+    </div>
     <nav class="channels" aria-label="Escolher canal">
       <a class="channel globo" id="canal-globo"
         href="https://globoplay.globo.com/tv-globo/ao-vivo/7832875/" aria-label="Abrir Globo no Globoplay">
