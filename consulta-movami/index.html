@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffcf00"><meta name="apple-mobile-web-app-capable" content="yes">
+<title>Consulta de Clientes | Movami</title>
+<style>
+:root{color-scheme:light;font-family:Inter,"Segoe UI",Arial,sans-serif;color:#181818;background:#f5f5f2}
+*{box-sizing:border-box}body{margin:0}
+header{background:#ffd500;padding:25px max(20px,calc((100vw - 860px)/2));border-bottom:5px solid #141414}
+.logo{width:min(300px,80vw);height:auto;display:block}header h1{margin:16px 0 4px;font-size:clamp(26px,4vw,34px);letter-spacing:-.035em}header p{margin:0;font-size:14px;max-width:700px}
+main{width:min(860px,calc(100% - 30px));margin:28px auto 70px}
+.panel{background:#fff;border:1px solid #e6e6e0;border-radius:15px;padding:23px;box-shadow:0 8px 30px #0000000a;margin-bottom:16px}
+h2{margin:0 0 13px;font-size:19px}.label{display:block;font-size:14px;font-weight:700;margin:12px 0 8px}
+input{width:100%;border:2px solid #d7d7d3;border-radius:9px;padding:13px 14px;font:inherit;font-size:16px;outline:none}
+input:focus{border-color:#ddbb00;box-shadow:0 0 0 3px #ffda3450}
+button{font:inherit;border:0;border-radius:9px;background:#141414;color:#fff;font-weight:750;padding:13px 22px;cursor:pointer}
+button:disabled{opacity:.55}.flex{display:flex;gap:10px;align-items:center}.flex input{flex:1;min-width:0}
+.small{font-size:13px;color:#64645d;line-height:1.6}
+#err{color:#ac2828;font-size:13px;min-height:18px;margin-top:8px}
+#app[hidden],#login[hidden],#message[hidden]{display:none}
+.stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:12px 0;color:#666;font-size:13px}
+.items{list-style:none;background:#fff;border:1px solid #e5e5df;border-radius:12px;margin:0;padding:0;overflow:hidden}
+.items li{padding:14px 18px;border-bottom:1px solid #efefea;display:flex;align-items:center;gap:12px;font-size:14px}
+.items li:last-child{border:0}
+.n{color:#92928b;min-width:28px;font-size:12px}
+#message{padding:14px 17px;border-radius:11px;margin:12px 0;font-size:14px;line-height:1.5}
+.found{background:#edf8ec;color:#19532b;border:1px solid #bcdfb7}
+.missing{background:#fff9e3;color:#6e5800;border:1px solid #ebd78a}
+footer{font-size:12px;line-height:1.65;color:#696963;margin-top:21px}
+@media(max-width:520px){header{padding:21px 18px}.panel{padding:17px}.flex{flex-direction:column;align-items:stretch}.items li{padding:12px}}
+</style></head><body>
+<header><img class="logo" src="data:image/png;base64,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" alt="Movami aluguel de carros"><h1>Consulta de clientes</h1><p>Pesquise antes de prospectar. Lista interna fornecida pelo consultor.</p></header>
+<main>
+<section class="panel" id="login">
+<h2>Acesso à consulta</h2><p class="small">A relação de clientes está criptografada. Digite sua senha para pesquisar no computador ou celular.</p>
+<form id="access"><label class="label" for="pass">Senha de acesso</label><div class="flex"><input id="pass" type="password" placeholder="Digite sua senha" autocomplete="off" required><button id="unlock" type="submit">Acessar</button></div><div id="err" role="alert"></div></form>
+<p class="small">Sua senha não é enviada a nenhum servidor. A consulta é desbloqueada somente neste aparelho.</p>
+</section>
+<section id="app" hidden>
+<div class="panel"><div class="flex" style="justify-content:space-between"><h2>Buscar empresa</h2><button type="button" id="lock" style="background:#ececea;color:#242424;padding:10px 16px">Sair</button></div>
+<label class="label" for="q">Nome ou parte da razão social</label><input id="q" type="search" placeholder="Ex.: Brandili, RF Sul, Blumalte..." autocomplete="off" autofocus>
+<p class="small">Ignora diferenças entre acentos e maiúsculas. No computador, pressione / para iniciar a pesquisa.</p>
+</div>
+<div class="stats"><strong id="count">51 empresas cadastradas</strong><span>Consulta à lista fornecida • Não sincroniza com o PipeRun</span></div>
+<div id="message" role="status" aria-live="polite" hidden></div>
+<ol class="items" id="list"></ol>
+<footer>Não encontrar uma empresa nesta lista não significa que ela não seja cliente da Movami. Confirme casos duvidosos com a gestão antes de abordar.</footer>
+</section></main>
+<script>
+"use strict";
+const vault={"salt":"Mfwe6YrHXXILGLXLB7qsDg==","iv":"WSD9FKbIiXIrC/xj","data":"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","iterations":190000};
+const el=(id)=>document.getElementById(id);
+const raw=(s)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+const norm=(s)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+let companies=[];
+function render(){
+ const q=norm(el("q").value),box=el("list"),m=el("message");
+ const matches=companies.filter(s=>norm(s).includes(q));
+ box.replaceChildren();
+ el("count").textContent=q?matches.length+" resultado(s) encontrado(s)":companies.length+" empresas cadastradas";
+ m.hidden=!q;
+ if(q){m.className=matches.length?"found":"missing";m.textContent=matches.length?"CONSTA NA LISTA: "+matches.length+" empresa(s) encontrada(s).":"NÃO CONSTA NA LISTA FORNECIDA. Confirme no PipeRun ou com a gestão."; }
+ for(let i=0;i<matches.length;i++){
+  const li=document.createElement("li"),n=document.createElement("span"),t=document.createElement("span");
+  n.className="n";n.textContent=String(i+1).padStart(2,"0");t.textContent=matches[i];
+  li.append(n,t);box.append(li);
+ }
+}
+el("access").addEventListener("submit",async(e)=>{
+ e.preventDefault();el("err").textContent="";const b=el("unlock");b.disabled=true;b.textContent="Verificando...";
+ try{
+  if(!crypto.subtle)throw new Error("unsupported");
+  const key0=await crypto.subtle.importKey("raw",new TextEncoder().encode(el("pass").value),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:raw(vault.salt),iterations:vault.iterations,hash:"SHA-256"},key0,{name:"AES-GCM",length:256},false,["decrypt"]);
+  companies=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:raw(vault.iv)},key,raw(vault.data))));
+  if(!Array.isArray(companies)||companies.length!==51)throw new Error("dados");
+  el("pass").value="";el("login").hidden=true;el("app").hidden=false;el("q").value="";render();el("q").focus();
+ }catch(e){el("err").textContent="Senha incorreta ou navegador incompatível. Confira a senha e tente novamente."}
+ finally{b.disabled=false;b.textContent="Acessar"}
+});
+el("q").addEventListener("input",render);
+el("lock").addEventListener("click",()=>{companies=[];el("app").hidden=true;el("login").hidden=false;el("q").value="";el("list").replaceChildren();el("pass").focus()});
+document.addEventListener("keydown",e=>{if(e.key==="/"&&!el("app").hidden&&!["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){e.preventDefault();el("q").focus()}});
+</script></body></html>
