@@ -74,24 +74,37 @@ function leave(){
  $("client-dialog").close?.();$("detail-dialog").close?.();
  $("float-panel").classList.add("hidden");$("float-bubble").classList.add("hidden");
 }
+let authMode="login";
+$("auth-mode").addEventListener("click",()=>{
+ authMode=authMode==="login"?"signup":"login";
+ $("auth-submit").textContent=authMode==="login"?"Entrar no meu painel":"Criar minha conta";
+ $("auth-mode").textContent=authMode==="login"?"Criar conta de acesso":"Já tenho conta: entrar";
+ $("auth-password").autocomplete=authMode==="signup"?"new-password":"current-password";
+ authMessage("");
+});
 $("auth-form").addEventListener("submit",async e=>{
  e.preventDefault();if(!db)return;
  const btn=$("auth-submit");
  const email=$("auth-email").value.trim();
- if(!email){authMessage("Informe seu e-mail para receber o link.");return}
+ const password=$("auth-password").value;
+ if(!email||!password){authMessage("Informe e-mail e senha para continuar.");return}
  btn.disabled=true;
- authMessage("Enviando o link de acesso...");
+ authMessage(authMode==="signup"?"Criando conta...":"Verificando acesso...");
  try{
-  const {error}=await db.auth.signInWithOtp({
-   email,
-   options:{
-    emailRedirectTo:window.location.origin+window.location.pathname,
-    shouldCreateUser:true
-   }
-  });
+  const {data,error}=authMode==="signup"
+   ?await db.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}})
+   :await db.auth.signInWithPassword({email,password});
   if(error)throw error;
-  authMessage("Enviamos um link de acesso para "+email+". Abra o e-mail e clique no link para entrar sem senha. Se não encontrar, confira também o spam.");
- }catch(err){authMessage("Não foi possível enviar o link: "+(err.message||"tente novamente em instantes"))}
+  if(authMode==="signup"&&!data.session){
+   authMessage("Cadastro solicitado. Confira seu e-mail para confirmar a conta antes de entrar. Veja também a caixa de spam.");
+   authMode="login";
+   $("auth-submit").textContent="Entrar no meu painel";
+   $("auth-mode").textContent="Criar conta de acesso";
+   $("auth-password").autocomplete="current-password";
+  }else if(data.user){
+   await enter(data.user);
+  }
+ }catch(err){authMessage("Não foi possível acessar: "+(err.message||"verifique seus dados e tente novamente"))}
  finally{btn.disabled=false}
 });
 $("logout").addEventListener("click",async()=>{if(db){const {error}=await db.auth.signOut();if(error)toast(error.message,true);else leave()}});
