@@ -18,7 +18,7 @@ const STAGES=[
  ["perdido","Perdido"]
 ];
 const LABELS=Object.fromEntries(STAGES);
-const state={user:null,clientes:[],notas:[],view:"inicio",layout:"lista",search:"",stage:"todos",detailId:null,fetching:false};
+const state={user:null,storageMode:null,clientes:[],notas:[],view:"inicio",layout:"lista",search:"",stage:"todos",detailId:null,fetching:false};
 const $=id=>document.getElementById(id);
 const esc=v=>String(v===null||v===undefined?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const formatDate=v=>v?new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v)):"—";
@@ -38,88 +38,137 @@ function toast(message,isError=false){
  const box=$("toast");box.textContent=message;box.classList.toggle("error",isError);box.classList.remove("hidden");
  clearTimeout(toastTimer);toastTimer=setTimeout(()=>box.classList.add("hidden"),4500);
 }
-function syncLabel(txt,bad=false){$("sync-state").textContent=(bad?"● ":"● ")+txt;$("sync-state").classList.toggle("offline",bad)}
-let db;
-if(window.supabase&&window.supabase.createClient){
- db=window.supabase.createClient(SUPA_URL,SUPA_PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-}else{
- authMessage("Não foi possível carregar a conexão segura. Verifique sua internet e recarregue a página.");
- $("auth-submit").disabled=true;
+function syncLabel(txt,bad=false){const label=state.storageMode==="local"&&txt==="Sincronizado"?"Salvo neste navegador":txt;$("sync-state").textContent="● "+label;$("sync-state").classList.toggle("offline",bad)}
+/* Modo local sem senha. Sessões anteriores do Supabase continuam válidas,
+ * mas nunca abrimos as tabelas protegidas ao público.
+ */
+const LOCAL_KEY="movami_negociacoes_local_v1";
+const LOCAL_ID="movami-navegador-local";
+let db=null;
+let supa=null;
+function localRead(){
+ try{
+  const value=JSON.parse(localStorage.getItem(LOCAL_KEY)||"{}");
+  if(value&&typeof value==="object")return {
+   [TABLE_CLIENTES]:Array.isArray(value[TABLE_CLIENTES])?value[TABLE_CLIENTES]:[],
+   [TABLE_INTERACOES]:Array.isArray(value[TABLE_INTERACOES])?value[TABLE_INTERACOES]:[],
+   [TABLE_NOTAS]:Array.isArray(value[TABLE_NOTAS])?value[TABLE_NOTAS]:[]
+  };
+ }catch(e){console.warn("Não foi possível ler o backup local:",e)}
+ return {[TABLE_CLIENTES]:[],[TABLE_INTERACOES]:[],[TABLE_NOTAS]:[]};
+}
+function localQuery(table){
+ let type="select",payload=null,filters=[],sorting=null,maximum=null,singleRow=false,selected="*";
+ let executed=null;
+ const api={
+  select(fields="*"){selected=fields;return api},
+  insert(value){type="insert";payload=value;return api},
+  update(value){type="update";payload=value;return api},
+  delete(){type="delete";return api},
+  eq(key,value){filters.push([key,value]);return api},
+  order(key,opts={}){sorting=[key,!!opts.ascending];return api},
+  limit(value){maximum=Number(value);return api},
+  single(){singleRow=true;return Promise.resolve(run())},
+  then(resolve,reject){return Promise.resolve(run()).then(resolve,reject)}
+ };
+ function run(){
+  if(executed)return executed;
+  try{
+   const all=localRead();
+   if(!Object.prototype.hasOwnProperty.call(all,table))throw Error("Tabela local desconhecida");
+   let rows=all[table];
+   const matches=r=>filters.every(([k,v])=>String(r[k]??"")===String(v??""));
+   const now=new Date().toISOString();
+   let result=[];
+   if(type==="select"){
+    result=rows.filter(matches);
+    if(sorting){const [key,asc]=sorting;result=[...result].sort((a,b)=>{
+     const left=a[key]??"",right=b[key]??"";
+     return (left>right?1:left<right?-1:0)*(asc?1:-1);
+    })}
+    if(Number.isFinite(maximum))result=result.slice(0,maximum);
+    if(selected!=="*")result=result.map(row=>Object.fromEntries(selected.split(",").map(f=>f.trim()).filter(Boolean).map(f=>[f,row[f]])));
+   }else{
+    if(type==="insert"){
+     const values=Array.isArray(payload)?payload:[payload];
+     result=values.map(value=>({id:crypto.randomUUID(),criado_em:now,atualizado_em:now,...value}));
+     rows.push(...result);
+    }else if(type==="update"){
+     rows.forEach((row,i)=>{
+      if(matches(row)){rows[i]={...row,...payload,atualizado_em:now};result.push(rows[i])}
+     });
+    }else if(type==="delete"){
+     result=rows.filter(matches);
+     all[table]=rows.filter(row=>!matches(row));
+     if(table===TABLE_CLIENTES&&result.length){
+      const ids=new Set(result.map(r=>r.id));
+      all[TABLE_INTERACOES]=all[TABLE_INTERACOES].filter(r=>!ids.has(r.cliente_id));
+      all[TABLE_NOTAS]=all[TABLE_NOTAS].map(r=>ids.has(r.cliente_id)?{...r,cliente_id:null}:r);
+     }
+    }
+    // Nunca declarar sucesso se o navegador não conseguir persistir os dados.
+    localStorage.setItem(LOCAL_KEY,JSON.stringify(all));
+    if(selected!=="*")result=result.map(row=>Object.fromEntries(selected.split(",").map(f=>f.trim()).filter(Boolean).map(f=>[f,row[f]])));
+   }
+   executed={data:singleRow?(result[0]||null):result,error:null};
+  }catch(err){executed={data:null,error:{message:err.message||"Erro no armazenamento local"}}}
+  return executed;
+ }
+ return api;
+}
+function openLocal(){
+ db={from:localQuery};
+ enter({id:LOCAL_ID,email:null},"local");
+}
+if(window.supabase?.createClient){
+ supa=window.supabase.createClient(SUPA_URL,SUPA_PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 }
 async function startup(){
- if(!db)return;
- db.auth.onAuthStateChange((event,session)=>{
-  if(event==="SIGNED_OUT"||!session){leave();return}
-  if((event==="SIGNED_IN"||event==="INITIAL_SESSION"||event==="TOKEN_REFRESHED")&&session.user){
-   if(!state.user||state.user.id!==session.user.id) setTimeout(()=>enter(session.user),0);
-  }
- });
- const {data,error}=await db.auth.getSession();
- if(error){authMessage("Sua sessão não pôde ser verificada: "+error.message);return}
- if(data.session&&data.session.user)await enter(data.session.user);
+ if(supa){
+  try{
+   const {data,error}=await supa.auth.getSession();
+   if(error)throw error;
+   if(data?.session?.user){db=supa;await enter(data.session.user,"cloud");return}
+  }catch(err){console.warn("Usando armazenamento local sem autenticação:",err)}
+ }
+ openLocal();
 }
-async function enter(user){
- if(state.user&&state.user.id===user.id)return;
+async function enter(user,mode){
  state.user=user;
- $("auth-view").classList.add("hidden");
+ state.storageMode=mode;
+ $("boot-screen").classList.add("hidden");
  $("workspace").classList.remove("hidden");
  $("float-bubble").classList.remove("hidden");
- $("account-name").textContent=user.email||"Minha conta";
+ $("account-name").textContent=mode==="local"?"Meu navegador":user.email||"Minha conta";
+ $("account-status").textContent=mode==="local"?"Dados apenas neste navegador":"Supabase sincronizado";
+ $("mode-banner").classList.toggle("hidden",mode!=="local");
  $("today-label").textContent=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).format(new Date());
- setView("inicio");await loadAll();
+ setView("inicio");
+ await loadAll();
 }
-function leave(){
- state.user=null;state.clientes=[];state.notas=[];state.detailId=null;
- $("workspace").classList.add("hidden");$("auth-view").classList.remove("hidden");
- $("client-dialog").close?.();$("detail-dialog").close?.();
- $("float-panel").classList.add("hidden");$("float-bubble").classList.add("hidden");
-}
-let authMode="login";
-$("auth-mode").addEventListener("click",()=>{
- authMode=authMode==="login"?"signup":"login";
- $("auth-submit").textContent=authMode==="login"?"Entrar no meu painel":"Criar minha conta";
- $("auth-mode").textContent=authMode==="login"?"Criar conta de acesso":"Já tenho conta: entrar";
- $("auth-password").autocomplete=authMode==="signup"?"new-password":"current-password";
- authMessage("");
-});
-$("auth-form").addEventListener("submit",async e=>{
- e.preventDefault();if(!db)return;
- const btn=$("auth-submit");
- const email=$("auth-email").value.trim();
- const password=$("auth-password").value;
- if(!email||!password){authMessage("Informe e-mail e senha para continuar.");return}
- btn.disabled=true;
- authMessage(authMode==="signup"?"Criando conta...":"Verificando acesso...");
+$("backup-data").addEventListener("click",async()=>{
+ if(!state.user)return;
  try{
-  const {data,error}=authMode==="signup"
-   ?await db.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}})
-   :await db.auth.signInWithPassword({email,password});
-  if(error)throw error;
-  if(authMode==="signup"&&!data.session){
-   authMessage("Cadastro solicitado. Confira seu e-mail para confirmar a conta antes de entrar. Veja também a caixa de spam.");
-   authMode="login";
-   $("auth-submit").textContent="Entrar no meu painel";
-   $("auth-mode").textContent="Criar conta de acesso";
-   $("auth-password").autocomplete="current-password";
-  }else if(data.user){
-   await enter(data.user);
+  let backup=localRead();
+  if(state.storageMode==="cloud"){
+   const {data,error}=await db.from(TABLE_INTERACOES).select("*").eq("usuario_id",state.user.id).limit(10000);
+   if(error)throw error;
+   backup={
+    [TABLE_CLIENTES]:state.clientes,
+    [TABLE_NOTAS]:state.notas,
+    [TABLE_INTERACOES]:data||[]
+   };
   }
- }catch(err){
-  const code=String(err.code||"");
-  const message=String(err.message||"").toLowerCase();
-  if(code==="over_email_send_rate_limit"||message.includes("email rate limit")){
-   authMessage("O Supabase atingiu o limite de envio de e-mails. Não tente criar várias contas. Se você já tem cadastro, clique em 'Já tenho conta: entrar' e use suas credenciais existentes. Novos cadastros exigem a liberação do envio de e-mails.");
-  }else if(code==="invalid_credentials"||message.includes("invalid login credentials")){
-   authMessage("E-mail ou senha incorretos. Confira se está usando o e-mail da conta que já existe.");
-  }else if(code==="email_address_invalid"||message.includes("email address")&&message.includes("invalid")){
-   authMessage("O endereço de e-mail foi recusado. Confira se o domínio foi digitado corretamente (Gmail normalmente termina em @gmail.com).");
-  }else{
-   authMessage("Não foi possível acessar: "+(err.message||"verifique seus dados e tente novamente"));
-  }
- }
- finally{btn.disabled=false}
+  const data={versao:1,origem:state.storageMode,exportado_em:new Date().toISOString(),...backup};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;link.download="movami-negociacoes-backup-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast("Backup gerado. Guarde o arquivo em local seguro.");
+ }catch(err){toast("Não foi possível gerar o backup: "+err.message,true)}
 });
-$("logout").addEventListener("click",async()=>{if(db){const {error}=await db.auth.signOut();if(error)toast(error.message,true);else leave()}});
 async function loadAll(){
  if(!state.user||state.fetching)return;
  state.fetching=true;syncLabel("Carregando...");
@@ -143,7 +192,7 @@ const PAGE={
 function setView(view){
  state.view=view;const p=PAGE[view]||PAGE.inicio;
  $("page-kicker").textContent=p[0];$("page-title").innerHTML=esc(p[1])+'<span class="yellow-dot">.</span>';
- $("page-description").textContent=p[2];$("section-breadcrumb").textContent=p[3];
+ $("page-description").textContent=view==="notas"&&state.storageMode==="local"?"Anotações guardadas neste navegador. Exporte um backup periodicamente.":p[2];$("section-breadcrumb").textContent=p[3];
  for(const v of Object.keys(PAGE))$(v+"-view").classList.toggle("hidden",v!==view);
  document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
  document.querySelector(".sidebar").classList.remove("open");render();
@@ -391,4 +440,4 @@ function endDrag(){if(!drag)return;drag=null;
 handle.addEventListener("pointerup",endDrag);handle.addEventListener("pointercancel",endDrag);
 window.addEventListener("focus",()=>{if(state.user&&!state.fetching)loadAll()});
 window.addEventListener("online",()=>{if(state.user)loadAll()});
-if(db)startup();
+startup();
