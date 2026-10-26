@@ -123,15 +123,73 @@ function openLocal(){
 if(window.supabase?.createClient){
  supa=window.supabase.createClient(SUPA_URL,SUPA_PUBLIC_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 }
+
+/* Reposição segura do levantamento de cotações do ChatGPT.
+ * O repositório público contém apenas um arquivo criptografado.
+ * A chave de decriptação chega no fragmento da URL e nunca é enviada ao servidor.
+ * Respeita status editados e evita registros duplicados.
+ */
+function historyBase64UrlBytes(input){
+ if(typeof input!=="string"||!input||!/^[A-Za-z0-9_-]+$/.test(input))throw Error("Chave de acesso inválida.");
+ const s=input.replace(/-/g,"+").replace(/_/g,"/");
+ const value=atob(s.padEnd(Math.ceil(s.length/4)*4,"="));
+ return Uint8Array.from(value,ch=>ch.charCodeAt(0));
+}
+async function restoreHistoricalClients(){
+ const params=new URLSearchParams(window.location.hash.replace(/^#/,""));
+ const code=params.get("clientes");
+ if(!code)return 0;
+ const rawKey=historyBase64UrlBytes(code);
+ if(rawKey.length!==32)throw Error("O link de clientes está incompleto.");
+ if(!crypto?.subtle||typeof DecompressionStream!=="function")throw Error("Seu navegador não oferece os recursos necessários. Utilize um navegador atualizado.");
+ const response=await fetch("./historico-clientes.v1.enc.json",{cache:"no-store"});
+ if(!response.ok)throw Error("Arquivo histórico ainda não está disponível. Atualize o site e tente novamente.");
+ const pack=await response.json();
+ if(pack.v!==1||pack.alg!=="AES-256-GCM"||pack.compression!=="deflate")throw Error("Formato do histórico não reconhecido.");
+ const key=await crypto.subtle.importKey("raw",rawKey,{name:"AES-GCM"},false,["decrypt"]);
+ let decrypted;
+ try{
+  decrypted=await crypto.subtle.decrypt({name:"AES-GCM",iv:historyBase64UrlBytes(pack.iv),additionalData:new TextEncoder().encode("movami-clientes-v1")},key,historyBase64UrlBytes(pack.data));
+ }catch(err){throw Error("Não foi possível validar o link de clientes. Abra o link original novamente.")}
+ const stream=new Blob([decrypted]).stream().pipeThrough(new DecompressionStream("deflate"));
+ const data=JSON.parse(await new Response(stream).text());
+ if(!data||!Array.isArray(data.registros)||data.registros.length>200)throw Error("Arquivo de clientes inválido.");
+ const imported=data.registros.map(monitorSanitize);
+ if(imported.some(row=>!row))throw Error("Há cadastros inválidos no histórico.");
+ const all=monitorRead();
+ const seen=new Set(all.map(row=>row.tipo+"|"+monitorNormalize(row.empresa)));
+ const news=[];
+ for(const row of imported){
+  const id=row.tipo+"|"+monitorNormalize(row.empresa);
+  if(seen.has(id))continue;
+  seen.add(id);
+  news.push(row);
+ }
+ if(news.length)localStorage.setItem(MONITOR_KEY,JSON.stringify([...all,...news]));
+ // Retira a chave de acesso do histórico do navegador depois de usar o link.
+ window.history.replaceState(null,"",window.location.pathname+window.location.search);
+ return news.length;
+}
+
 async function startup(){
+ let restored=0,restoreProblem="";
+ try{restored=await restoreHistoricalClients()}
+ catch(err){console.warn("Falha ao carregar histórico comercial:",err);restoreProblem=err.message||"Não foi possível recuperar os clientes."}
  if(supa){
   try{
    const {data,error}=await supa.auth.getSession();
    if(error)throw error;
-   if(data?.session?.user){db=supa;await enter(data.session.user,"cloud");return}
+   if(data?.session?.user){
+    db=supa;await enter(data.session.user,"cloud");
+    if(restored)toast(restored+" clientes carregados nas abas de cotações e crédito.");
+    if(restoreProblem)toast(restoreProblem,true);
+    return;
+   }
   }catch(err){console.warn("Usando armazenamento local sem autenticação:",err)}
  }
  openLocal();
+ if(restored)toast(restored+" clientes carregados nas abas de cotações e crédito.");
+ if(restoreProblem)toast(restoreProblem,true);
 }
 async function enter(user,mode){
  state.user=user;
@@ -296,7 +354,7 @@ function renderMonitoring(){
   host.innerHTML=matches.length?matches.sort((a,b)=>(b.data||b.atualizado_em||"").localeCompare(a.data||a.atualizado_em||"")).map(r=>{
    const label=MONITOR_STATUSES[type].find(s=>s[0]===r.status)?.[1]||r.status;
    return '<article class="monitor-card"><div class="monitor-main"><span class="monitor-avatar">'+esc(initials(r.empresa))+'</span><div class="monitor-copy"><b>'+esc(r.empresa)+'</b><small>'+esc(r.contato||"Contato não informado")+(r.data?" · "+esc(r.data.split("-").reverse().join("/")):"")+'</small>'+(r.detalhes?'<p>'+esc(r.detalhes)+'</p>':'')+(r.observacoes?'<p class="monitor-note">'+esc(r.observacoes)+'</p>':'')+'</div></div><div class="monitor-actions"><label>Situação<select class="monitor-select '+esc(r.status)+'" data-monitor-status="'+esc(r.id)+'" aria-label="Situação de '+esc(r.empresa)+'">'+monitorOptions(type,r.status)+'</select></label><button type="button" class="btn outline monitor-edit" data-monitor-edit="'+esc(r.id)+'">Editar</button><button type="button" class="monitor-delete" data-monitor-delete="'+esc(r.id)+'" aria-label="Excluir '+esc(r.empresa)+'" title="Excluir registro">×</button></div></article>';
-  }).join(""):empty(search||statusFilter!=="todos"?"Nenhum resultado":"Nenhum registro nesta lista",search||statusFilter!=="todos"?"Altere a busca ou o filtro.":"Adicione uma empresa ou importe a relação de clientes já levantados.");
+  }).join(""):empty(search||statusFilter!=="todos"?"Nenhum resultado":"Nenhum registro nesta lista",search||statusFilter!=="todos"?"Altere a busca ou o filtro.":"Abra o link de carregamento enviado na conversa ou use Importar clientes para recuperar o levantamento.");
  }
 }
 function monitorOpen(tipo,id=null){
