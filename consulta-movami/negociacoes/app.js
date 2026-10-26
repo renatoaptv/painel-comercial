@@ -18,7 +18,7 @@ const STAGES=[
  ["perdido","Perdido"]
 ];
 const LABELS=Object.fromEntries(STAGES);
-const state={user:null,clientes:[],notas:[],view:"inicio",layout:"lista",search:"",stage:"todos",detailId:null,authMode:"login",fetching:false};
+const state={user:null,clientes:[],notas:[],view:"inicio",layout:"lista",search:"",stage:"todos",detailId:null,fetching:false};
 const $=id=>document.getElementById(id);
 const esc=v=>String(v===null||v===undefined?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const formatDate=v=>v?new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v)):"—";
@@ -74,22 +74,24 @@ function leave(){
  $("client-dialog").close?.();$("detail-dialog").close?.();
  $("float-panel").classList.add("hidden");$("float-bubble").classList.add("hidden");
 }
-$("auth-mode").addEventListener("click",()=>{
- state.authMode=state.authMode==="login"?"signup":"login";
- $("auth-submit").textContent=state.authMode==="login"?"Entrar no meu painel":"Criar minha conta";
- $("auth-mode").textContent=state.authMode==="login"?"Criar conta de acesso":"Já tenho conta: entrar";
- authMessage("");
-});
 $("auth-form").addEventListener("submit",async e=>{
  e.preventDefault();if(!db)return;
- const btn=$("auth-submit");btn.disabled=true;
- const email=$("auth-email").value.trim(),password=$("auth-password").value;
+ const btn=$("auth-submit");
+ const email=$("auth-email").value.trim();
+ if(!email){authMessage("Informe seu e-mail para receber o link.");return}
+ btn.disabled=true;
+ authMessage("Enviando o link de acesso...");
  try{
-  const result=state.authMode==="signup"?await db.auth.signUp({email,password}):await db.auth.signInWithPassword({email,password});
-  if(result.error)throw result.error;
-  if(state.authMode==="signup"&&!result.data.session){authMessage("Conta criada. Confira seu e-mail para confirmar o cadastro e depois entre no painel.");state.authMode="login";$("auth-submit").textContent="Entrar no meu painel";$("auth-mode").textContent="Criar conta de acesso";}
-  else if(result.data.user)await enter(result.data.user);
- }catch(err){authMessage("Não foi possível acessar: "+(err.message||"verifique seus dados"))}
+  const {error}=await db.auth.signInWithOtp({
+   email,
+   options:{
+    emailRedirectTo:window.location.origin+window.location.pathname,
+    shouldCreateUser:true
+   }
+  });
+  if(error)throw error;
+  authMessage("Enviamos um link de acesso para "+email+". Abra o e-mail e clique no link para entrar sem senha. Se não encontrar, confira também o spam.");
+ }catch(err){authMessage("Não foi possível enviar o link: "+(err.message||"tente novamente em instantes"))}
  finally{btn.disabled=false}
 });
 $("logout").addEventListener("click",async()=>{if(db){const {error}=await db.auth.signOut();if(error)toast(error.message,true);else leave()}});
