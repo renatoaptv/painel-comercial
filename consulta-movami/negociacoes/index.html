@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fbd11b">
+<meta name="description" content="Gestão de prospecção, visitas, propostas e retornos da Movami.">
+<title>Movami | Controle de Negociações</title>
+<link rel="icon" href="../movami-logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./app.css">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js"></script>
+<script defer src="./app.js"></script>
+</head>
+<body>
+<div id="auth-view" class="auth-layout">
+ <section class="auth-box">
+  <div class="auth-mark"><img src="../movami-logo.svg" alt="Movami"><span>COMERCIAL PRO</span></div>
+  <p class="eyebrow">SEU ESPAÇO DE TRABALHO</p>
+  <h1>Não deixe uma<br><em>negociação</em> para trás.</h1>
+  <p class="muted">Organize empresas, propostas, retornos e visitas. Seus dados ficam salvos com segurança.</p>
+  <form id="auth-form" class="auth-form">
+   <label>E-mail<input id="auth-email" type="email" autocomplete="email" placeholder="seuemail@empresa.com" required></label>
+   <label>Senha<input id="auth-password" type="password" autocomplete="current-password" placeholder="Sua senha" minlength="6" required></label>
+   <button type="submit" class="btn dark full" id="auth-submit">Entrar no meu painel</button>
+  </form>
+  <button type="button" class="text-button" id="auth-mode">Criar conta de acesso</button>
+  <p id="auth-message" class="form-message" role="status"></p>
+  <a class="secondary-link" href="../">Consultar lista de clientes ativos</a>
+ </section>
+ <div class="auth-art" aria-hidden="true">
+  <div class="auth-art-copy"><span>PROSPECÇÃO • FOLLOW-UP • RESULTADOS</span><strong>Seu próximo negócio começa com uma boa organização.</strong></div>
+  <div class="floating-example">
+   <span class="pill yellow">PRIORIDADE DE HOJE</span><b>Retornar clientes</b><p>Propostas enviadas, visitas e contatos — tudo no mesmo lugar.</p>
+   <div class="example-line"><span>↗ Proposta enviada</span><strong>Em andamento</strong></div>
+  </div>
+ </div>
+</div>
+<div id="workspace" class="workspace hidden">
+ <aside class="sidebar">
+  <div class="brand"><img src="../movami-logo.svg" alt="Movami"><span>COMERCIAL PRO</span></div>
+  <p class="nav-label">ÁREA COMERCIAL</p>
+  <nav id="nav">
+   <button class="nav-item active" data-view="inicio"><span>▦</span> Visão geral</button>
+   <button class="nav-item" data-view="negociacoes"><span>◫</span> Negociações</button>
+   <button class="nav-item" data-view="retornos"><span>◷</span> Retornos e visitas</button>
+   <button class="nav-item" data-view="notas"><span>▤</span> Notas rápidas</button>
+  </nav>
+  <div class="sidebar-bottom">
+   <a href="../" class="lookup-link">⌕ Consultar clientes ativos <span>↗</span></a>
+   <div class="user-chip"><div class="avatar">M</div><div><strong id="account-name">Conta</strong><small>Área reservada</small></div><button id="logout" type="button" title="Sair">↪</button></div>
+  </div>
+ </aside>
+ <div class="main-shell">
+  <header class="topbar">
+   <button type="button" id="mobile-menu" class="mobile-menu" aria-label="Abrir menu">☰</button>
+   <div class="breadcrumb">MOVAMI <span>/</span> <strong id="section-breadcrumb">VISÃO GERAL</strong></div>
+   <div class="top-actions"><span id="today-label" class="today-label"></span><button class="btn outline" type="button" id="open-float">✎ Nota rápida</button><button class="btn dark" type="button" id="new-client">＋ Novo cliente</button></div>
+  </header>
+  <main class="main-content">
+   <div class="page-heading"><div><p class="eyebrow" id="page-kicker">PAINEL DE ACOMPANHAMENTO</p><h1 id="page-title">Visão geral<span class="yellow-dot">.</span></h1><p id="page-description" class="muted">Prioridades, conversas e oportunidades em um só lugar.</p></div><div id="sync-state" class="sync-indicator">● Sincronizado</div></div>
+   <section id="dashboard-view" class="view">
+    <div class="stats-grid" id="stats"></div>
+    <div class="dash-grid">
+     <section class="surface" id="priority-section"><div class="section-heading"><div><span class="dot"></span><h2>Precisa da sua atenção</h2></div><button class="link-action" data-jump="retornos" type="button">Ver todos →</button></div><div id="priority-list"></div></section>
+     <section class="surface" id="pipeline-section"><div class="section-heading"><h2>Pipeline comercial</h2></div><div id="pipeline-summary"></div></section>
+    </div>
+    <section class="surface"><div class="section-heading"><h2>Negociações recentes</h2><button class="link-action" data-jump="negociacoes" type="button">Ver negociações →</button></div><div id="recent-list" class="table-wrap"></div></section>
+   </section>
+   <section id="negociacoes-view" class="view hidden">
+    <div class="toolbar"><label class="search"><span>⌕</span><input id="search" placeholder="Buscar empresa, CNPJ, contato, telefone..." type="search"></label><select id="stage-filter" aria-label="Filtrar etapa"><option value="todos">Todas as etapas</option><option value="prospectar">A prospectar</option><option value="conversamos">Já conversamos</option><option value="aguardando_resposta">Aguardando resposta</option><option value="proposta_enviada">Proposta enviada</option><option value="negociando">Negociando</option><option value="visita_agendada">Visita agendada</option><option value="fechado">Fechado</option><option value="perdido">Perdido</option></select><div class="view-switch"><button id="table-mode" class="selected" type="button">☷ Lista</button><button id="board-mode" type="button">▥ Quadro</button></div></div>
+    <div id="negotiations-content"></div>
+   </section>
+   <section id="retornos-view" class="view hidden"><div class="surface"><div class="section-heading"><h2>Agenda de retornos e visitas</h2><span class="muted tiny">Organizada por data e horário</span></div><div id="schedule-list"></div></div></section>
+   <section id="notas-view" class="view hidden"><div class="surface"><div class="section-heading"><h2>Notas rápidas</h2><button class="btn dark" type="button" data-quick>＋ Nova nota</button></div><div id="all-notes"></div></div></section>
+  </main>
+ </div>
+</div>
+<!-- Modal de empresa -->
+<dialog id="client-dialog" class="modal">
+ <form id="client-form" method="dialog" class="modal-body">
+  <div class="modal-title"><div><p class="eyebrow">CADASTRO COMERCIAL</p><h2 id="client-dialog-title">Novo cliente</h2></div><button type="button" class="x-btn" data-close="client-dialog" aria-label="Fechar">×</button></div>
+  <input id="client-id" type="hidden">
+  <div class="form-grid">
+   <label class="span-2">Empresa / razão social *<input id="f-empresa" maxlength="180" required placeholder="Ex.: Indústria ABC Ltda"></label>
+   <label>CNPJ <small>(opcional)</small><input id="f-cnpj" maxlength="25" inputmode="text" placeholder="00.000.000/0000-00"></label>
+   <label>Nome do contato<input id="f-contato" maxlength="120" placeholder="Responsável pela negociação"></label>
+   <label>WhatsApp / telefone<input id="f-telefone" maxlength="25" type="tel" placeholder="(47) 99999-9999"></label>
+   <label>E-mail<input id="f-email" maxlength="180" type="email" placeholder="contato@empresa.com"></label>
+   <label>Cidade<input id="f-cidade" maxlength="100" placeholder="Blumenau / SC"></label>
+   <label>Segmento<input id="f-segmento" maxlength="100" placeholder="Têxtil, logística, serviços..."></label>
+   <label>Veículo de interesse<input id="f-veiculo" maxlength="140" placeholder="Onix, Saveiro, Fiorino..."></label>
+   <label>Quantidade de veículos<input id="f-quantidade" type="number" min="0" step="1" placeholder="1"></label>
+   <label>KM mensal<input id="f-km" type="number" min="0" step="1" placeholder="3000"></label>
+   <label>Valor mensal proposto (R$)<input id="f-valor" type="number" min="0" step="0.01" placeholder="0,00"></label>
+   <label>Etapa<select id="f-etapa"><option value="prospectar">A prospectar</option><option value="conversamos">Já conversamos</option><option value="aguardando_resposta">Aguardando resposta</option><option value="proposta_enviada">Proposta enviada</option><option value="negociando">Negociando</option><option value="visita_agendada">Visita agendada</option><option value="fechado">Fechado</option><option value="perdido">Perdido</option></select></label>
+   <label>Prioridade<select id="f-prioridade"><option value="normal">Normal</option><option value="alta">Alta</option><option value="baixa">Baixa</option></select></label>
+   <label class="span-2">Próxima ação<input id="f-acao" maxlength="240" placeholder="Ex.: cobrar retorno da cotação"></label>
+   <label class="span-2">Data e hora do próximo contato / visita<input id="f-retorno" type="datetime-local"></label>
+   <label class="span-2">Observações da negociação<textarea id="f-notas" rows="3" maxlength="8000" placeholder="O que conversaram? Qual foi a objeção? O que ficou combinado?"></textarea></label>
+  </div>
+  <div class="modal-footer"><button type="button" class="btn outline" data-close="client-dialog">Cancelar</button><button class="btn dark" id="save-client" type="submit">Salvar cliente</button></div>
+ </form>
+</dialog>
+<!-- Modal de detalhes e histórico -->
+<dialog id="detail-dialog" class="modal detail-modal">
+ <div class="modal-body">
+  <div class="modal-title"><div><p class="eyebrow">HISTÓRICO DE NEGOCIAÇÃO</p><h2 id="detail-title">Empresa</h2></div><button class="x-btn" type="button" data-close="detail-dialog">×</button></div>
+  <div id="detail-content"></div>
+  <div class="detail-actions"><button class="btn outline" id="detail-edit" type="button">✎ Editar cadastro</button><button class="btn danger-outline" id="detail-delete" type="button">Excluir</button></div>
+  <div class="activity-block"><h3>Registrar interação</h3><form id="activity-form"><select id="activity-type"><option value="anotacao">Anotação</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option><option value="visita">Visita</option><option value="proposta">Proposta</option><option value="retorno">Retorno</option></select><textarea id="activity-text" rows="3" required maxlength="8000" placeholder="Descreva o que foi conversado e os próximos passos..."></textarea><button type="submit" class="btn dark">＋ Salvar no histórico</button></form><div id="activity-list"></div></div>
+ </div>
+</dialog>
+<!-- Bloco de notas flutuante, restrito à janela do aplicativo -->
+<div id="float-panel" class="float-panel hidden" role="region" aria-label="Bloco de notas flutuante">
+ <div class="float-header" id="float-handle"><div><span class="mini-circle">✎</span><strong>Nota rápida</strong><small>Arraste para mover</small></div><div class="float-tools"><button type="button" id="float-minimize" title="Minimizar">−</button><button type="button" id="float-close" title="Fechar">×</button></div></div>
+ <div id="float-body" class="float-body"><label>Registrar para o cliente <small>(opcional)</small><select id="float-client"><option value="">Nota avulsa</option></select></label><textarea id="float-text" rows="5" maxlength="6000" placeholder="Escreva uma ideia, promessa, retorno pendente, detalhe da conversa..."></textarea><button type="button" id="float-save" class="btn dark full">Salvar nota</button><p id="float-status" class="tiny muted"></p></div>
+</div>
+<button id="float-bubble" class="float-bubble hidden" type="button" title="Abrir notas flutuantes">✎<span>NOTAS</span></button>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</body>
+</html>
