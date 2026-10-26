@@ -104,7 +104,19 @@ $("auth-form").addEventListener("submit",async e=>{
   }else if(data.user){
    await enter(data.user);
   }
- }catch(err){authMessage("Não foi possível acessar: "+(err.message||"verifique seus dados e tente novamente"))}
+ }catch(err){
+  const code=String(err.code||"");
+  const message=String(err.message||"").toLowerCase();
+  if(code==="over_email_send_rate_limit"||message.includes("email rate limit")){
+   authMessage("O Supabase atingiu o limite de envio de e-mails. Não tente criar várias contas. Se você já tem cadastro, clique em 'Já tenho conta: entrar' e use suas credenciais existentes. Novos cadastros exigem a liberação do envio de e-mails.");
+  }else if(code==="invalid_credentials"||message.includes("invalid login credentials")){
+   authMessage("E-mail ou senha incorretos. Confira se está usando o e-mail da conta que já existe.");
+  }else if(code==="email_address_invalid"||message.includes("email address")&&message.includes("invalid")){
+   authMessage("O endereço de e-mail foi recusado. Confira se o domínio foi digitado corretamente (Gmail normalmente termina em @gmail.com).");
+  }else{
+   authMessage("Não foi possível acessar: "+(err.message||"verifique seus dados e tente novamente"));
+  }
+ }
  finally{btn.disabled=false}
 });
 $("logout").addEventListener("click",async()=>{if(db){const {error}=await db.auth.signOut();if(error)toast(error.message,true);else leave()}});
