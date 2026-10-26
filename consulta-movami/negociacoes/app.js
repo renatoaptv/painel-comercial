@@ -18,7 +18,7 @@ const STAGES=[
  ["perdido","Perdido"]
 ];
 const LABELS=Object.fromEntries(STAGES);
-const state={user:null,storageMode:null,clientes:[],notas:[],view:"inicio",layout:"lista",search:"",stage:"todos",detailId:null,fetching:false};
+const state={user:null,storageMode:null,clientes:[],notas:[],registros:[],view:"inicio",layout:"lista",search:"",stage:"todos",detailId:null,fetching:false};
 const $=id=>document.getElementById(id);
 const esc=v=>String(v===null||v===undefined?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const formatDate=v=>v?new Intl.DateTimeFormat("pt-BR",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(v)):"—";
@@ -143,6 +143,7 @@ async function enter(user,mode){
  $("account-status").textContent=mode==="local"?"Dados apenas neste navegador":"Supabase sincronizado";
  $("mode-banner").classList.toggle("hidden",mode!=="local");
  $("import-data").classList.toggle("hidden",mode!=="local");
+ state.registros=monitorRead();
  $("today-label").textContent=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).format(new Date());
  setView("inicio");
  await loadAll();
@@ -168,6 +169,13 @@ $("import-file").addEventListener("change",async e=>{
    });
   }
   if(!confirm("Importar este backup? Isso substituirá os cadastros que estão salvos neste navegador. Deseja continuar?"))return;
+  if(raw.registros!==undefined){
+   if(!Array.isArray(raw.registros))throw Error("Lista de acompanhamento inválida no backup.");
+   const registros=raw.registros.map(monitorSanitize);
+   if(registros.some(r=>!r))throw Error("Registro de acompanhamento inválido.");
+   localStorage.setItem(MONITOR_KEY,JSON.stringify(registros));
+   state.registros=registros;
+  }
   localStorage.setItem(LOCAL_KEY,JSON.stringify(imported));
   state.detailId=null;
   await loadAll();
@@ -187,7 +195,7 @@ $("backup-data").addEventListener("click",async()=>{
     [TABLE_INTERACOES]:data||[]
    };
   }
-  const data={versao:1,origem:state.storageMode,exportado_em:new Date().toISOString(),...backup};
+  const data={versao:2,origem:state.storageMode,exportado_em:new Date().toISOString(),registros:monitorRead(),...backup};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob);
   const link=document.createElement("a");
@@ -215,7 +223,9 @@ const PAGE={
  inicio:["PAINEL DE ACOMPANHAMENTO","Visão geral","Prioridades, conversas e oportunidades em um só lugar.","VISÃO GERAL"],
  negociacoes:["CARTEIRA DE OPORTUNIDADES","Negociações","Todas as empresas e contatos comerciais.","NEGOCIAÇÕES"],
  retornos:["SUA ROTINA COMERCIAL","Retornos e visitas","O que precisa ser feito e quando.","RETORNOS E VISITAS"],
- notas:["IDEIAS E LEMBRETES","Notas rápidas","Anotações salvas na nuvem, vinculadas ou não a clientes.","NOTAS RÁPIDAS"]
+ notas:["IDEIAS E LEMBRETES","Notas rápidas","Anotações salvas na nuvem, vinculadas ou não a clientes.","NOTAS RÁPIDAS"],
+ cotacoes:["ACOMPANHAMENTO COMERCIAL","Clientes que fizemos cotação","Acompanhe propostas enviadas, retornos e fechamentos.","COTAÇÕES"],
+ credito:["ANÁLISE CADASTRAL","Clientes que foram para análise de crédito","Marque o resultado de cada análise: pendente, aprovado ou reprovado.","ANÁLISE DE CRÉDITO"]
 };
 function setView(view){
  state.view=view;const p=PAGE[view]||PAGE.inicio;
@@ -228,7 +238,156 @@ function setView(view){
 document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
 document.querySelectorAll("[data-jump]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.jump)));
 $("mobile-menu").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
-function render(){if(!state.user)return;renderDashboard();renderNegotiations();renderSchedule();renderNotes()}
+function render(){if(!state.user)return;renderDashboard();renderNegotiations();renderSchedule();renderNotes();renderMonitoring()}
+
+/* Acompanhamento de cotações e crédito: dados privados apenas no navegador.
+ * Os nomes de clientes não são incorporados ao repositório público.
+ */
+const MONITOR_KEY="movami_acompanhamento_comercial_v1";
+const MONITOR_STATUSES={
+ cotacao:[["aguardando","Aguardando retorno"],["negociando","Em negociação"],["fechado","Fechado"],["perdido","Não fechado"]],
+ credito:[["pendente","Pendente"],["aprovado","Aprovado"],["reprovado","Reprovado"]]
+};
+function monitorNormalize(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLocaleLowerCase("pt-BR").replace(/\s+/g," ")}
+function monitorSanitize(v){
+ if(!v||typeof v!=="object"||!Object.hasOwn(MONITOR_STATUSES,v.tipo)||!String(v.empresa||"").trim())return null;
+ const statuses=MONITOR_STATUSES[v.tipo];
+ const status=statuses.some(x=>x[0]===v.status)?v.status:statuses[0][0];
+ return {
+  id:String(v.id||crypto.randomUUID()),
+  tipo:v.tipo,empresa:String(v.empresa||"").trim().slice(0,180),
+  contato:String(v.contato||"").trim().slice(0,120),
+  detalhes:String(v.detalhes||"").trim().slice(0,600),
+  data:String(v.data||"").slice(0,10),
+  status,observacoes:String(v.observacoes||"").trim().slice(0,3000),
+  atualizado_em:String(v.atualizado_em||new Date().toISOString())
+ };
+}
+function monitorRead(){
+ try{
+  const data=JSON.parse(localStorage.getItem(MONITOR_KEY)||"[]");
+  return Array.isArray(data)?data.map(monitorSanitize).filter(Boolean):[];
+ }catch(err){console.warn("Acompanhamento não encontrado:",err);return []}
+}
+function monitorSave(records){
+ localStorage.setItem(MONITOR_KEY,JSON.stringify(records));
+ state.registros=records;
+ renderMonitoring();
+}
+function monitorOptions(tipo,status){
+ return MONITOR_STATUSES[tipo].map(([id,label])=>'<option value="'+esc(id)+'"'+(id===status?' selected':'')+'>'+esc(label)+'</option>').join("");
+}
+function renderMonitoring(){
+ for(const type of ["cotacao","credito"]){
+  const prefix=type==="cotacao"?"cotacoes":"credito";
+  const host=$(prefix+"-list");if(!host)continue;
+  const all=state.registros.filter(r=>r.tipo===type);
+  const search=monitorNormalize($(prefix+"-search").value);
+  const statusFilter=$(prefix+"-filter").value;
+  const matches=all.filter(r=>(statusFilter==="todos"||r.status===statusFilter)&&monitorNormalize([r.empresa,r.contato,r.detalhes,r.observacoes].join(" ")).includes(search));
+  const labels=type==="cotacao"?"Cotações cadastradas":"Clientes encaminhados para análise";
+  $(prefix+"-count").textContent=all.length+" "+(all.length===1?"registro":"registros");
+  if(type==="credito"){
+   $("credito-summary").innerHTML=MONITOR_STATUSES.credito.map(([id,label])=>{
+    const n=all.filter(r=>r.status===id).length;
+    return '<div class="monitor-kpi '+id+'"><span>'+esc(label)+'</span><strong>'+n+'</strong></div>';
+   }).join("");
+  }
+  host.innerHTML=matches.length?matches.sort((a,b)=>(b.data||b.atualizado_em||"").localeCompare(a.data||a.atualizado_em||"")).map(r=>{
+   const label=MONITOR_STATUSES[type].find(s=>s[0]===r.status)?.[1]||r.status;
+   return '<article class="monitor-card"><div class="monitor-main"><span class="monitor-avatar">'+esc(initials(r.empresa))+'</span><div class="monitor-copy"><b>'+esc(r.empresa)+'</b><small>'+esc(r.contato||"Contato não informado")+(r.data?" · "+esc(r.data.split("-").reverse().join("/")):"")+'</small>'+(r.detalhes?'<p>'+esc(r.detalhes)+'</p>':'')+(r.observacoes?'<p class="monitor-note">'+esc(r.observacoes)+'</p>':'')+'</div></div><div class="monitor-actions"><label>Situação<select class="monitor-select '+esc(r.status)+'" data-monitor-status="'+esc(r.id)+'" aria-label="Situação de '+esc(r.empresa)+'">'+monitorOptions(type,r.status)+'</select></label><button type="button" class="btn outline monitor-edit" data-monitor-edit="'+esc(r.id)+'">Editar</button><button type="button" class="monitor-delete" data-monitor-delete="'+esc(r.id)+'" aria-label="Excluir '+esc(r.empresa)+'" title="Excluir registro">×</button></div></article>';
+  }).join(""):empty(search||statusFilter!=="todos"?"Nenhum resultado":"Nenhum registro nesta lista",search||statusFilter!=="todos"?"Altere a busca ou o filtro.":"Adicione uma empresa ou importe a relação de clientes já levantados.");
+ }
+}
+function monitorOpen(tipo,id=null){
+ const record=id?state.registros.find(r=>r.id===id):null;
+ const actual=record?.tipo||tipo;
+ if(!Object.hasOwn(MONITOR_STATUSES,actual))return;
+ $("monitor-form").reset();
+ $("monitor-id").value=record?.id||"";
+ $("monitor-tipo").value=actual;
+ $("monitor-dialog-title").textContent=(record?"Editar ":"Novo ")+(actual==="credito"?"cliente em análise":"cliente com cotação");
+ $("monitor-empresa").value=record?.empresa||"";
+ $("monitor-contato").value=record?.contato||"";
+ $("monitor-detalhes").value=record?.detalhes||"";
+ $("monitor-data").value=record?.data||new Date().toLocaleDateString("en-CA");
+ $("monitor-observacoes").value=record?.observacoes||"";
+ $("monitor-status").innerHTML=monitorOptions(actual,record?.status||MONITOR_STATUSES[actual][0][0]);
+ $("monitor-dialog").showModal();
+}
+$("monitor-form").addEventListener("submit",e=>{
+ e.preventDefault();
+ const tipo=$("monitor-tipo").value,id=$("monitor-id").value;
+ const empresa=$("monitor-empresa").value.trim();
+ if(!empresa)return;
+ const candidate=monitorSanitize({
+  id:id||crypto.randomUUID(),tipo,empresa,contato:$("monitor-contato").value,
+  detalhes:$("monitor-detalhes").value,data:$("monitor-data").value,
+  status:$("monitor-status").value,observacoes:$("monitor-observacoes").value
+ });
+ if(!candidate)return;
+ const duplicado=state.registros.some(r=>r.id!==id&&r.tipo===tipo&&monitorNormalize(r.empresa)===monitorNormalize(empresa));
+ if(duplicado){toast("Essa empresa já consta nesta lista.",true);return}
+ try{
+  const records=id?state.registros.map(r=>r.id===id?candidate:r):[...state.registros,candidate];
+  monitorSave(records);
+  $("monitor-dialog").close();
+  toast("Registro salvo neste navegador.");
+ }catch(err){toast("Falha ao salvar: "+err.message,true)}
+});
+document.addEventListener("click",e=>{
+ const add=e.target.closest("[data-monitor-add]");
+ if(add){monitorOpen(add.dataset.monitorAdd);return}
+ const edit=e.target.closest("[data-monitor-edit]");
+ if(edit){const record=state.registros.find(r=>r.id===edit.dataset.monitorEdit);if(record)monitorOpen(record.tipo,record.id);return}
+ const remove=e.target.closest("[data-monitor-delete]");
+ if(remove){
+  const rec=state.registros.find(r=>r.id===remove.dataset.monitorDelete);
+  if(!rec||!confirm("Remover "+rec.empresa+" desta lista?"))return;
+  try{monitorSave(state.registros.filter(r=>r.id!==rec.id));toast("Registro removido.");}catch(err){toast(err.message,true)}
+ }
+ const importBtn=e.target.closest("[data-monitor-import]");
+ if(importBtn)$("monitor-import-file").click();
+});
+document.addEventListener("change",e=>{
+ if(!e.target.matches("[data-monitor-status]"))return;
+ const id=e.target.dataset.monitorStatus;
+ const record=state.registros.find(r=>r.id===id);
+ if(!record)return;
+ if(!MONITOR_STATUSES[record.tipo].some(s=>s[0]===e.target.value)){renderMonitoring();return}
+ try{
+  monitorSave(state.registros.map(r=>r.id===id?{...r,status:e.target.value,atualizado_em:new Date().toISOString()}:r));
+  toast("Situação atualizada.");
+ }catch(err){renderMonitoring();toast("Não foi possível salvar: "+err.message,true)}
+});
+$("monitor-import-file").addEventListener("change",async e=>{
+ const file=e.target.files?.[0];e.target.value="";
+ if(!file)return;
+ if(file.size>1024*1024){toast("Arquivo ultrapassa 1 MB.",true);return}
+ try{
+  const raw=JSON.parse(await file.text());
+  if(!Array.isArray(raw.registros))throw Error("Arquivo inválido. Envie um JSON com a lista registros.");
+  if(raw.registros.length>5000)throw Error("Lista muito grande.");
+  const list=raw.registros.map(monitorSanitize);
+  if(list.some(r=>!r))throw Error("Há registros sem empresa ou tipo válido.");
+  const seen=new Set(state.registros.map(r=>r.tipo+"|"+monitorNormalize(r.empresa)));
+  const news=[];
+  for(const rec of list){
+   const key=rec.tipo+"|"+monitorNormalize(rec.empresa);
+   if(seen.has(key))continue;
+   seen.add(key);news.push({...rec,id:crypto.randomUUID()});
+  }
+  if(!news.length){toast("Todos os clientes desse arquivo já estão cadastrados.");return}
+  if(!confirm("Importar "+news.length+" registro(s) para este navegador, mantendo os existentes?"))return;
+  monitorSave([...state.registros,...news]);
+  toast(news.length+" registro(s) importado(s) com sucesso.");
+ }catch(err){toast("Não foi possível importar: "+err.message,true)}
+});
+for(const prefix of ["cotacoes","credito"]){
+ $(prefix+"-search").addEventListener("input",renderMonitoring);
+ $(prefix+"-filter").addEventListener("change",renderMonitoring);
+}
+
 function renderDashboard(){
  const live=state.clientes.filter(c=>!["fechado","perdido"].includes(c.etapa));
  const due=live.filter(isToday).length,waiting=live.filter(c=>["aguardando_resposta","proposta_enviada"].includes(c.etapa)).length;
