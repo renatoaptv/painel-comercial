@@ -63,6 +63,7 @@ async function enter(user){
  state.user=user;
  $("auth-view").classList.add("hidden");
  $("workspace").classList.remove("hidden");
+ $("float-bubble").classList.remove("hidden");
  $("account-name").textContent=user.email||"Minha conta";
  $("today-label").textContent=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).format(new Date());
  setView("inicio");await loadAll();
@@ -262,7 +263,7 @@ async function openDetails(id){
  ];
  let contacts="";
  const digits=phone(c.telefone);
- if(digits.length>=10){const number=digits.startsWith("55")?digits:"55"+digits;contacts='<a class="btn outline" href="https://wa.me/'+number+'" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>'}
+ if(digits.length>=10){const number=(digits.length>11&&digits.startsWith("55"))?digits:"55"+digits;contacts='<a class="btn outline" href="https://wa.me/'+number+'" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>'}
  const linked=state.notas.filter(n=>n.cliente_id===id);
  $("detail-content").innerHTML='<div class="detail-meta">'+meta.map(([k,v])=>'<div><small>'+esc(k)+'</small><strong>'+esc(v)+'</strong></div>').join("")+'</div>'+
  '<p style="font-size:12px;white-space:pre-wrap;line-height:1.65;color:#5c655a">'+esc(c.notas||"")+'</p>'+contacts+
@@ -306,6 +307,7 @@ function populateFloatSelect(){
 }
 function showFloat(){
  $("float-panel").classList.remove("hidden");$("float-bubble").classList.add("hidden");
+ $("float-body").classList.remove("hidden");$("float-minimize").textContent="−";
  const pos=localStorage.getItem("movami_crm_float_pos");
  if(pos&&window.innerWidth>760){try{const p=JSON.parse(pos);const x=Math.max(0,Math.min(p.x,window.innerWidth-330));const y=Math.max(0,Math.min(p.y,window.innerHeight-150));$("float-panel").style.left=x+"px";$("float-panel").style.top=y+"px";$("float-panel").style.right="auto";$("float-panel").style.bottom="auto"}catch(e){/* sem posição salva */}}
  $("float-text").focus();
