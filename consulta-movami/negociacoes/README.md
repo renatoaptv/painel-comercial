@@ -6,7 +6,7 @@ Módulo comercial independente localizado em \`consulta-movami/negociacoes/\`. O
 
 https://renatoaptv.github.io/painel-comercial/consulta-movami/negociacoes/
 
-Faça login com sua conta de e-mail e senha do Supabase vinculado ao projeto ou use "Criar conta de acesso" (a confirmação de e-mail pode ser necessária conforme a configuração do Supabase).
+Acesso temporário sem senha: informe seu e-mail e clique em "Receber link de acesso". Abra o link enviado pelo Supabase no e-mail para entrar. O link pode exigir que a URL publicada esteja cadastrada em Authentication > URL Configuration > Redirect URLs. Não há acesso público às tabelas nem alteração do usuário/da política RLS; o mesmo e-mail mantém seu cadastro existente.
 
 ## Funções
 
