@@ -7,9 +7,9 @@
 <meta name="description" content="Gestão de prospecção, visitas, propostas e retornos da Movami.">
 <title>Movami | Controle de Negociações</title>
 <link rel="icon" href="../movami-logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./app.css?v=20261026-hover-v2">
+<link rel="stylesheet" href="./app.css?v=20261026-hover-v3">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-<script defer src="./app.js?v=20261026-aberto-v2"></script>
+<script defer src="./app.js?v=20261026-aberto-v3"></script>
 </head>
 <body>
 <div id="boot-screen" class="boot-screen" role="status" aria-live="polite"><div class="boot-card"><img src="../movami-logo.svg" alt="Movami"><span class="boot-spinner" aria-hidden="true"></span><p>Abrindo seu painel de negociações...</p></div></div>
@@ -25,16 +25,17 @@
   </nav>
   <div class="sidebar-bottom">
    <a href="../" class="lookup-link">⌕ Consultar clientes ativos <span>↗</span></a>
-   <div class="user-chip"><div class="avatar">M</div><div><strong id="account-name">Meu painel</strong><small id="account-status">Iniciando...</small></div><button id="backup-data" type="button" title="Exportar backup dos dados" aria-label="Exportar backup">↓</button></div>
+   <div class="user-chip"><div class="avatar">M</div><div><strong id="account-name">Meu painel</strong><small id="account-status">Iniciando...</small></div><button id="import-data" type="button" title="Importar backup dos dados" aria-label="Importar backup">↑</button><button id="backup-data" type="button" title="Exportar backup dos dados" aria-label="Exportar backup">↓</button></div>
   </div>
  </aside>
+ <input id="import-file" type="file" accept=".json,application/json" hidden aria-label="Selecionar arquivo de backup">
  <div class="main-shell">
   <header class="topbar">
    <button type="button" id="mobile-menu" class="mobile-menu" aria-label="Abrir menu">☰</button>
    <div class="breadcrumb">MOVAMI <span>/</span> <strong id="section-breadcrumb">VISÃO GERAL</strong></div>
    <div class="top-actions"><span id="today-label" class="today-label"></span><button class="btn outline" type="button" id="open-float">✎ Nota rápida</button><button class="btn dark" type="button" id="new-client">＋ Novo cliente</button></div>
   </header>
-  <main class="main-content"><div id="mode-banner" class="mode-banner hidden"><span class="mode-banner-dot">●</span><div><strong>Acesso sem senha ativado</strong><p>Seus dados novos ficam apenas neste navegador. Não limpe os dados do site e use o botão ↓ no menu para guardar um backup.</p></div></div>
+  <main class="main-content"><div id="mode-banner" class="mode-banner hidden"><span class="mode-banner-dot">●</span><div><strong>Acesso sem senha ativado</strong><p>Seus dados novos ficam apenas neste navegador. Não limpe os dados do site e use ↑ para importar e ↓ para exportar seu backup no menu.</p></div></div>
    <div class="page-heading"><div><p class="eyebrow" id="page-kicker">PAINEL DE ACOMPANHAMENTO</p><h1 id="page-title">Visão geral<span class="yellow-dot">.</span></h1><p id="page-description" class="muted">Prioridades, conversas e oportunidades em um só lugar.</p></div><div id="sync-state" class="sync-indicator">● Sincronizado</div></div>
    <section id="dashboard-view" class="view">
     <div class="stats-grid" id="stats"></div>
