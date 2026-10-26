@@ -21,7 +21,7 @@
    <button class="nav-item active" data-view="inicio"><span>▦</span> Visão geral</button>
    <button class="nav-item" data-view="negociacoes"><span>◫</span> Negociações</button>
    <button class="nav-item" data-view="cotacoes"><span>▤</span> Clientes que fizemos cotação</button>
-   <button class="nav-item" data-view="credito"><span>✓</span> Clientes para análise de crédito</button>
+   <button class="nav-item" data-view="credito"><span>✓</span> Clientes que foram para análise de crédito</button>
    <button class="nav-item" data-view="retornos"><span>◷</span> Retornos e visitas</button>
    <button class="nav-item" data-view="notas"><span>▤</span> Notas rápidas</button>
   </nav>
@@ -54,7 +54,7 @@
    <section id="cotacoes-view" class="view hidden">
     <div class="surface">
      <div class="section-heading"><h2>Clientes que fizemos cotação</h2><span id="cotacoes-count" class="tiny muted">0 registros</span></div>
-     <p class="tiny muted">Registre cada proposta apresentada e acompanhe o retorno da negociação.</p>
+     <p class="tiny muted">Registre cada proposta apresentada e acompanhe o retorno da negociação. As marcações ficam salvas neste navegador; faça backups pelo menu ↓.</p>
      <div class="monitor-toolbar">
       <input id="cotacoes-search" type="search" placeholder="Buscar empresa, contato ou veículo..." aria-label="Buscar cotações">
       <select id="cotacoes-filter" aria-label="Filtrar situação da cotação"><option value="todos">Todas as situações</option><option value="aguardando">Aguardando retorno</option><option value="negociando">Em negociação</option><option value="fechado">Fechado</option><option value="perdido">Não fechado</option></select>
@@ -68,7 +68,7 @@
     <div id="credito-summary" class="monitor-summary"></div>
     <div class="surface">
      <div class="section-heading"><h2>Clientes que foram para análise de crédito</h2><span id="credito-count" class="tiny muted">0 registros</span></div>
-     <p class="tiny muted">Atualize o parecer somente após receber o resultado confirmado da análise.</p>
+     <p class="tiny muted">Atualize o parecer somente após receber o resultado confirmado da análise. As marcações ficam salvas neste navegador; faça backups pelo menu ↓.</p>
      <div class="monitor-toolbar">
       <input id="credito-search" type="search" placeholder="Buscar cliente ou empresa..." aria-label="Buscar análises">
       <select id="credito-filter" aria-label="Filtrar resultado da análise"><option value="todos">Todos os resultados</option><option value="pendente">Pendente</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select>
