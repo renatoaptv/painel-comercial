@@ -9,7 +9,7 @@
 <link rel="icon" href="../movami-logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./app.css">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-<script defer src="./app.js"></script>
+<script defer src="./app.js?v=20261026-sem-senha"></script>
 </head>
 <body>
 <div id="auth-view" class="auth-layout">
@@ -20,10 +20,9 @@
   <p class="muted">Organize empresas, propostas, retornos e visitas. Seus dados ficam salvos com segurança.</p>
   <form id="auth-form" class="auth-form">
    <label>E-mail<input id="auth-email" type="email" autocomplete="email" placeholder="seuemail@empresa.com" required></label>
-   <label>Senha<input id="auth-password" type="password" autocomplete="current-password" placeholder="Sua senha" minlength="6" required></label>
-   <button type="submit" class="btn dark full" id="auth-submit">Entrar no meu painel</button>
+   <button type="submit" class="btn dark full" id="auth-submit">Receber link de acesso</button>
   </form>
-  <button type="button" class="text-button" id="auth-mode">Criar conta de acesso</button>
+  <p class="muted">Acesso sem senha: enviaremos um link seguro para o seu e-mail. Seus clientes continuam protegidos.</p>
   <p id="auth-message" class="form-message" role="status"></p>
   <a class="secondary-link" href="../">Consultar lista de clientes ativos</a>
  </section>
