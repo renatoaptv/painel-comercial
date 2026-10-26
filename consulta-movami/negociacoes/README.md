@@ -6,7 +6,13 @@ Módulo comercial independente localizado em \`consulta-movami/negociacoes/\`. O
 
 https://renatoaptv.github.io/painel-comercial/consulta-movami/negociacoes/
 
-Acesso por e-mail e senha do Supabase. O campo de e-mail é preenchido inicialmente com renato@gmail.com (visível no código público do GitHub, conforme solicitado); a senha NUNCA é gravada no GitHub. Se o e-mail ainda não estiver cadastrado, selecione "Criar conta de acesso", escolha uma senha forte e confirme pelo e-mail quando solicitado. Os clientes continuam isolados pela autenticação do usuário e RLS. Para a confirmação de e-mail, a URL publicada deve constar entre os Redirect URLs do Supabase.
+A página inicia automaticamente sem solicitar e-mail ou senha.
+Se existir uma sessão autenticada válida do Supabase neste navegador, ela é preservada e os dados da conta seguem sincronizados.
+Caso contrário, o painel usa armazenamento local do próprio navegador. Nesse modo, os dados não são sincronizados entre dispositivos, podem ser perdidos se o usuário limpar os dados do navegador e podem ser vistos por outras pessoas que usem o mesmo perfil. Use o botão de exportação de backup (↓) no menu. Nunca abra as políticas RLS das tabelas ao público.
+
+### Visual
+
+Efeito de expansão e elevação ao passar o mouse sobre cartões de indicadores, quadros, notas e painéis. No celular não há efeito de hover. Há suporte para preferência por movimento reduzido.
 
 ## Funções
 
@@ -15,7 +21,7 @@ Acesso por e-mail e senha do Supabase. O campo de e-mail é preenchido inicialme
 - Controlar etapas: prospectar, conversamos, aguardando resposta, proposta enviada, negociando, visita agendada, fechado e perdido.
 - Próxima ação e lembrete de data/hora; agenda e destaques de pendências vencidas ou de hoje.
 - Histórico de ligações, WhatsApp, visitas, propostas e retornos, associado a cada cliente.
-- Notas rápidas flutuantes dentro da página; podem ser avulsas ou vinculadas a clientes. Dados ficam salvos no Supabase, e não apenas neste aparelho.
+- Notas rápidas flutuantes dentro da página; podem ser avulsas ou vinculadas a clientes. Com sessão pré-existente, sincronizam no Supabase; sem sessão, ficam apenas neste navegador.
 - Visualização em lista ou quadro e atalhos de WhatsApp.
 - Acesso à consulta já existente de clientes ativos (ela continua protegida por senha independente).
 
@@ -28,7 +34,7 @@ Somente as seguintes tabelas foram criadas no Supabase \`painel-comercial-saas\`
 
 Todas têm RLS e políticas de leitura, inclusão, edição e exclusão limitadas ao \`auth.uid()\` autenticado. As interações e notas associadas a clientes usam chave estrangeira composta \`(cliente_id, usuario_id)\`, para impedir o vínculo com registros de outros usuários. A chave presente no front-end é pública (\`sb_publishable_...\`) e nunca a chave secreta.
 
-**Atenção:** um cadastro de cliente no novo painel não atualiza automaticamente a lista criptografada dos clientes ativos da Movami. Consulte essa lista separadamente para evitar abordagens duplicadas. O app depende de conexão à internet para autenticar e sincronizar os dados.
+**Atenção:** um cadastro de cliente no novo painel não atualiza automaticamente a lista criptografada dos clientes ativos da Movami. Consulte essa lista separadamente para evitar abordagens duplicadas. A sincronização de sessões autenticadas depende de conexão à internet. O modo local não precisa de autenticação para iniciar.
 
 ## Observações de uso
 
