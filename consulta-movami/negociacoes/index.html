@@ -7,35 +7,12 @@
 <meta name="description" content="Gestão de prospecção, visitas, propostas e retornos da Movami.">
 <title>Movami | Controle de Negociações</title>
 <link rel="icon" href="../movami-logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./app.css">
+<link rel="stylesheet" href="./app.css?v=20261026-hover-v2">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-<script defer src="./app.js?v=20261026-feedback-login"></script>
+<script defer src="./app.js?v=20261026-aberto-v2"></script>
 </head>
 <body>
-<div id="auth-view" class="auth-layout">
- <section class="auth-box">
-  <div class="auth-mark"><img src="../movami-logo.svg" alt="Movami"><span>COMERCIAL PRO</span></div>
-  <p class="eyebrow">SEU ESPAÇO DE TRABALHO</p>
-  <h1>Não deixe uma<br><em>negociação</em> para trás.</h1>
-  <p class="muted">Organize empresas, propostas, retornos e visitas. Seus dados ficam salvos com segurança.</p>
-  <form id="auth-form" class="auth-form">
-   <label>E-mail<input id="auth-email" type="email" autocomplete="username" placeholder="E-mail da sua conta existente" required></label>
-   <label>Senha<input id="auth-password" type="password" autocomplete="current-password" placeholder="Digite sua senha" minlength="6" required></label>
-   <button type="submit" class="btn dark full" id="auth-submit">Entrar no meu painel</button>
-  </form>
-  <button type="button" class="text-button" id="auth-mode">Criar conta de acesso</button>
-  <p class="muted">Se você já possui conta, entre com o e-mail e a senha utilizados anteriormente. Crie outra conta somente se ainda não tiver cadastro.</p>
-  <p id="auth-message" class="form-message" role="status"></p>
-  <a class="secondary-link" href="../">Consultar lista de clientes ativos</a>
- </section>
- <div class="auth-art" aria-hidden="true">
-  <div class="auth-art-copy"><span>PROSPECÇÃO • FOLLOW-UP • RESULTADOS</span><strong>Seu próximo negócio começa com uma boa organização.</strong></div>
-  <div class="floating-example">
-   <span class="pill yellow">PRIORIDADE DE HOJE</span><b>Retornar clientes</b><p>Propostas enviadas, visitas e contatos — tudo no mesmo lugar.</p>
-   <div class="example-line"><span>↗ Proposta enviada</span><strong>Em andamento</strong></div>
-  </div>
- </div>
-</div>
+<div id="boot-screen" class="boot-screen" role="status" aria-live="polite"><div class="boot-card"><img src="../movami-logo.svg" alt="Movami"><span class="boot-spinner" aria-hidden="true"></span><p>Abrindo seu painel de negociações...</p></div></div>
 <div id="workspace" class="workspace hidden">
  <aside class="sidebar">
   <div class="brand"><img src="../movami-logo.svg" alt="Movami"><span>COMERCIAL PRO</span></div>
@@ -48,7 +25,7 @@
   </nav>
   <div class="sidebar-bottom">
    <a href="../" class="lookup-link">⌕ Consultar clientes ativos <span>↗</span></a>
-   <div class="user-chip"><div class="avatar">M</div><div><strong id="account-name">Conta</strong><small>Área reservada</small></div><button id="logout" type="button" title="Sair">↪</button></div>
+   <div class="user-chip"><div class="avatar">M</div><div><strong id="account-name">Meu painel</strong><small id="account-status">Iniciando...</small></div><button id="backup-data" type="button" title="Exportar backup dos dados" aria-label="Exportar backup">↓</button></div>
   </div>
  </aside>
  <div class="main-shell">
@@ -57,7 +34,7 @@
    <div class="breadcrumb">MOVAMI <span>/</span> <strong id="section-breadcrumb">VISÃO GERAL</strong></div>
    <div class="top-actions"><span id="today-label" class="today-label"></span><button class="btn outline" type="button" id="open-float">✎ Nota rápida</button><button class="btn dark" type="button" id="new-client">＋ Novo cliente</button></div>
   </header>
-  <main class="main-content">
+  <main class="main-content"><div id="mode-banner" class="mode-banner hidden"><span class="mode-banner-dot">●</span><div><strong>Acesso sem senha ativado</strong><p>Seus dados novos ficam apenas neste navegador. Não limpe os dados do site e use o botão ↓ no menu para guardar um backup.</p></div></div>
    <div class="page-heading"><div><p class="eyebrow" id="page-kicker">PAINEL DE ACOMPANHAMENTO</p><h1 id="page-title">Visão geral<span class="yellow-dot">.</span></h1><p id="page-description" class="muted">Prioridades, conversas e oportunidades em um só lugar.</p></div><div id="sync-state" class="sync-indicator">● Sincronizado</div></div>
    <section id="dashboard-view" class="view">
     <div class="stats-grid" id="stats"></div>
