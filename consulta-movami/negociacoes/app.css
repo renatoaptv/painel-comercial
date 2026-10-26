@@ -47,3 +47,5 @@ body{background:linear-gradient(135deg,#f8f9f6 0%,#f1f4ee 100%)}
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+.user-chip button{padding:5px;min-width:25px;border-radius:6px}.user-chip button:hover{background:#36422f;color:#ffe16a}
