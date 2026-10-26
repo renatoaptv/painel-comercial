@@ -142,10 +142,38 @@ async function enter(user,mode){
  $("account-name").textContent=mode==="local"?"Meu navegador":user.email||"Minha conta";
  $("account-status").textContent=mode==="local"?"Dados apenas neste navegador":"Supabase sincronizado";
  $("mode-banner").classList.toggle("hidden",mode!=="local");
+ $("import-data").classList.toggle("hidden",mode!=="local");
  $("today-label").textContent=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"2-digit",month:"long"}).format(new Date());
  setView("inicio");
  await loadAll();
 }
+$("import-data").addEventListener("click",()=>{
+ if(state.storageMode!=="local")return;
+ $("import-file").click();
+});
+$("import-file").addEventListener("change",async e=>{
+ const file=e.target.files?.[0];
+ e.target.value="";
+ if(!file||state.storageMode!=="local")return;
+ if(file.size>5*1024*1024){toast("Arquivo muito grande. Limite de 5 MB.",true);return}
+ try{
+  const raw=JSON.parse(await file.text());
+  const keys=[TABLE_CLIENTES,TABLE_INTERACOES,TABLE_NOTAS];
+  if(!raw||typeof raw!=="object"||!keys.every(k=>Array.isArray(raw[k])))throw Error("Arquivo não é um backup válido do painel.");
+  const imported={};
+  for(const key of keys){
+   imported[key]=raw[key].map(item=>{
+    if(!item||typeof item!=="object"||!item.id)throw Error("Cadastro inválido no backup.");
+    return {...item,usuario_id:LOCAL_ID};
+   });
+  }
+  if(!confirm("Importar este backup? Isso substituirá os cadastros que estão salvos neste navegador. Deseja continuar?"))return;
+  localStorage.setItem(LOCAL_KEY,JSON.stringify(imported));
+  state.detailId=null;
+  await loadAll();
+  toast("Backup importado. Cadastros restaurados neste navegador.");
+ }catch(err){toast("Não foi possível importar: "+(err.message||"arquivo inválido"),true)}
+});
 $("backup-data").addEventListener("click",async()=>{
  if(!state.user)return;
  try{
