@@ -8,7 +8,7 @@ https://renatoaptv.github.io/painel-comercial/consulta-movami/negociacoes/
 
 A página inicia automaticamente sem solicitar e-mail ou senha.
 Se existir uma sessão autenticada válida do Supabase neste navegador, ela é preservada e os dados da conta seguem sincronizados.
-Caso contrário, o painel usa armazenamento local do próprio navegador. Nesse modo, os dados não são sincronizados entre dispositivos, podem ser perdidos se o usuário limpar os dados do navegador e podem ser vistos por outras pessoas que usem o mesmo perfil. Use o botão de exportação de backup (↓) no menu. Nunca abra as políticas RLS das tabelas ao público.
+Caso contrário, o painel usa armazenamento local do próprio navegador. Nesse modo, os dados não são sincronizados entre dispositivos, podem ser perdidos se o usuário limpar os dados do navegador e podem ser vistos por outras pessoas que usem o mesmo perfil. Use ↓ para exportar e ↑ para importar backups no menu. Importação substitui os dados locais, após confirmação; ela não altera o Supabase. Nunca abra as políticas RLS das tabelas ao público.
 
 ### Visual
 
