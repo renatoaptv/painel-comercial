@@ -7,9 +7,9 @@
 <meta name="description" content="Gestão de prospecção, visitas, propostas e retornos da Movami.">
 <title>Movami | Controle de Negociações</title>
 <link rel="icon" href="../movami-logo.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./app.css?v=20261026-hover-v3">
+<link rel="stylesheet" href="./app.css?v=20261026-acompanhamento-v1">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
-<script defer src="./app.js?v=20261026-aberto-v3"></script>
+<script defer src="./app.js?v=20261026-acompanhamento-v1"></script>
 </head>
 <body>
 <div id="boot-screen" class="boot-screen" role="status" aria-live="polite"><div class="boot-card"><img src="../movami-logo.svg" alt="Movami"><span class="boot-spinner" aria-hidden="true"></span><p>Abrindo seu painel de negociações...</p></div></div>
@@ -20,6 +20,8 @@
   <nav id="nav">
    <button class="nav-item active" data-view="inicio"><span>▦</span> Visão geral</button>
    <button class="nav-item" data-view="negociacoes"><span>◫</span> Negociações</button>
+   <button class="nav-item" data-view="cotacoes"><span>▤</span> Clientes que fizemos cotação</button>
+   <button class="nav-item" data-view="credito"><span>✓</span> Clientes para análise de crédito</button>
    <button class="nav-item" data-view="retornos"><span>◷</span> Retornos e visitas</button>
    <button class="nav-item" data-view="notas"><span>▤</span> Notas rápidas</button>
   </nav>
@@ -48,6 +50,33 @@
    <section id="negociacoes-view" class="view hidden">
     <div class="toolbar"><label class="search"><span>⌕</span><input id="search" placeholder="Buscar empresa, CNPJ, contato, telefone..." type="search"></label><select id="stage-filter" aria-label="Filtrar etapa"><option value="todos">Todas as etapas</option><option value="prospectar">A prospectar</option><option value="conversamos">Já conversamos</option><option value="aguardando_resposta">Aguardando resposta</option><option value="proposta_enviada">Proposta enviada</option><option value="negociando">Negociando</option><option value="visita_agendada">Visita agendada</option><option value="fechado">Fechado</option><option value="perdido">Perdido</option></select><div class="view-switch"><button id="table-mode" class="selected" type="button">☷ Lista</button><button id="board-mode" type="button">▥ Quadro</button></div></div>
     <div id="negotiations-content"></div>
+   </section>
+   <section id="cotacoes-view" class="view hidden">
+    <div class="surface">
+     <div class="section-heading"><h2>Clientes que fizemos cotação</h2><span id="cotacoes-count" class="tiny muted">0 registros</span></div>
+     <p class="tiny muted">Registre cada proposta apresentada e acompanhe o retorno da negociação.</p>
+     <div class="monitor-toolbar">
+      <input id="cotacoes-search" type="search" placeholder="Buscar empresa, contato ou veículo..." aria-label="Buscar cotações">
+      <select id="cotacoes-filter" aria-label="Filtrar situação da cotação"><option value="todos">Todas as situações</option><option value="aguardando">Aguardando retorno</option><option value="negociando">Em negociação</option><option value="fechado">Fechado</option><option value="perdido">Não fechado</option></select>
+      <button class="btn dark" type="button" data-monitor-add="cotacao">＋ Nova cotação</button>
+      <button class="btn outline" type="button" data-monitor-import>↑ Importar clientes</button>
+     </div>
+     <div id="cotacoes-list" class="monitor-list"></div>
+    </div>
+   </section>
+   <section id="credito-view" class="view hidden">
+    <div id="credito-summary" class="monitor-summary"></div>
+    <div class="surface">
+     <div class="section-heading"><h2>Clientes que foram para análise de crédito</h2><span id="credito-count" class="tiny muted">0 registros</span></div>
+     <p class="tiny muted">Atualize o parecer somente após receber o resultado confirmado da análise.</p>
+     <div class="monitor-toolbar">
+      <input id="credito-search" type="search" placeholder="Buscar cliente ou empresa..." aria-label="Buscar análises">
+      <select id="credito-filter" aria-label="Filtrar resultado da análise"><option value="todos">Todos os resultados</option><option value="pendente">Pendente</option><option value="aprovado">Aprovado</option><option value="reprovado">Reprovado</option></select>
+      <button class="btn dark" type="button" data-monitor-add="credito">＋ Nova análise</button>
+      <button class="btn outline" type="button" data-monitor-import>↑ Importar clientes</button>
+     </div>
+     <div id="credito-list" class="monitor-list"></div>
+    </div>
    </section>
    <section id="retornos-view" class="view hidden"><div class="surface"><div class="section-heading"><h2>Agenda de retornos e visitas</h2><span class="muted tiny">Organizada por data e horário</span></div><div id="schedule-list"></div></div></section>
    <section id="notas-view" class="view hidden"><div class="surface"><div class="section-heading"><h2>Notas rápidas</h2><button class="btn dark" type="button" data-quick>＋ Nova nota</button></div><div id="all-notes"></div></div></section>
@@ -89,6 +118,23 @@
   <div class="activity-block"><h3>Registrar interação</h3><form id="activity-form"><select id="activity-type"><option value="anotacao">Anotação</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option><option value="visita">Visita</option><option value="proposta">Proposta</option><option value="retorno">Retorno</option></select><textarea id="activity-text" rows="3" required maxlength="8000" placeholder="Descreva o que foi conversado e os próximos passos..."></textarea><button type="submit" class="btn dark">＋ Salvar no histórico</button></form><div id="activity-list"></div></div>
  </div>
 </dialog>
+<!-- Cotações e análises de crédito -->
+<dialog id="monitor-dialog" class="modal">
+ <form id="monitor-form" class="modal-body">
+  <div class="modal-title"><div><p class="eyebrow">ACOMPANHAMENTO MOVAMI</p><h2 id="monitor-dialog-title">Novo registro</h2></div><button type="button" class="x-btn" data-close="monitor-dialog" aria-label="Fechar">×</button></div>
+  <input id="monitor-id" type="hidden"><input id="monitor-tipo" type="hidden">
+  <div class="form-grid">
+   <label class="span-2">Empresa / cliente *<input id="monitor-empresa" maxlength="180" required placeholder="Razão social ou nome do cliente"></label>
+   <label>Responsável / contato<input id="monitor-contato" maxlength="120" placeholder="Ex.: Bruno"></label>
+   <label>Data da solicitação<input type="date" id="monitor-data"></label>
+   <label class="span-2">Veículo / condições / descrição<input id="monitor-detalhes" maxlength="600" placeholder="Ex.: Onix hatch manual, 12 meses, 3.000 km"></label>
+   <label class="span-2">Situação<select id="monitor-status" required></select></label>
+   <label class="span-2">Observações<textarea id="monitor-observacoes" maxlength="3000" rows="3" placeholder="Pendências, documentos, próxima ação..."></textarea></label>
+  </div>
+  <div class="modal-footer"><button class="btn outline" type="button" data-close="monitor-dialog">Cancelar</button><button class="btn dark" type="submit">Salvar registro</button></div>
+ </form>
+</dialog>
+<input id="monitor-import-file" type="file" accept=".json,application/json" hidden aria-label="Importar relação de cotações e análises">
 <!-- Bloco de notas flutuante, restrito à janela do aplicativo -->
 <div id="float-panel" class="float-panel hidden" role="region" aria-label="Bloco de notas flutuante">
  <div class="float-header" id="float-handle"><div><span class="mini-circle">✎</span><strong>Nota rápida</strong><small>Arraste para mover</small></div><div class="float-tools"><button type="button" id="float-minimize" title="Minimizar">−</button><button type="button" id="float-close" title="Fechar">×</button></div></div>
