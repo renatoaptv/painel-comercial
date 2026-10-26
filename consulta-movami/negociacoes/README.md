@@ -44,3 +44,8 @@ Todas têm RLS e políticas de leitura, inclusão, edição e exclusão limitada
 4. Use "Nota rápida" para lembretes sem perder o contexto da página.
 
 O painel de notas é flutuante **dentro do site**; não fica por cima de outros programas do Windows. Esse comportamento exigiria aplicativo de área de trabalho próprio.
+## Cotações e análise de crédito
+
+As abas **Clientes que fizemos cotação** e **Clientes que foram para análise de crédito** permitem criar, editar, excluir e filtrar registros, bem como marcar Pendente / Aprovado / Reprovado na análise, e Aguardando / Negociando / Fechado / Não fechado nas cotações. As marcações são persistidas exclusivamente no localStorage do navegador (inclusive quando o CRM principal está autenticado no Supabase); **não** são compartilhadas entre dispositivos.
+
+Não há dados de clientes pessoais incluídos no código público do GitHub. Para importar a lista de clientes anteriormente levantada, use o botão **Importar clientes** e selecione arquivo JSON contendo `registros: [...]`. A importação acrescenta apenas novas combinações empresa + tipo, sem sobrescrever status existentes. O backup ↓ exporta os registros e o backup ↑ (no modo local) pode restaurá-los.
