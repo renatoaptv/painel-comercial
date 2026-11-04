@@ -106,7 +106,7 @@ $('usedCompleteSale').onclick=()=>{
  const form=$('usedDealForm');
  if(!form.reportValidity())return;
  if(!$('udVehicle').value){alert('Selecione primeiro um veículo do ESTOQUE DE USADOS.');return}
- if(!confirm('Confirmar a venda deste veículo? O cliente será marcado como VENDIDO e será gerado um pacote com até 3 documentos editáveis do LibreOffice Writer.'))return;
+ if(!confirm('Confirmar a venda deste veículo? O cliente será marcado como VENDIDO e será gerado um pacote com 2 a 4 documentos editáveis do LibreOffice Writer, conforme tipo de comprador e existência de troca.'))return;
  $('udStage').value='vendido';
  $('udStage').dispatchEvent(new Event('change',{bubbles:true}));
  if(!$('udSaleDate').value)$('udSaleDate').value=date();
