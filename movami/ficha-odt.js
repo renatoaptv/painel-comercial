@@ -111,7 +111,7 @@ function install(){
   if(d)issue(d,api.getStock());else alert('Cliente não encontrado.');
  },true);
  // Cards são reconstruídos a cada renderização; ajuste o texto após cada renderização.
- const renameCards=()=>area.querySelectorAll('[data-print-ficha]').forEach(b=>b.textContent='FICHA WRITER (.ODT)');
+ const renameCards=()=>area.querySelectorAll('[data-print-ficha]').forEach(b=>{if(b.textContent!=='FICHA WRITER (.ODT)')b.textContent='FICHA WRITER (.ODT)'});
  renameCards();new MutationObserver(renameCards).observe($('usedContent'),{childList:true,subtree:true});
 }
 install();
