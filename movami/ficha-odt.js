@@ -6,6 +6,7 @@ const utf8=new TextEncoder(), decoder=new TextDecoder();
 const templatePath='./modelo-resumo-vendas.odt?v=arquivo-corrigido-20261104';
 const termTemplatePath='./modelo-termo-responsabilidade.odt?v=termo-v1';
 const declarationTemplatePath='./modelo-declaracao-sem-troca.odt?v=decl-v1';
+const pfTemplatePath='./modelo-declaracao-pf-venda-usado.odt?v=pf-v1';
 const U16=(v,p)=>v.getUint16(p,true),U32=(v,p)=>v.getUint32(p,true);
 function xmlEscape(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]))}
 function money(x){if(x==null||x==='')return '';const n=Number(x);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):String(x)}
@@ -249,6 +250,50 @@ async function makeDeclarationODT(d,stock){
  });
  if(replacements<12)throw Error('Declaração original sem os campos para preencher.');
  return zipStored(files);
+}
+/* Declaração PF Venda Usado: transcreve a peça original; assinatura fica em branco. */
+let cachedPFModel;
+async function loadPFModel(){
+ if(!cachedPFModel)cachedPFModel=(async()=>{
+  const r=await fetch(pfTemplatePath,{cache:'no-store'});
+  if(!r.ok)throw Error('Não foi possível buscar a Declaração PF original (HTTP '+r.status+').');
+  const files=await unzip(await r.arrayBuffer()),content=files.find(x=>x.name==='content.xml');
+  if(!content||!files.some(x=>x.name==='mimetype'))throw Error('Modelo da Declaração PF está incompleto.');
+  const xml=decoder.decode(content.data);
+  const tokens=xml.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[];
+  if(tokens.length<12||!['{{name}}','{{cpf}}','{{rg}}','{{model}}','{{plate}}','{{chassis}}','{{km}}'].every(k=>xml.includes(k)))
+   throw Error('Modelo da Declaração PF não contém os campos esperados.');
+  return files;
+ })().catch(e=>{cachedPFModel=null;throw e});
+ return cachedPFModel;
+}
+function isPersonBuyer(d){
+ return String(d?.ficha?.buyerType||'')==='pf';
+}
+async function makePFDeclarationODT(d,stock){
+ const f=d.ficha||{},v=(stock||[]).find(x=>x.id===d.vehicleId)||{};
+ const raw=String(d.saleDate||f.transactionDate||'');
+ const [yy,mm,dd]=/^\d{4}-\d\d-\d\d$/.test(raw)?raw.split('-'):['','',''];
+ const months=['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+ const km=v.km==null||v.km===''?'':Number(v.km).toLocaleString('pt-BR');
+ const map={
+  name:d.name||'',cpf:f.cpf||'',rg:f.rg||'',
+  model:[v.brand,v.model,v.version].filter(Boolean).join(' '),
+  plate:v.plate||'',chassis:v.chassis||'',
+  saleDay:dd,saleMonth:months[Number(mm)]||'',saleYear:yy,km
+ };
+ let replacements=0;
+ const filled=(await loadPFModel()).map(file=>{
+  if(file.name!=='content.xml')return file;
+  const xml=decoder.decode(file.data).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,(_,key)=>{
+   replacements++;
+   const value=map[key];
+   return xmlEscape(value==null||String(value).trim()===''?'__________':value);
+  });
+  return {name:file.name,data:utf8.encode(xml)};
+ });
+ if(replacements<12)throw Error('Declaração PF sem todos os campos esperados.');
+ return zipStored(filled);
 }
 function safeName(d){return String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,52)}
 let activeDownloadUrl=null;
