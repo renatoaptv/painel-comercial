@@ -52,10 +52,10 @@ document.head.appendChild(style);
 const printBtn=document.createElement('button');printBtn.type='button';printBtn.id='usedPrintFicha';printBtn.textContent='FICHA / PDF';printBtn.style.background='#ffcf00';
 target.querySelector('.used-actions').insertBefore(printBtn,$('usedCancelDeal'));
 function getData(){const x={};for(const [k] of fields)x[k]=$('uf_'+k).value.trim();return x}
-function setData(d){const f=d?.ficha||{};for(const [k] of fields)$('uf_'+k).value=f[k]??'';block.open=d?.stage==='vendido';printBtn.hidden=d?.stage!=='vendido'}
+function setData(d){const f=d?.ficha||{};for(const [k] of fields)$('uf_'+k).value=f[k]??'';block.open=d?.stage==='vendido';printBtn.hidden=false;printBtn.textContent=d?.stage==='vendido'?'BAIXAR FICHA DA VENDA (PDF)':'GERAR PRÉVIA EM PDF'}
 window.usadosFichaCapture=getData;
 window.usadosFichaOpen=setData;
-$('udStage').addEventListener('change',()=>{if($('udStage').value==='vendido')block.open=true;printBtn.hidden=$('udStage').value!=='vendido'});
+$('udStage').addEventListener('change',()=>{if($('udStage').value==='vendido')block.open=true;printBtn.hidden=false;printBtn.textContent=$('udStage').value==='vendido'?'BAIXAR FICHA DA VENDA (PDF)':'GERAR PRÉVIA EM PDF'});
 function line(label,value){return '<div class="f-line"><span>'+label+'</span><b>'+orBlank(value)+'</b></div>'}
 function amountLine(label,value){return '<div class="f-amount"><span>'+esc(label)+'</span><strong>'+money(value)+'</strong></div>'}
 function sumValues(f,keys){const valid=keys.map(k=>f[k]).filter(v=>v!==''&&v!=null);if(!valid.length)return '';return valid.reduce((s,v)=>s+Number(v||0),0)}
@@ -145,6 +145,7 @@ function makePDF(d,stock) {
  const company='MOVAMI — CONTROLE DE VENDAS DE USADOS';
  text(174,819,company,9,true);line(38,812,557,812,.6);
  text(202,788,'RESUMO DE VENDAS',16,true);
+ if(d.stage!=='vendido')text(189,776,'PREVIA - VENDA AINDA NAO CONCLUIDA',8,true);
  labeled(40,765,'CGC / CPF',f.cpf,46);labeled(317,765,'Data de Nascimento',fmt(f.birthday),46);
  labeled(40,744,'RG',f.rg,47);labeled(317,744,'Data emissão RG',fmt(f.rgIssued),46);
  labeled(40,723,'Nome',d.name,97);
@@ -229,7 +230,7 @@ function makePDF(d,stock) {
  const out=new Uint8Array(count);let at=0;for(const p of parts){out.set(p,at);at+=p.length}
  return new Blob([out],{type:'application/pdf'});
 }
-function fileName(d){return 'FICHA_VENDA_'+String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,45)+'_'+(d.saleDate||new Date().toISOString().slice(0,10))+'.pdf'}
+function fileName(d){return (d.stage==='vendido'?'FICHA_VENDA_':'PREVIA_VENDA_')+String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,45)+'_'+(d.saleDate||new Date().toISOString().slice(0,10))+'.pdf'}
 function pdfDownload(d,stock){
  const blob=makePDF(d,stock);
  const url=URL.createObjectURL(blob);
@@ -253,12 +254,26 @@ function printSaved(id){
  if(!d){alert('Cliente não encontrado');return}
  try{pdfDownload(d,api.getStock());const msg=$('usedMsg');if(msg){msg.hidden=false;msg.textContent='PDF gerado! Confira a pasta de Downloads.'}}catch(err){alert('Erro ao gerar PDF: '+err.message)}
 }
-printBtn.textContent='BAIXAR PDF DA VENDA';
+printBtn.textContent='GERAR PRÉVIA EM PDF';
 printBtn.onclick=()=>{
  const api=window.usadosFichaAccess;
- const d=api?.getDeals().find(x=>x.id===window.usadosFichaCurrentId);
- if(d)printSaved(d.id);
- else alert('Salve a ficha antes de baixar o PDF.');
+ const name=$('udName').value.trim();
+ const vehicleId=$('udVehicle').value;
+ if(!name){alert('Informe o nome do cliente para emitir a prévia.');return}
+ if(!vehicleId){alert('Selecione um veículo do estoque para gerar a prévia.');return}
+ const draft={
+  id:window.usadosFichaCurrentId||'',
+  name,vehicleId,
+  stage:$('udStage').value,
+  phone:$('udPhone').value.trim(),
+  price:Number($('udPrice').value||0),
+  saleDate:$('udSaleDate').value,
+  ficha:getData()
+ };
+ try{
+  pdfDownload(draft,api?.getStock()||[]);
+  const feedback=$('usedMsg');if(feedback){feedback.hidden=false;feedback.textContent='PDF gerado! Confira a pasta Downloads.'}
+ }catch(err){alert('Erro ao gerar prévia em PDF: '+err.message)}
 };
 const origOpen=window.usadosFichaOpen;
 window.usadosFichaOpen=d=>{window.usadosFichaCurrentId=d?.id||null;origOpen(d)};
