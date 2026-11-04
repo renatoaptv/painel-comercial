@@ -4,6 +4,7 @@
 const $=id=>document.getElementById(id);
 const utf8=new TextEncoder(), decoder=new TextDecoder();
 const templatePath='./modelo-resumo-vendas.odt?v=arquivo-corrigido-20261104';
+const termTemplatePath='./modelo-termo-responsabilidade.odt?v=termo-v1';
 const U16=(v,p)=>v.getUint16(p,true),U32=(v,p)=>v.getUint32(p,true);
 function xmlEscape(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]))}
 function money(x){if(x==null||x==='')return '';const n=Number(x);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):String(x)}
@@ -121,23 +122,90 @@ async function loadModel(){
  return cachedTemplate;
 }
 function filename(d){return(d.stage==='vendido'?'FICHA_VENDA_':'PREVIA_VENDA_')+String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,55)+'_'+(d.saleDate||new Date().toISOString().slice(0,10))+'.odt'}
-async function generate(d,stock){
+
+async function makeOriginalSaleODT(d,stock){
  const files=await loadModel(),map=values(d,stock);let replacements=0;
  const filled=files.map(file=>{
   if(file.name!=='content.xml')return file;
   const xml=decoder.decode(file.data).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,(_,key)=>{replacements++;return xmlEscape(map[key]??'')});
   return{name:file.name,data:utf8.encode(xml)};
  });
- if(replacements<35)throw Error('O modelo ODT não possui os campos esperados.');
- const out=zipStored(filled),url=URL.createObjectURL(new Blob([out],{type:'application/vnd.oasis.opendocument.text'}));
- const a=document.createElement('a');a.href=url;a.download=filename(d);document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(url),90000);
- return out.length;
+ if(replacements<35)throw Error('A ficha de vendas não possui os campos esperados.');
+ return zipStored(filled);
+}
+let cachedTermModel;
+async function loadTermModel(){
+ if(!cachedTermModel)cachedTermModel=(async()=>{
+  const r=await fetch(termTemplatePath,{cache:'no-store'});
+  if(!r.ok)throw Error('Não foi possível buscar o Termo original (.ODT): HTTP '+r.status);
+  const files=await unzip(await r.arrayBuffer());
+  const content=files.find(f=>f.name==='content.xml');
+  if(!content||!files.some(f=>f.name==='mimetype'))throw Error('O Termo de Responsabilidade não contém os arquivos ODT obrigatórios.');
+  const xml=decoder.decode(content.data);
+  if((xml.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[]).length<20||!xml.includes('{{registeredOwner}}')||!xml.includes('{{maritalStatus}}'))
+    throw Error('O modelo de Termo publicado está incompleto.');
+  return files;
+ })().catch(e=>{cachedTermModel=null;throw e});
+ return cachedTermModel;
+}
+function termFields(d,stock){
+ const base=values(d,stock),f=d.ficha||{};
+ // O termo usa o endereço sem repetir a palavra Rua quando ela já aparece no cadastro.
+ const street=String(f.street||'').trim().replace(/^rua\s+/i,'');
+ const inputDate=String(d.saleDate||f.transactionDate||'');
+ let day='',month='',year='';
+ if(/^\d{4}-\d\d-\d\d$/.test(inputDate)){
+  const [y,m,dd]=inputDate.split('-');
+  day=dd;year=y;
+  month=['','JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'][Number(m)]||'';
+ }
+ const time=String(f.termTime||'');
+ const [hour='',minute='']=/^\d\d:\d\d$/.test(time)?time.split(':'):[];
+ return {...base,street,maritalStatus:f.maritalStatus||'',addressNumber:f.addressNumber||'',
+  dut:f.dut||'',registeredOwner:f.registeredOwner||'',vehicleType:'USADO',
+  saleDay:day,saleMonth:month,saleYear:year,saleHour:hour,saleMinute:minute};
+}
+async function makeTermODT(d,stock){
+ const files=await loadTermModel(),map=termFields(d,stock);let replacements=0;
+ const filled=files.map(file=>{
+  if(file.name!=='content.xml')return file;
+  const xml=decoder.decode(file.data).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,(_,key)=>{
+   replacements++;
+   const v=map[key];
+   return xmlEscape(v==null||String(v).trim()===''?'__________':v);
+  });
+  return{name:file.name,data:utf8.encode(xml)};
+ });
+ if(replacements<20)throw Error('Termo de Responsabilidade sem campos para preenchimento.');
+ return zipStored(filled);
+}
+function safeName(d){return String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,52)}
+function downloadBytes(bytes,name,mime){
+ const u=URL.createObjectURL(new Blob([bytes],{type:mime})),a=document.createElement('a');
+ a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(u),90000);
+}
+async function generatePackage(d,stock){
+ // Um único ZIP evita bloqueio de múltiplos downloads automáticos pelo Chrome/Edge.
+ const [saleDoc,termDoc]=await Promise.all([makeOriginalSaleODT(d,stock),makeTermODT(d,stock)]);
+ const buyer=safeName(d),isSale=d.stage==='vendido',stamp=d.saleDate||new Date().toISOString().slice(0,10);
+ const files=[
+  {name:(isSale?'01_FICHA_DE_VENDA_':'01_PREVIA_FICHA_DE_VENDA_')+buyer+'.odt',data:saleDoc},
+  {name:(isSale?'02_TERMO_RESPONSABILIDADE_COMPRADOR_':'02_PREVIA_TERMO_RESPONSABILIDADE_')+buyer+'.odt',data:termDoc}
+ ];
+ const bundle=zipStored(files);
+ downloadBytes(bundle,(isSale?'DOCUMENTOS_VENDA_':'PREVIA_DOCUMENTOS_')+buyer+'_'+stamp+'.zip','application/zip');
+ return bundle.length;
 }
 function feedback(message){const m=$('usedMsg');if(m){m.hidden=false;m.textContent=message}}
 async function issue(d,stock){
- try{await generate(d,stock);feedback('Documento do LibreOffice Writer (.ODT) gerado! Confira sua pasta Downloads.')}
- catch(err){feedback('Não foi possível gerar a ficha Writer: '+err.message);alert('Falha ao gerar ODT: '+err.message)}
+ try{
+  await generatePackage(d,stock);
+  feedback('Pacote gerado! Confira Downloads: o ZIP contém a ficha de venda e o Termo de Responsabilidade em .ODT.');
+ }catch(err){
+  feedback('Não foi possível gerar os documentos: '+err.message);
+  alert('Falha ao preparar o pacote de documentos: '+err.message);
+ }
 }
 function draft(){
  const f=window.usadosFichaCapture?.()||{};
@@ -147,14 +215,14 @@ function draft(){
 function install(){
  const pdfButton=$('usedPrintFicha'),area=$('usadosArea');
  if(!pdfButton||!area)return;
- function relabel(){pdfButton.textContent=$('udStage').value==='vendido'?'BAIXAR FICHA WRITER (.ODT)':'GERAR PRÉVIA WRITER (.ODT)';pdfButton.hidden=false}
+ function relabel(){pdfButton.textContent=$('udStage').value==='vendido'?'BAIXAR PACOTE (2 DOCUMENTOS)':'GERAR PRÉVIA (2 DOCUMENTOS)';pdfButton.hidden=false}
  const formerOpen=window.usadosFichaOpen;
  window.usadosFichaOpen=d=>{formerOpen?.(d);relabel()};
  $('udStage').addEventListener('change',relabel);
  pdfButton.onclick=async()=>{const d=draft();if(!d.name){alert('Informe o nome do cliente.');return}if(!d.vehicleId){alert('Selecione um veículo do estoque.');return}await issue(d,d.stock)};
  // Ao salvar uma venda, este método substitui o antigo gerador PDF.
  window.usadosFichaAfterSale=async(d,stock)=>await issue(d,stock);
- const originalButton=$('usedCompleteSale');if(originalButton)originalButton.textContent='EFETIVAR VENDA + GERAR FICHA WRITER';
+ const originalButton=$('usedCompleteSale');if(originalButton)originalButton.textContent='EFETIVAR VENDA + GERAR 2 DOCUMENTOS';
  // Intercepta a segunda via antes do antigo listener do PDF.
  area.addEventListener('click',e=>{
   const b=e.target.closest('[data-print-ficha]');if(!b)return;
@@ -163,7 +231,7 @@ function install(){
   if(d)issue(d,api.getStock());else alert('Cliente não encontrado.');
  },true);
  // Cards são reconstruídos a cada renderização; ajuste o texto após cada renderização.
- const renameCards=()=>area.querySelectorAll('[data-print-ficha]').forEach(b=>{if(b.textContent!=='FICHA WRITER (.ODT)')b.textContent='FICHA WRITER (.ODT)'});
+ const renameCards=()=>area.querySelectorAll('[data-print-ficha]').forEach(b=>{if(b.textContent!=='PACOTE DE DOCUMENTOS')b.textContent='PACOTE DE DOCUMENTOS'});
  renameCards();new MutationObserver(renameCards).observe($('usedContent'),{childList:true,subtree:true});
 }
 install();
