@@ -5,6 +5,7 @@ const $=id=>document.getElementById(id);
 const utf8=new TextEncoder(), decoder=new TextDecoder();
 const templatePath='./modelo-resumo-vendas.odt?v=arquivo-corrigido-20261104';
 const termTemplatePath='./modelo-termo-responsabilidade.odt?v=termo-v1';
+const declarationTemplatePath='./modelo-declaracao-sem-troca.odt?v=decl-v1';
 const U16=(v,p)=>v.getUint16(p,true),U32=(v,p)=>v.getUint32(p,true);
 function xmlEscape(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]))}
 function money(x){if(x==null||x==='')return '';const n=Number(x);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):String(x)}
@@ -179,6 +180,76 @@ async function makeTermODT(d,stock){
  if(replacements<20)throw Error('Termo de Responsabilidade sem campos para preenchimento.');
  return zipStored(filled);
 }
+
+/* Declaração de usado na troca — somente quando comprador confirma ausência de veículo recebido. */
+let cachedDeclModel;
+async function loadDeclModel(){
+ if(!cachedDeclModel)cachedDeclModel=(async()=>{
+  const r=await fetch(declarationTemplatePath,{cache:'no-store'});
+  if(!r.ok)throw Error('Não foi possível carregar a Declaração (HTTP '+r.status+').');
+  const files=await unzip(await r.arrayBuffer()),content=files.find(f=>f.name==='content.xml');
+  if(!content||!files.some(f=>f.name==='mimetype'))throw Error('Declaração ODT incompleta.');
+  const xml=decoder.decode(content.data);
+  if((xml.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[]).length<12||!xml.includes('{{priceWords}}')||!xml.includes('{{km}}'))
+   throw Error('Declaração ODT não possui os campos esperados.');
+  return files;
+ })().catch(e=>{cachedDeclModel=null;throw e});
+ return cachedDeclModel;
+}
+function ptTriple(n){
+ if(n===100)return 'cem';
+ const units=['','um','dois','três','quatro','cinco','seis','sete','oito','nove'];
+ const teens=['dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'];
+ const tens=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa'];
+ const hundreds=['','cento','duzentos','trezentos','quatrocentos','quinhentos','seiscentos','setecentos','oitocentos','novecentos'];
+ const parts=[],h=Math.floor(n/100),t=Math.floor(n%100/10),u=n%10;
+ if(h)parts.push(hundreds[h]);
+ if(t===1)parts.push(teens[u]);
+ else{if(t)parts.push(tens[t]);if(u)parts.push(units[u])}
+ return parts.join(' e ');
+}
+function ptInteger(n){
+ if(n===0)return 'zero';
+ if(n>=1000000000)throw Error('Valor muito alto para declaração por extenso.');
+ const m=Math.floor(n/1000000),t=Math.floor(n%1000000/1000),u=n%1000,parts=[];
+ if(m)parts.push(ptTriple(m)+(m===1?' milhão':' milhões'));
+ if(t)parts.push(t===1?'mil':ptTriple(t)+' mil');
+ if(u)parts.push(ptTriple(u));
+ if(parts.length<2)return parts[0];
+ const last=parts.pop(),join=u>0&&(u<100||u%100===0)?' e ':' ';
+ return parts.join(' ')+join+last;
+}
+function priceInWords(v){
+ const n=Number(v);if(!Number.isFinite(n)||n<0)throw Error('Valor de venda inválido.');
+ const total=Math.round(n*100),i=Math.floor(total/100),c=total%100;
+ return ptInteger(i)+' '+(i===1?'real':'reais')+(c?' e '+ptInteger(c)+' '+(c===1?'centavo':'centavos'):'');
+}
+function declarationAllowed(d){
+ const f=d.ficha||{},hasTradeIn=Boolean(String(f.tradeIn||'').trim())||Number(f.tradeInAmount||0)>0;
+ if(f.tradeInStatus==='nao'&&hasTradeIn)throw Error('Cadastro contraditório: existe veículo na troca, mas foi marcado NÃO. Corrija antes de emitir.');
+ return f.tradeInStatus==='nao'&&!hasTradeIn;
+}
+async function makeDeclarationODT(d,stock){
+ const f=d.ficha||{},v=(stock||[]).find(x=>x.id===d.vehicleId)||{};
+ const [yy,mm,dd]=/^\d{4}-\d\d-\d\d$/.test(String(d.saleDate||''))?d.saleDate.split('-'):['','',''];
+ const months=['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+ const n=Number(d.price),ok=Number.isFinite(n)&&n>0;
+ const map={name:d.name||'',cpf:f.cpf||'',model:[v.brand,v.model,v.version].filter(Boolean).join(' '),
+  plate:v.plate||'',chassis:v.chassis||'',
+  price:ok?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'',
+  priceWords:ok?priceInWords(n):'',saleDay:dd,saleMonth:months[Number(mm)]||'',saleYear:yy,
+  km:v.km==null||v.km===''?'':Number(v.km).toLocaleString('pt-BR')};
+ let replacements=0;
+ const files=(await loadDeclModel()).map(file=>{
+  if(file.name!=='content.xml')return file;
+  const xml=decoder.decode(file.data).replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,(_,k)=>{
+   replacements++;return xmlEscape(map[k]??'');
+  });
+  return {name:file.name,data:utf8.encode(xml)};
+ });
+ if(replacements<12)throw Error('Declaração original sem os campos para preencher.');
+ return zipStored(files);
+}
 function safeName(d){return String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,52)}
 function downloadBytes(bytes,name,mime){
  const u=URL.createObjectURL(new Blob([bytes],{type:mime})),a=document.createElement('a');
@@ -186,22 +257,27 @@ function downloadBytes(bytes,name,mime){
  setTimeout(()=>URL.revokeObjectURL(u),90000);
 }
 async function generatePackage(d,stock){
- // Um único ZIP evita bloqueio de múltiplos downloads automáticos pelo Chrome/Edge.
- const [saleDoc,termDoc]=await Promise.all([makeOriginalSaleODT(d,stock),makeTermODT(d,stock)]);
+ // Só emite declaração assinável se a ausência de troca foi confirmada.
+ const includeDeclaration=declarationAllowed(d);
+ const [saleDoc,termDoc,declDoc]=await Promise.all([
+  makeOriginalSaleODT(d,stock),makeTermODT(d,stock),
+  includeDeclaration?makeDeclarationODT(d,stock):Promise.resolve(null)
+ ]);
  const buyer=safeName(d),isSale=d.stage==='vendido',stamp=d.saleDate||new Date().toISOString().slice(0,10);
  const files=[
   {name:(isSale?'01_FICHA_DE_VENDA_':'01_PREVIA_FICHA_DE_VENDA_')+buyer+'.odt',data:saleDoc},
   {name:(isSale?'02_TERMO_RESPONSABILIDADE_COMPRADOR_':'02_PREVIA_TERMO_RESPONSABILIDADE_')+buyer+'.odt',data:termDoc}
  ];
+ if(declDoc)files.push({name:(isSale?'03_DECLARACAO_SEM_USADO_NA_TROCA_':'03_PREVIA_DECLARACAO_SEM_TROCA_')+buyer+'.odt',data:declDoc});
  const bundle=zipStored(files);
  downloadBytes(bundle,(isSale?'DOCUMENTOS_VENDA_':'PREVIA_DOCUMENTOS_')+buyer+'_'+stamp+'.zip','application/zip');
- return bundle.length;
+ return files.length;
 }
 function feedback(message){const m=$('usedMsg');if(m){m.hidden=false;m.textContent=message}}
 async function issue(d,stock){
  try{
-  await generatePackage(d,stock);
-  feedback('Pacote gerado! Confira Downloads: o ZIP contém a ficha de venda e o Termo de Responsabilidade em .ODT.');
+  const total=await generatePackage(d,stock);
+  feedback(total===3?'Pacote baixado: 3 documentos editáveis do LibreOffice, incluindo a declaração sem troca.':'Pacote baixado: 2 documentos. A declaração sem troca exige marcar NÃO em VEÍCULO USADO NA TROCA no cadastro.');
  }catch(err){
   feedback('Não foi possível gerar os documentos: '+err.message);
   alert('Falha ao preparar o pacote de documentos: '+err.message);
@@ -215,14 +291,14 @@ function draft(){
 function install(){
  const pdfButton=$('usedPrintFicha'),area=$('usadosArea');
  if(!pdfButton||!area)return;
- function relabel(){pdfButton.textContent=$('udStage').value==='vendido'?'BAIXAR PACOTE (2 DOCUMENTOS)':'GERAR PRÉVIA (2 DOCUMENTOS)';pdfButton.hidden=false}
+ function relabel(){pdfButton.textContent=$('udStage').value==='vendido'?'BAIXAR PACOTE (ATÉ 3 DOCUMENTOS)':'GERAR PRÉVIA (ATÉ 3 DOCUMENTOS)';pdfButton.hidden=false}
  const formerOpen=window.usadosFichaOpen;
  window.usadosFichaOpen=d=>{formerOpen?.(d);relabel()};
  $('udStage').addEventListener('change',relabel);
  pdfButton.onclick=async()=>{const d=draft();if(!d.name){alert('Informe o nome do cliente.');return}if(!d.vehicleId){alert('Selecione um veículo do estoque.');return}await issue(d,d.stock)};
  // Ao salvar uma venda, este método substitui o antigo gerador PDF.
  window.usadosFichaAfterSale=async(d,stock)=>await issue(d,stock);
- const originalButton=$('usedCompleteSale');if(originalButton)originalButton.textContent='EFETIVAR VENDA + GERAR 2 DOCUMENTOS';
+ const originalButton=$('usedCompleteSale');if(originalButton)originalButton.textContent='EFETIVAR VENDA + GERAR PACOTE';
  // Intercepta a segunda via antes do antigo listener do PDF.
  area.addEventListener('click',e=>{
   const b=e.target.closest('[data-print-ficha]');if(!b)return;
