@@ -3,7 +3,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const utf8=new TextEncoder(), decoder=new TextDecoder();
-const templatePath='./modelo-resumo-vendas.odt?v=1';
+const templatePath='./modelo-resumo-vendas.odt?v=arquivo-corrigido-20261104';
 const U16=(v,p)=>v.getUint16(p,true),U32=(v,p)=>v.getUint32(p,true);
 function xmlEscape(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]))}
 function money(x){if(x==null||x==='')return '';const n=Number(x);return Number.isFinite(n)?n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):String(x)}
