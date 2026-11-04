@@ -57,15 +57,67 @@ function zipStored(files){
  u32(e,0,0x06054b50);u16(e,8,files.length);u16(e,10,files.length);u32(e,12,centralBytes.length);u32(e,16,offset);
  return appendParts([...locals,centralBytes,end]);
 }
+const LOCAL_MODEL_KEY='movami_writer_modelo_original_odt_v1';
 let cachedTemplate;
+async function verifyODT(buffer){
+ const bytes=new Uint8Array(buffer);
+ if(bytes.length<1000||bytes[0]!==80||bytes[1]!==75||bytes[2]!==3||bytes[3]!==4)throw Error('O modelo recebido não é um arquivo ODT válido.');
+ const files=await unzip(buffer);
+ const content=files.find(f=>f.name==='content.xml');
+ if(!content||!files.some(f=>f.name==='mimetype'))throw Error('O documento não possui a estrutura ODT completa.');
+ const xml=decoder.decode(content.data);
+ const tokens=xml.match(/\{\{[a-zA-Z0-9_]+\}\}/g)||[];
+ if(tokens.length<35)throw Error('Selecione o modelo original de prévias, com os campos de preenchimento automático.');
+ return files;
+}
+async function chooseOriginalModel(reason){
+ return new Promise((resolve,reject)=>{
+  const dlg=document.createElement('dialog');
+  dlg.style.cssText='width:min(580px,95vw);border:2px solid #ffcf00;border-radius:12px;padding:22px;font-family:Arial,sans-serif';
+  dlg.innerHTML='<div style="display:grid;gap:12px"><h2 style="margin:0">CONFIGURAR FICHA ORIGINAL DO LIBREOFFICE</h2>'+
+   '<p style="line-height:1.5;margin:0">O arquivo de modelo publicado está com problema. Selecione o <b>modelo original .ODT</b> salvo no seu computador. Esta configuração será guardada neste navegador para as próximas vendas.</p>'+
+   '<p style="font-size:12px;color:#a22;margin:0"></p>'+
+   '<label style="font-weight:700">SELECIONAR MODELO .ODT<input type="file" accept=".odt,application/vnd.oasis.opendocument.text" style="width:100%;margin-top:8px"></label>'+
+   '<div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" data-cancel>Cancelar</button></div></div>';
+  const error=dlg.querySelector('p:nth-of-type(2)'),input=dlg.querySelector('input');
+  error.textContent=reason?('Detalhe técnico: '+reason):'';
+  const done=(result,err)=>{dlg.close();dlg.remove();if(err)reject(err);else resolve(result)};
+  dlg.querySelector('[data-cancel]').onclick=()=>done(null,Error('Configuração da ficha cancelada. A venda continua salva.'));
+  input.onchange=async()=>{
+   const file=input.files?.[0];if(!file)return;
+   try{
+    const buffer=await file.arrayBuffer();
+    const verified=await verifyODT(buffer);
+    const bytes=new Uint8Array(buffer);
+    let binary='';
+    for(let i=0;i<bytes.length;i+=16000)binary+=String.fromCharCode(...bytes.subarray(i,i+16000));
+    try{localStorage.setItem(LOCAL_MODEL_KEY,btoa(binary))}catch(err){console.warn('Não foi possível memorizar o modelo:',err)}
+    done(verified);
+   }catch(err){error.textContent='Arquivo inválido: '+err.message;input.value=''}
+  };
+  document.body.appendChild(dlg);dlg.showModal();
+ });
+}
 async function loadModel(){
  if(!cachedTemplate)cachedTemplate=(async()=>{
-  const r=await fetch(templatePath,{cache:'no-store'});
-  if(!r.ok)throw Error('Não foi possível buscar o modelo original ODT ('+r.status+').');
-  const files=await unzip(await r.arrayBuffer());
-  if(!files.some(f=>f.name==='content.xml')||!files.some(f=>f.name==='mimetype'))throw Error('O modelo ODT está incompleto.');
-  return files;
- })().catch(e=>{cachedTemplate=null;throw e});
+  let cause='';
+  try{
+   const saved=localStorage.getItem(LOCAL_MODEL_KEY);
+   if(saved){
+    const raw=atob(saved),bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+    return await verifyODT(bytes.buffer);
+   }
+  }catch(err){cause=err.message;localStorage.removeItem(LOCAL_MODEL_KEY)}
+  try{
+   const r=await fetch(templatePath,{cache:'no-store'});
+   if(!r.ok)throw Error('Erro HTTP '+r.status+' ao carregar modelo ODT.');
+   return await verifyODT(await r.arrayBuffer());
+  }catch(err){cause=err.message}
+  const selected=await chooseOriginalModel(cause);
+  if(!selected)throw Error('Não foi possível configurar o modelo.');
+  return selected;
+ })().catch(err=>{cachedTemplate=null;throw err});
  return cachedTemplate;
 }
 function filename(d){return(d.stage==='vendido'?'FICHA_VENDA_':'PREVIA_VENDA_')+String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,55)+'_'+(d.saleDate||new Date().toISOString().slice(0,10))+'.odt'}
