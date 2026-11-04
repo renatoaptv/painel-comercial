@@ -316,16 +316,22 @@ function downloadBytes(bytes,name,mime){
 async function generatePackage(d,stock){
  // Só emite declaração assinável se a ausência de troca foi confirmada.
  const includeDeclaration=declarationAllowed(d);
- const [saleDoc,termDoc,declDoc]=await Promise.all([
+ const includePF=isPersonBuyer(d);
+ const [saleDoc,termDoc,declDoc,pfDoc]=await Promise.all([
   makeOriginalSaleODT(d,stock),makeTermODT(d,stock),
-  includeDeclaration?makeDeclarationODT(d,stock):Promise.resolve(null)
+  includeDeclaration?makeDeclarationODT(d,stock):Promise.resolve(null),
+  includePF?makePFDeclarationODT(d,stock):Promise.resolve(null)
  ]);
  const buyer=safeName(d),isSale=d.stage==='vendido',stamp=d.saleDate||new Date().toISOString().slice(0,10);
  const files=[
   {name:(isSale?'01_FICHA_DE_VENDA_':'01_PREVIA_FICHA_DE_VENDA_')+buyer+'.odt',data:saleDoc},
   {name:(isSale?'02_TERMO_RESPONSABILIDADE_COMPRADOR_':'02_PREVIA_TERMO_RESPONSABILIDADE_')+buyer+'.odt',data:termDoc}
  ];
- if(declDoc)files.push({name:(isSale?'03_DECLARACAO_SEM_USADO_NA_TROCA_':'03_PREVIA_DECLARACAO_SEM_TROCA_')+buyer+'.odt',data:declDoc});
+ if(declDoc)files.push({name:'03_'+(isSale?'DECLARACAO_SEM_USADO_NA_TROCA_':'PREVIA_DECLARACAO_SEM_TROCA_')+buyer+'.odt',data:declDoc});
+ if(pfDoc){
+  const number=String(files.length+1).padStart(2,'0');
+  files.push({name:number+'_'+(isSale?'DECLARACAO_PF_VENDA_USADO_':'PREVIA_DECLARACAO_PF_VENDA_USADO_')+buyer+'.odt',data:pfDoc});
+ }
  const bundle=zipStored(files);
  downloadBytes(bundle,(isSale?'DOCUMENTOS_VENDA_':'PREVIA_DOCUMENTOS_')+buyer+'_'+stamp+'.zip','application/zip');
  return files.length;
@@ -334,7 +340,7 @@ function feedback(message){const m=$('usedMsg');if(m){m.hidden=false;m.textConte
 async function issue(d,stock){
  try{
   const total=await generatePackage(d,stock);
-  feedback(total===3?'Pacote de 3 documentos preparado. Confira Downloads ou clique em BAIXAR PACOTE ZIP AGORA.':'Pacote de 2 documentos preparado. Para incluir a declaração, marque NÃO em VEÍCULO USADO NA TROCA. Confira Downloads ou clique em BAIXAR PACOTE ZIP AGORA.');
+  feedback('Pacote com '+total+' documentos ODT preparado. Confira Downloads ou clique em BAIXAR PACOTE ZIP AGORA. A declaração sem troca exige NÃO na troca; a declaração PF exige selecionar PESSOA FÍSICA.');
  }catch(err){
   feedback('Não foi possível gerar os documentos: '+err.message);
   alert('Falha ao preparar o pacote de documentos: '+err.message);
@@ -348,17 +354,22 @@ function draft(){
 function install(){
  const pdfButton=$('usedPrintFicha'),area=$('usadosArea');
  if(!pdfButton||!area)return;
- const foot=document.createElement('div');foot.style.cssText='background:#fff7da;border:1px solid #dcc152;border-radius:10px;padding:11px;font-size:12px';foot.innerHTML='<label style="display:grid;gap:5px;font-weight:800">HOUVE VEÍCULO USADO NA TROCA?<select id="usedTradeQuick" style="width:100%;padding:9px;border:1px solid #bbb;border-radius:7px"><option value="">NÃO INFORMADO — SOMENTE 2 DOCUMENTOS</option><option value="nao">NÃO — SEM USADO NA TROCA (3 DOCUMENTOS)</option><option value="sim">SIM — HOUVE USADO NA TROCA (2 DOCUMENTOS)</option></select></label><small>A declaração sem troca só será emitida após confirmação de que não houve veículo recebido.</small>';
+ const foot=document.createElement('div');foot.style.cssText='background:#fff7da;border:1px solid #dcc152;border-radius:10px;padding:11px;font-size:12px';foot.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"><label style="display:grid;gap:5px;font-weight:800">HOUVE VEÍCULO USADO NA TROCA?<select id="usedTradeQuick" style="width:100%;padding:9px;border:1px solid #bbb;border-radius:7px"><option value="">NÃO INFORMADO</option><option value="nao">NÃO — SEM USADO NA TROCA</option><option value="sim">SIM — HOUVE USADO NA TROCA</option></select></label><label style="display:grid;gap:5px;font-weight:800">TIPO DO COMPRADOR<select id="usedBuyerQuick" style="width:100%;padding:9px;border:1px solid #bbb;border-radius:7px"><option value="">NÃO INFORMADO</option><option value="pf">PESSOA FÍSICA (PF)</option><option value="pj">PESSOA JURÍDICA (PJ)</option></select></label></div><small>Declaração sem troca: somente se não houve veículo recebido. Declaração PF: somente comprador pessoa física. Confira as informações prestadas ao cliente antes de colher a assinatura.</small>';
  $('usedDealForm').insertBefore(foot,$('usedDealForm').querySelector('.used-actions'));
  const state=$('uf_tradeInStatus'),quick=$('usedTradeQuick');
+ const buyerState=$('uf_buyerType'),buyerQuick=$('usedBuyerQuick');
  function relabel(){
   const hasTrade=Boolean(($('uf_tradeIn').value||'').trim())||Number($('uf_tradeInAmount').value||0)>0;
-  const count=state.value==='nao'&&!hasTrade?3:2;
+  const count=2+(state.value==='nao'&&!hasTrade?1:0)+(buyerState.value==='pf'?1:0);
   pdfButton.textContent=($('udStage').value==='vendido'?'BAIXAR PACOTE (':'GERAR PRÉVIA (')+count+' DOCUMENTOS)';
-  pdfButton.hidden=false;quick.value=state.value;
+  pdfButton.hidden=false;
+  quick.value=state.value;buyerQuick.value=buyerState.value;
+  const complete=$('usedCompleteSale');
+  if(complete)complete.textContent='EFETIVAR VENDA + GERAR '+count+' DOCUMENTOS';
  }
  quick.onchange=()=>{state.value=quick.value;state.dispatchEvent(new Event('change',{bubbles:true}))};
- state.addEventListener('change',relabel);
+ buyerQuick.onchange=()=>{buyerState.value=buyerQuick.value;buyerState.dispatchEvent(new Event('change',{bubbles:true}))};
+ state.addEventListener('change',relabel);buyerState.addEventListener('change',relabel);
  for(const id of ['uf_tradeIn','uf_tradeInAmount'])$(id).addEventListener('input',relabel);
  const formerOpen=window.usadosFichaOpen;
  window.usadosFichaOpen=d=>{formerOpen?.(d);relabel()};
