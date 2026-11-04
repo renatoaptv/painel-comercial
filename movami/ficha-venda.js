@@ -9,6 +9,7 @@ const orBlank=v=>v==null||String(v).trim()===''?'________________':esc(v);
 const fields=[
  ['cpf','CPF / CNPJ','text'],['birthday','Data de nascimento','date'],
  ['rg','RG','text'],['rgIssued','Data de emissão do RG','date'],
+ ['maritalStatus','Estado civil','text'],['addressNumber','Número da residência','text'],
  ['street','Endereço / Rua','text'],['district','Bairro','text'],
  ['city','Cidade','text'],['state','UF','text'],['cep','CEP','text'],
  ['phoneWork','Telefone comercial','text'],['phoneHome','Telefone residencial','text'],
@@ -29,9 +30,10 @@ const fields=[
  ['paidParts','Devolução peças / serviços (R$)','number'],['paidPayoff','Quitação (R$)','number'],
  ['fi','F&I — responsável','text'],['financer','Financiador / condições / arrendatário','text'],
  ['sellerCode','Código do vendedor','text'],['sellerName','Nome do vendedor','text'],
- ['commission','Comissão (R$)','number']
+ ['commission','Comissão (R$)','number'],
+ ['dut','Número do DETRAN / DUT','text'],['registeredOwner','Nome do proprietário no DUT','text'],['termTime','Horário do termo','time']
 ];
-const personal=new Set(['cpf','birthday','rg','rgIssued','street','district','city','state','cep','phoneWork','phoneHome']);
+const personal=new Set(['cpf','birthday','rg','rgIssued','maritalStatus','addressNumber','street','district','city','state','cep','phoneWork','phoneHome']);
 const financial=new Set(['receivedInvoice','intermediate','tradeIn','tradeInAmount','checkCash','checkNumber','checkAmount','duplicataNumber','duplicataAmount','deposit','cash','financed','financeType','consortiumAdmin','consortiumType','groupQuota','consortiumCredit','paidInvoice','paidAdm','paidReferral','paidDispatcher','paidInsurance','paidOther','paidParts','paidPayoff']);
 const selectOptions={intermediate:[['','Não informado'],['sim','Sim'],['nao','Não']],financeType:[['','Não informado'],['leasing','Leasing'],['financiamento','Financiamento']],consortiumType:[['','Não informado'],['aquisicao','Aquisição'],['alienado','Alienado']]};
 function fieldRow(item){
@@ -44,7 +46,7 @@ return '<label>'+esc(label)+input+'</label>';
 const target=$('usedDealForm');
 if(!target)return;
 const block=document.createElement('details');block.id='usedFichaDetails';
-block.innerHTML='<summary>FICHA DE VENDA — PREENCHIMENTO COMPLEMENTAR</summary><p class="muted">O cliente, o veículo, o valor negociado e a data da venda são recuperados automaticamente do CRM. Preencha somente os dados adicionais que constarão no RESUMO DE VENDAS.</p><h3>IDENTIFICAÇÃO DO COMPRADOR</h3><div class="uf-grid">'+fields.filter(f=>personal.has(f[0])).map(fieldRow).join('')+'</div><h3>NOTA FISCAL E TRANSAÇÃO</h3><div class="uf-grid">'+fields.filter(f=>['invoiceValue','transactionDate','invoiceDate'].includes(f[0])).map(fieldRow).join('')+'</div><h3>RECEBIMENTOS E PAGAMENTOS</h3><div class="uf-grid">'+fields.filter(f=>financial.has(f[0])).map(fieldRow).join('')+'</div><h3>VENDEDOR / F&I</h3><div class="uf-grid">'+fields.filter(f=>['fi','financer','sellerCode','sellerName','commission'].includes(f[0])).map(fieldRow).join('')+'</div><p class="muted">Dados não informados aparecerão em branco na impressão. Os valores não são inventados nem somados automaticamente ao preço de venda.</p>';
+block.innerHTML='<summary>FICHA DE VENDA — PREENCHIMENTO COMPLEMENTAR</summary><p class="muted">O cliente, o veículo, o valor negociado e a data da venda são recuperados automaticamente do CRM. Preencha somente os dados adicionais que constarão no RESUMO DE VENDAS.</p><h3>IDENTIFICAÇÃO DO COMPRADOR</h3><div class="uf-grid">'+fields.filter(f=>personal.has(f[0])).map(fieldRow).join('')+'</div><h3>NOTA FISCAL E TRANSAÇÃO</h3><div class="uf-grid">'+fields.filter(f=>['invoiceValue','transactionDate','invoiceDate'].includes(f[0])).map(fieldRow).join('')+'</div><h3>RECEBIMENTOS E PAGAMENTOS</h3><div class="uf-grid">'+fields.filter(f=>financial.has(f[0])).map(fieldRow).join('')+'</div><h3>VENDEDOR / F&I</h3><div class="uf-grid">'+fields.filter(f=>['fi','financer','sellerCode','sellerName','commission'].includes(f[0])).map(fieldRow).join('')+'</div><h3>TERMO DE RESPONSABILIDADE DO COMPRADOR</h3><div class="uf-grid">'+fields.filter(f=>['dut','registeredOwner','termTime'].includes(f[0])).map(fieldRow).join('')+'</div><p class="muted">Dados não informados aparecerão em branco na impressão. Os valores não são inventados nem somados automaticamente ao preço de venda.</p>';
 const docs=target.querySelector('.used-docs');target.insertBefore(block,docs);
 const style=document.createElement('style');
 style.textContent='#usedFichaDetails{background:#fafafa;border:1px solid #e0c76f;border-left:5px solid #ffcf00;border-radius:10px;padding:12px}#usedFichaDetails summary{font-size:13px;font-weight:900;cursor:pointer}#usedFichaDetails h3{margin:17px 0 10px;font-size:12px;border-bottom:1px solid #ddd;padding-bottom:5px}#usedFichaDetails .uf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#usedFichaDetails label{display:grid;gap:4px;font-weight:700;font-size:12px}#usedFichaDetails input,#usedFichaDetails select{width:100%;padding:9px;border:1px solid #bbb;border-radius:7px;font:inherit}@media(max-width:650px){#usedFichaDetails .uf-grid{grid-template-columns:1fr}}';
