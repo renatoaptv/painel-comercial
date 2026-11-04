@@ -251,10 +251,22 @@ async function makeDeclarationODT(d,stock){
  return zipStored(files);
 }
 function safeName(d){return String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,52)}
+let activeDownloadUrl=null;
 function downloadBytes(bytes,name,mime){
- const u=URL.createObjectURL(new Blob([bytes],{type:mime})),a=document.createElement('a');
- a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(u),90000);
+ const url=URL.createObjectURL(new Blob([bytes],{type:mime}));
+ if(activeDownloadUrl)URL.revokeObjectURL(activeDownloadUrl);
+ activeDownloadUrl=url;
+ for(const [id,place] of [['usedDealForm','modal'],['usadosArea','board']]){
+  const parent=$(id);if(!parent)continue;
+  let link=$('movamiZip_'+place);
+  if(!link){
+   link=document.createElement('a');link.id='movamiZip_'+place;
+   link.style.cssText='display:inline-block;border-radius:8px;padding:12px;background:#ffcf00;color:#111;text-decoration:none;font-weight:800;margin:9px 0';
+   if(place==='modal')parent.insertBefore(link,parent.querySelector('.used-actions'));else parent.insertBefore(link,$('usedMsg').nextSibling);
+  }
+  link.href=url;link.download=name;link.textContent='BAIXAR PACOTE ZIP AGORA';link.hidden=false;
+ }
+ const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
 }
 async function generatePackage(d,stock){
  // Só emite declaração assinável se a ausência de troca foi confirmada.
@@ -277,7 +289,7 @@ function feedback(message){const m=$('usedMsg');if(m){m.hidden=false;m.textConte
 async function issue(d,stock){
  try{
   const total=await generatePackage(d,stock);
-  feedback(total===3?'Pacote baixado: 3 documentos editáveis do LibreOffice, incluindo a declaração sem troca.':'Pacote baixado: 2 documentos. A declaração sem troca exige marcar NÃO em VEÍCULO USADO NA TROCA no cadastro.');
+  feedback(total===3?'Pacote de 3 documentos preparado. Confira Downloads ou clique em BAIXAR PACOTE ZIP AGORA.':'Pacote de 2 documentos preparado. Para incluir a declaração, marque NÃO em VEÍCULO USADO NA TROCA. Confira Downloads ou clique em BAIXAR PACOTE ZIP AGORA.');
  }catch(err){
   feedback('Não foi possível gerar os documentos: '+err.message);
   alert('Falha ao preparar o pacote de documentos: '+err.message);
@@ -291,7 +303,18 @@ function draft(){
 function install(){
  const pdfButton=$('usedPrintFicha'),area=$('usadosArea');
  if(!pdfButton||!area)return;
- function relabel(){pdfButton.textContent=$('udStage').value==='vendido'?'BAIXAR PACOTE (ATÉ 3 DOCUMENTOS)':'GERAR PRÉVIA (ATÉ 3 DOCUMENTOS)';pdfButton.hidden=false}
+ const foot=document.createElement('div');foot.style.cssText='background:#fff7da;border:1px solid #dcc152;border-radius:10px;padding:11px;font-size:12px';foot.innerHTML='<label style="display:grid;gap:5px;font-weight:800">HOUVE VEÍCULO USADO NA TROCA?<select id="usedTradeQuick" style="width:100%;padding:9px;border:1px solid #bbb;border-radius:7px"><option value="">NÃO INFORMADO — SOMENTE 2 DOCUMENTOS</option><option value="nao">NÃO — SEM USADO NA TROCA (3 DOCUMENTOS)</option><option value="sim">SIM — HOUVE USADO NA TROCA (2 DOCUMENTOS)</option></select></label><small>A declaração sem troca só será emitida após confirmação de que não houve veículo recebido.</small>';
+ $('usedDealForm').insertBefore(foot,$('usedDealForm').querySelector('.used-actions'));
+ const state=$('uf_tradeInStatus'),quick=$('usedTradeQuick');
+ function relabel(){
+  const hasTrade=Boolean(($('uf_tradeIn').value||'').trim())||Number($('uf_tradeInAmount').value||0)>0;
+  const count=state.value==='nao'&&!hasTrade?3:2;
+  pdfButton.textContent=($('udStage').value==='vendido'?'BAIXAR PACOTE (':'GERAR PRÉVIA (')+count+' DOCUMENTOS)';
+  pdfButton.hidden=false;quick.value=state.value;
+ }
+ quick.onchange=()=>{state.value=quick.value;state.dispatchEvent(new Event('change',{bubbles:true}))};
+ state.addEventListener('change',relabel);
+ for(const id of ['uf_tradeIn','uf_tradeInAmount'])$(id).addEventListener('input',relabel);
  const formerOpen=window.usadosFichaOpen;
  window.usadosFichaOpen=d=>{formerOpen?.(d);relabel()};
  $('udStage').addEventListener('change',relabel);
