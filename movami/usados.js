@@ -12,7 +12,7 @@ const date=()=>new Date().toISOString().slice(0,10);
 const uid=()=>crypto.randomUUID();
 const fmtDate=s=>s?String(s).split('-').reverse().join('/'):'—';
 const stageName=v=>STAGES.find(s=>s[0]===v)?.[1]||'—';
-let deals=[],stock=[],query='',filter='todos',view='negociacoes',editing=null,editVehicle=null,dbPromise;
+let deals=[],stock=[],query='',filter='todos',view='negociacoes',editing=null,editVehicle=null,dbPromise,forcePdfAfterSave=false;
 try{const data=JSON.parse(localStorage.getItem(KEY)||'{}');deals=Array.isArray(data.deals)?data.deals:[];stock=Array.isArray(data.stock)?data.stock:[]}catch(e){alert('Não foi possível ler os dados de usados. Confira o backup.')}
 function save(){localStorage.setItem(KEY,JSON.stringify({deals,stock}))}
 function idb(){if(!dbPromise)dbPromise=new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(DOCS,{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});return dbPromise}
@@ -31,7 +31,7 @@ document.head.appendChild(css);
 const area=$('usadosArea');
 area.innerHTML='<div class="used-hero"><h1>VENDAS DE VEÍCULOS USADOS</h1><span>Estoque • Clientes em negociação • Vendas concluídas • Processo documental</span></div><div class="used-bar"><button id="usedDealsTab" class="active">NEGOCIAÇÕES E VENDAS</button><button id="usedStockTab">ESTOQUE DE USADOS</button></div><div id="usedMsg" hidden></div><div id="usedContent"></div><p class="used-warning"><b>PRIVACIDADE:</b> clientes, estoque e anexos ficam somente neste navegador, sem sincronização. A página pública não tem login nem armazenamento central seguro. Não cadastre documentos sensíveis de clientes em computadores compartilhados. Os backups incluem os arquivos e dados pessoais sem criptografia: guarde-os em local protegido. O backup do cabeçalho também inclui este módulo.</p>';
 const dlg=document.createElement('dialog');dlg.id='usedDealDialog';
-dlg.innerHTML='<form id="usedDealForm"><div class="row"><h2 id="usedDealTitle">CADASTRAR CLIENTE</h2><button type="button" id="usedCloseDeal">FECHAR ✕</button></div><div class="used-formgrid"><label>NOME DO CLIENTE *<input id="udName" maxlength="140" required></label><label>WHATSAPP<input id="udPhone" maxlength="35" inputmode="tel"></label><label>E-MAIL<input type="email" id="udEmail" maxlength="140"></label><label>VEÍCULO DO ESTOQUE<select id="udVehicle"></select></label><label>ETAPA<select id="udStage"></select></label><label>VALOR NEGOCIADO (R$)<input id="udPrice" type="number" min="0" step=".01"></label><label>PRÓXIMO CONTATO<input id="udFollow" type="date"></label><label>DATA DA VENDA / ENTREGA<input id="udSaleDate" type="date"></label><label>FORMA DE PAGAMENTO<select id="udPayment"><option value="">Não definido</option><option>PIX / À VISTA</option><option>FINANCIAMENTO</option><option>CONSÓRCIO</option><option>MISTO / TROCA</option><option>OUTROS</option></select></label><label>DOCUMENTO DE REFERÊNCIA / PLACA (OPCIONAL)<input id="udRef" maxlength="50" placeholder="Somente se necessário"></label></div><label>OBSERVAÇÕES GERAIS<textarea id="udNotes" maxlength="4000" placeholder="Condições, avaliação do usado, pendências..."></textarea></label><label>NOVA ATUALIZAÇÃO NO HISTÓRICO<textarea id="udEvent" maxlength="1000" placeholder="Ex.: cliente enviou documentos, aguardando aprovação..."></textarea></label><div class="used-history" id="usedHistory"></div><div class="used-docs"><strong>DOCUMENTOS DO PROCESSO</strong><p class="muted">Arquivos vinculados a este cliente (PDF, JPG, PNG, WEBP ou DOCX; até 15 MB por arquivo)</p><label>CATEGORIA<select id="udDocCategory"></select></label><label>ANEXAR ARQUIVOS<input type="file" id="udDocInput" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx" multiple></label><div id="usedDocsList"></div></div><div class="used-actions"><button type="button" id="usedDeleteDeal" style="color:#a22;margin-right:auto">EXCLUIR REGISTRO</button><button type="button" id="usedCancelDeal">CANCELAR</button><button type="submit" class="primary">SALVAR CLIENTE</button></div></form>';
+dlg.innerHTML='<form id="usedDealForm"><div class="row"><h2 id="usedDealTitle">CADASTRAR CLIENTE</h2><button type="button" id="usedCloseDeal">FECHAR ✕</button></div><div class="used-formgrid"><label>NOME DO CLIENTE *<input id="udName" maxlength="140" required></label><label>WHATSAPP<input id="udPhone" maxlength="35" inputmode="tel"></label><label>E-MAIL<input type="email" id="udEmail" maxlength="140"></label><label>VEÍCULO DO ESTOQUE<select id="udVehicle"></select></label><label>ETAPA<select id="udStage"></select></label><label>VALOR NEGOCIADO (R$)<input id="udPrice" type="number" min="0" step=".01"></label><label>PRÓXIMO CONTATO<input id="udFollow" type="date"></label><label>DATA DA VENDA / ENTREGA<input id="udSaleDate" type="date"></label><label>FORMA DE PAGAMENTO<select id="udPayment"><option value="">Não definido</option><option>PIX / À VISTA</option><option>FINANCIAMENTO</option><option>CONSÓRCIO</option><option>MISTO / TROCA</option><option>OUTROS</option></select></label><label>DOCUMENTO DE REFERÊNCIA / PLACA (OPCIONAL)<input id="udRef" maxlength="50" placeholder="Somente se necessário"></label></div><label>OBSERVAÇÕES GERAIS<textarea id="udNotes" maxlength="4000" placeholder="Condições, avaliação do usado, pendências..."></textarea></label><label>NOVA ATUALIZAÇÃO NO HISTÓRICO<textarea id="udEvent" maxlength="1000" placeholder="Ex.: cliente enviou documentos, aguardando aprovação..."></textarea></label><div class="used-history" id="usedHistory"></div><div class="used-docs"><strong>DOCUMENTOS DO PROCESSO</strong><p class="muted">Arquivos vinculados a este cliente (PDF, JPG, PNG, WEBP ou DOCX; até 15 MB por arquivo)</p><label>CATEGORIA<select id="udDocCategory"></select></label><label>ANEXAR ARQUIVOS<input type="file" id="udDocInput" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx" multiple></label><div id="usedDocsList"></div></div><div class="used-actions"><button type="button" id="usedDeleteDeal" style="color:#a22;margin-right:auto">EXCLUIR REGISTRO</button><button type="button" id="usedCancelDeal">CANCELAR</button><button type="submit" class="primary">SALVAR CLIENTE</button><button type="button" id="usedCompleteSale" class="primary" style="background:#181818;color:#ffcf00;border-color:#181818">EFETIVAR VENDA + GERAR PDF</button></div></form>';
 document.body.appendChild(dlg);
 const vs=document.createElement('dialog');vs.id='usedStockDialog';
 vs.innerHTML='<form id="usedStockForm"><div class="row"><h2 id="usedStockTitle">CADASTRAR VEÍCULO</h2><button type="button" id="usedCloseStock">FECHAR ✕</button></div><div class="used-formgrid"><label>CÓDIGO DO ESTOQUE<input id="uvCode" maxlength="40"></label><label>MARCA *<input id="uvBrand" maxlength="70" required></label><label>MODELO *<input id="uvModel" maxlength="90" required></label><label>VERSÃO<input id="uvVersion" maxlength="100"></label><label>ANO / MODELO<input id="uvYear" maxlength="12" placeholder="2022/2023"></label><label>CHASSI<input id="uvChassis" maxlength="25"></label><label>PLACA<input id="uvPlate" maxlength="10"></label><label>QUILOMETRAGEM<input id="uvKm" type="number" min="0" step="1"></label><label>COR<input id="uvColor" maxlength="40"></label><label>PREÇO DE VENDA (R$)<input id="uvPrice" type="number" min="0" step=".01"></label><label>SITUAÇÃO<select id="uvStatus"><option value="disponivel">DISPONÍVEL</option><option value="reservado">RESERVADO</option><option value="vendido">VENDIDO</option><option value="indisponivel">INDISPONÍVEL</option></select></label></div><div class="used-actions"><button type="button" id="usedDeleteStock" style="color:#a22;margin-right:auto">EXCLUIR VEÍCULO</button><button type="button" id="usedCancelStock">CANCELAR</button><button type="submit" class="primary">SALVAR VEÍCULO</button></div></form>';
@@ -56,7 +56,7 @@ $('usedFilter').onchange=e=>{filter=e.target.value;render()};
 root.querySelectorAll('[data-deal]').forEach(b=>b.onclick=()=>openDeal(b.dataset.deal));
 }
 function openDeal(id){
-editing=id||null;
+editing=id||null;forcePdfAfterSave=false;
 const d=deals.find(x=>x.id===id)||{};
 $('usedDealTitle').textContent=id?'FICHA DE VENDA / NEGOCIAÇÃO':'NOVO CLIENTE DE USADOS';
 for(const [k,f] of Object.entries({udName:'name',udPhone:'phone',udEmail:'email',udPrice:'price',udFollow:'follow',udSaleDate:'saleDate',udPayment:'payment',udRef:'ref',udNotes:'notes'}))$(k).value=d[f]??'';
@@ -82,9 +82,10 @@ const old=deals.find(x=>x.id===editing), d=old?structuredClone(old):{id:uid(),hi
 d.name=name;for(const [k,f] of Object.entries({udPhone:'phone',udEmail:'email',udVehicle:'vehicleId',udStage:'stage',udFollow:'follow',udSaleDate:'saleDate',udPayment:'payment',udRef:'ref',udNotes:'notes'}))d[f]=$(k).value.trim();
 d.price=Number($('udPrice').value||0);d.ficha=window.usadosFichaCapture?.() ?? d.ficha ?? {};d.updatedAt=new Date().toISOString();
 const msg=$('udEvent').value.trim();if(msg)(d.history||(d.history=[])).push({at:new Date().toISOString(),text:msg});
+if(d.stage==='vendido'&&!d.vehicleId){alert('Selecione o veículo do estoque antes de efetivar a venda.');forcePdfAfterSave=false;return}
 if(d.stage==='vendido'&&d.vehicleId){const conflict=deals.find(x=>x.id!==d.id&&x.stage==='vendido'&&x.vehicleId===d.vehicleId);if(conflict){alert('Este veículo já consta como vendido para outro cliente.');return}}
 const becomingSold=d.stage==='vendido'&&(!old||old.stage!=='vendido');
-const printTab=becomingSold?window.usadosFichaReserve?.():null;
+const shouldGeneratePdf=becomingSold||forcePdfAfterSave;
 const newDocs=[];
 try{
  for(const file of $('udDocInput').files){
@@ -98,8 +99,19 @@ try{
  if(old){deals[deals.findIndex(x=>x.id===d.id)]=d}else deals.push(d);
  for(const v of stock)if(v.soldDealId===d.id&&!(d.stage==='vendido'&&v.id===d.vehicleId)){v.soldDealId=null;v.status='disponivel'}
  if(d.stage==='vendido'&&d.vehicleId){const v=stock.find(x=>x.id===d.vehicleId);if(v){v.status='vendido';v.soldDealId=d.id}}
- save();dlg.close();render();notice('Ficha de cliente salva com sucesso');if(becomingSold)window.usadosFichaAfterSale?.(d,stock,printTab);
-}catch(err){alert('Não foi possível salvar: '+err.message)}
+ save();dlg.close();render();notice('Ficha de cliente salva com sucesso');if(shouldGeneratePdf)window.usadosFichaAfterSale?.(d,stock);forcePdfAfterSave=false;
+}catch(err){forcePdfAfterSave=false;alert('Não foi possível salvar: '+err.message)}
+};
+$('usedCompleteSale').onclick=()=>{
+ const form=$('usedDealForm');
+ if(!form.reportValidity())return;
+ if(!$('udVehicle').value){alert('Selecione primeiro um veículo do ESTOQUE DE USADOS.');return}
+ if(!confirm('Confirmar a venda deste veículo? O cliente será marcado como VENDIDO e a ficha em PDF será baixada.'))return;
+ $('udStage').value='vendido';
+ $('udStage').dispatchEvent(new Event('change',{bubbles:true}));
+ if(!$('udSaleDate').value)$('udSaleDate').value=date();
+ forcePdfAfterSave=true;
+ form.requestSubmit();
 };
 function openVehicle(id){
 editVehicle=id||null;const v=stock.find(x=>x.id===id)||{};
