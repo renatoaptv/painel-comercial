@@ -117,20 +117,154 @@ function template(d,stock,auto){
  ];
  return html.join('');
 }
-function reserve(){const w=window.open('','_blank');if(w){w.document.write('<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Preparando ficha de venda</title><body style="font-family:Arial;padding:30px">Preparando ficha de venda...</body></html>');w.document.close()}return w}
-function openPrintable(d,stock,existing,auto){
- const html=template(d,stock,auto);
- if(existing&&!existing.closed){existing.document.open();existing.document.write(html);existing.document.close();existing.focus();return}
- // Abre HTML quando popup estiver bloqueado; o botão FICHA / PDF permanece disponível no sistema.
- const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));
- const w=window.open(url,'_blank');if(!w)alert('O navegador bloqueou a ficha. Autorize pop-ups e clique em FICHA / PDF novamente.');
- setTimeout(()=>URL.revokeObjectURL(url),120000);
+
+/* Geração nativa e independente de PDF (A4), sem pop-ups ou bibliotecas externas.
+   Fontes padrão PDF, caracteres em Windows-1252. */
+function bytes1252(s) {
+ const specials={8364:128,8218:130,402:131,8222:132,8230:133,8224:134,8225:135,710:136,8240:137,352:138,8249:139,338:140,381:142,8216:145,8217:146,8220:147,8221:148,8226:149,8211:150,8212:151,732:152,8482:153,353:154,8250:155,339:156,382:158,376:159};
+ const out=[];
+ for(const ch of String(s)){
+  const code=ch.codePointAt(0);
+  out.push(code<=255?code:(specials[code]??63));
+ }
+ return new Uint8Array(out);
 }
-window.usadosFichaReserve=reserve;
-window.usadosFichaAfterSale=(d,stock,popup)=>openPrintable(d,stock,popup,true);
-function printSaved(id){const api=window.usadosFichaAccess;const d=api?.getDeals().find(x=>x.id===id);if(!d){alert('Cliente não encontrado');return}openPrintable(d,api.getStock(),reserve(),false)}
-printBtn.onclick=()=>{const api=window.usadosFichaAccess;const d=api?.getDeals().find(x=>x.id===window.usadosFichaCurrentId);if(d)printSaved(d.id);else alert('Salve a ficha antes de imprimir.')};
+function makePDF(d,stock) {
+ const f=d.ficha||{},v=(stock||[]).find(x=>x.id===d.vehicleId)||{};
+ const moneyStr=x=>x===undefined||x===null||x===''?'________________':money(x);
+ const val=x=>x==null||x===''?'________________':String(x);
+ const fmt=x=>x?date(x):'________________';
+ const trim=(s,n)=>String(s||'').length>n?String(s).slice(0,n-1)+'…':String(s);
+ const pdfEscape=s=>String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)').replace(/[\r\n]/g,' ');
+ const content=[];
+ const text=(x,y,s,sz=9,bold=false)=>content.push('BT /'+(bold?'F2':'F1')+' '+sz+' Tf 1 0 0 1 '+x+' '+y+' Tm ('+pdfEscape(s)+') Tj ET');
+ const line=(x1,y1,x2,y2,width=.5)=>content.push(width+' w '+x1+' '+y1+' m '+x2+' '+y2+' l S');
+ const labeled=(x,y,label,value,max=48)=>text(x,y,trim(label+':  '+val(value),max));
+ const brl=(x,y,label,v)=>text(x,y,trim(label,32),8.4);
+ const amount=(x,y,v)=>text(x,y,moneyStr(v),8.7,true);
+ const company='MOVAMI — CONTROLE DE VENDAS DE USADOS';
+ text(174,819,company,9,true);line(38,812,557,812,.6);
+ text(202,788,'RESUMO DE VENDAS',16,true);
+ labeled(40,765,'CGC / CPF',f.cpf,46);labeled(317,765,'Data de Nascimento',fmt(f.birthday),46);
+ labeled(40,744,'RG',f.rg,47);labeled(317,744,'Data emissão RG',fmt(f.rgIssued),46);
+ labeled(40,723,'Nome',d.name,97);
+ labeled(40,702,'Endereço / Rua',f.street,96);
+ labeled(40,681,'Bairro',f.district,46);labeled(317,681,'Cidade',f.city,46);
+ labeled(40,660,'Estado',f.state,46);labeled(317,660,'CEP',f.cep,46);
+ labeled(40,639,'Telef. Comercial',f.phoneWork,45);labeled(317,639,'Residencial',f.phoneHome,45);
+ labeled(40,619,'Celular',d.phone,52);
+ line(38,608,557,608,.5);
+ text(185,590,'VEÍCULO PROPOSTO PARA TRANSAÇÃO',11,true);
+ labeled(40,572,'Nº Chassis',v.chassis,52);labeled(317,572,'Ano / Modelo',v.year,43);
+ labeled(40,554,'Tipo','Usado',28);labeled(170,554,'Marca',v.brand,31);labeled(330,554,'Modelo',[v.model,v.version].filter(Boolean).join(' '),42);
+ labeled(40,536,'Cor',v.color,27);labeled(170,536,'Placa',v.plate,29);text(330,536,'VALOR NF R$: '+moneyStr(f.invoiceValue),8.9,true);
+ // Quadro financeiro fiel à separação da ficha original
+ line(38,526,557,526,1);line(38,526,38,301,.7);line(557,526,557,301,.7);line(296,526,296,301,.7);
+ text(112,511,'RECEBIMENTOS',11,true);text(379,511,'PAGAMENTOS DE:',11,true);
+ line(38,504,557,504,.5);
+ const receipts=[
+  ['Nota Fiscal de entrada',f.receivedInvoice],
+  ['Veículo recebido',f.tradeInAmount],
+  ['Cheque à vista',f.checkCash],
+  ['Cheque / '+(f.checkNumber||'nº'),f.checkAmount],
+  ['Duplicata / '+(f.duplicataNumber||'nº'),f.duplicataAmount],
+  ['Depósito / PIX',f.deposit],['Dinheiro / Dólar',f.cash],
+  ['Leasing / Financiamento',f.financed],
+  ['Consórcio / Crédito',f.consortiumCredit]
+ ];
+ const payments=[
+  ['Nota Fiscal',f.paidInvoice],['Devolução Administrativa',f.paidAdm],
+  ['Indicação de Venda',f.paidReferral],['Devolução Despachante',f.paidDispatcher],
+  ['Devolução Seguro',f.paidInsurance],['Outras Devoluções',f.paidOther],
+  ['Devolução Peças / Serviços',f.paidParts],['Quitação',f.paidPayoff]
+ ];
+ for(let i=0;i<9;i++) {
+  const y=487-i*19;
+  if(receipts[i]){text(44,y,trim(receipts[i][0],28),8.2);text(205,y,moneyStr(receipts[i][1]),7.8,true)}
+  if(payments[i]){text(301,y,trim(payments[i][0],27),8.2);text(466,y,moneyStr(payments[i][1]),7.8,true)}
+  line(42,y-6,292,y-6,.18);line(300,y-6,553,y-6,.18);
+ }
+ const numericSum=(keys)=>{const items=keys.map(k=>f[k]).filter(v=>v!==undefined&&v!==null&&v!=='');return items.length?items.reduce((a,b)=>a+Number(b||0),0):null};
+ const receiptSum=numericSum(['receivedInvoice','tradeInAmount','checkCash','checkAmount','duplicataAmount','deposit','cash','financed','consortiumCredit']);
+ const paymentsSum=numericSum(['paidInvoice','paidAdm','paidReferral','paidDispatcher','paidInsurance','paidOther','paidParts','paidPayoff']);
+ line(38,320,557,320,.8);
+ text(45,307,'TOTAL: '+(receiptSum===null?'____________':money(receiptSum)),9,true);
+ text(303,307,'TOTAL: '+(paymentsSum===null?'____________':money(paymentsSum)),9,true);
+ line(38,301,557,301,.7);
+ labeled(40,283,'Veículo de entrada',f.tradeIn,50);
+ labeled(318,283,'Intermediário',f.intermediate==='sim'?'SIM':f.intermediate==='nao'?'NÃO':null,45);
+ labeled(40,264,'Consórcio ADM',f.consortiumAdmin,53);
+ labeled(318,264,'Grupo / Cota',f.groupQuota,46);
+ labeled(40,245,'Consórcio',f.consortiumType,47);
+ labeled(318,245,'Modalidade',f.financeType,45);
+ labeled(40,225,'F&I',f.fi,93);
+ labeled(40,206,'Financiador / Condições / Arrendatário',f.financer,95);
+ labeled(40,187,'Código vendedor',f.sellerCode,44);
+ labeled(318,187,'Vendedor',f.sellerName,44);
+ text(40,168,'Comissão: '+moneyStr(f.commission),9);
+ text(318,168,'VALOR VENDA: '+moneyStr(d.price),9.2,true);
+ labeled(40,149,'Data da Transação',fmt(f.transactionDate||d.saleDate),48);
+ labeled(318,149,'Data emissão N.F.',fmt(f.invoiceDate),46);
+ line(39,82,195,82,.75);line(219,82,375,82,.75);line(399,82,556,82,.75);
+ text(70,67,'Visto Responsável',9);text(281,67,'Visto F&I',9);text(424,67,'Assinatura do CLIENTE',9);
+ text(39,40,'Ficha gerada pelo CRM MOVAMI em '+new Date().toLocaleDateString('pt-BR'),7);
+ const stream=content.join('\n')+'\n';
+ const parts=[];let count=0;
+ const append=s=>{const data=bytes1252(s);parts.push(data);count+=data.length};
+ const offsets=[0];
+ append('%PDF-1.4\n%\u00E2\u00E3\u00CF\u00D3\n');
+ const objects=[
+ '<< /Type /Catalog /Pages 2 0 R >>',
+ '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+ '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+ '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
+ '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
+ '<< /Length '+bytes1252(stream).length+' >>\nstream\n'+stream+'endstream'
+ ];
+ objects.forEach((obj,i)=>{offsets.push(count);append((i+1)+' 0 obj\n'+obj+'\nendobj\n')});
+ const xref=count;
+ append('xref\n0 '+(objects.length+1)+'\n0000000000 65535 f \n');
+ for(let i=1;i<offsets.length;i++)append(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
+ append('trailer\n<< /Size '+(objects.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
+ const out=new Uint8Array(count);let at=0;for(const p of parts){out.set(p,at);at+=p.length}
+ return new Blob([out],{type:'application/pdf'});
+}
+function fileName(d){return 'FICHA_VENDA_'+String(d.name||'CLIENTE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').slice(0,45)+'_'+(d.saleDate||new Date().toISOString().slice(0,10))+'.pdf'}
+function pdfDownload(d,stock){
+ const blob=makePDF(d,stock);
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=fileName(d);a.style.display='none';
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),60000);
+ return blob.size;
+}
+// Disponível no console somente para testes manuais. Não envia informações à rede.
+window.usadosGerarPdf=pdfDownload;
+window.usadosFichaReserve=()=>null;
+window.usadosFichaAfterSale=(d,stock)=>{
+ try{
+  const size=pdfDownload(d,stock);
+  const msg=$('usedMsg');if(msg){msg.hidden=false;msg.textContent='Venda salva! PDF gerado ('+Math.round(size/1024)+' KB). Confira Downloads. Para outra via, clique em FICHA / PDF.'}
+ }catch(err){alert('Venda salva, mas o PDF não foi gerado. Clique em FICHA / PDF para tentar novamente. Detalhe: '+err.message)}
+};
+function printSaved(id){
+ const api=window.usadosFichaAccess;
+ const d=api?.getDeals().find(x=>x.id===id);
+ if(!d){alert('Cliente não encontrado');return}
+ try{pdfDownload(d,api.getStock());const msg=$('usedMsg');if(msg){msg.hidden=false;msg.textContent='PDF gerado! Confira a pasta de Downloads.'}}catch(err){alert('Erro ao gerar PDF: '+err.message)}
+}
+printBtn.textContent='BAIXAR PDF DA VENDA';
+printBtn.onclick=()=>{
+ const api=window.usadosFichaAccess;
+ const d=api?.getDeals().find(x=>x.id===window.usadosFichaCurrentId);
+ if(d)printSaved(d.id);
+ else alert('Salve a ficha antes de baixar o PDF.');
+};
 const origOpen=window.usadosFichaOpen;
 window.usadosFichaOpen=d=>{window.usadosFichaCurrentId=d?.id||null;origOpen(d)};
-$('usadosArea').addEventListener('click',e=>{const btn=e.target.closest('[data-print-ficha]');if(!btn)return;e.preventDefault();e.stopPropagation();printSaved(btn.dataset.printFicha)});
+$('usadosArea').addEventListener('click',e=>{
+ const btn=e.target.closest('[data-print-ficha]');
+ if(!btn)return;
+ e.preventDefault();e.stopPropagation();printSaved(btn.dataset.printFicha);
+});
 })();
