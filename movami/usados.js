@@ -34,7 +34,7 @@ const dlg=document.createElement('dialog');dlg.id='usedDealDialog';
 dlg.innerHTML='<form id="usedDealForm"><div class="row"><h2 id="usedDealTitle">CADASTRAR CLIENTE</h2><button type="button" id="usedCloseDeal">FECHAR ✕</button></div><div class="used-formgrid"><label>NOME DO CLIENTE *<input id="udName" maxlength="140" required></label><label>WHATSAPP<input id="udPhone" maxlength="35" inputmode="tel"></label><label>E-MAIL<input type="email" id="udEmail" maxlength="140"></label><label>VEÍCULO DO ESTOQUE<select id="udVehicle"></select></label><label>ETAPA<select id="udStage"></select></label><label>VALOR NEGOCIADO (R$)<input id="udPrice" type="number" min="0" step=".01"></label><label>PRÓXIMO CONTATO<input id="udFollow" type="date"></label><label>DATA DA VENDA / ENTREGA<input id="udSaleDate" type="date"></label><label>FORMA DE PAGAMENTO<select id="udPayment"><option value="">Não definido</option><option>PIX / À VISTA</option><option>FINANCIAMENTO</option><option>CONSÓRCIO</option><option>MISTO / TROCA</option><option>OUTROS</option></select></label><label>DOCUMENTO DE REFERÊNCIA / PLACA (OPCIONAL)<input id="udRef" maxlength="50" placeholder="Somente se necessário"></label></div><label>OBSERVAÇÕES GERAIS<textarea id="udNotes" maxlength="4000" placeholder="Condições, avaliação do usado, pendências..."></textarea></label><label>NOVA ATUALIZAÇÃO NO HISTÓRICO<textarea id="udEvent" maxlength="1000" placeholder="Ex.: cliente enviou documentos, aguardando aprovação..."></textarea></label><div class="used-history" id="usedHistory"></div><div class="used-docs"><strong>DOCUMENTOS DO PROCESSO</strong><p class="muted">Arquivos vinculados a este cliente (PDF, JPG, PNG, WEBP ou DOCX; até 15 MB por arquivo)</p><label>CATEGORIA<select id="udDocCategory"></select></label><label>ANEXAR ARQUIVOS<input type="file" id="udDocInput" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx" multiple></label><div id="usedDocsList"></div></div><div class="used-actions"><button type="button" id="usedDeleteDeal" style="color:#a22;margin-right:auto">EXCLUIR REGISTRO</button><button type="button" id="usedCancelDeal">CANCELAR</button><button type="submit" class="primary">SALVAR CLIENTE</button></div></form>';
 document.body.appendChild(dlg);
 const vs=document.createElement('dialog');vs.id='usedStockDialog';
-vs.innerHTML='<form id="usedStockForm"><div class="row"><h2 id="usedStockTitle">CADASTRAR VEÍCULO</h2><button type="button" id="usedCloseStock">FECHAR ✕</button></div><div class="used-formgrid"><label>CÓDIGO DO ESTOQUE<input id="uvCode" maxlength="40"></label><label>MARCA *<input id="uvBrand" maxlength="70" required></label><label>MODELO *<input id="uvModel" maxlength="90" required></label><label>VERSÃO<input id="uvVersion" maxlength="100"></label><label>ANO / MODELO<input id="uvYear" maxlength="12" placeholder="2022/2023"></label><label>PLACA<input id="uvPlate" maxlength="10"></label><label>QUILOMETRAGEM<input id="uvKm" type="number" min="0" step="1"></label><label>COR<input id="uvColor" maxlength="40"></label><label>PREÇO DE VENDA (R$)<input id="uvPrice" type="number" min="0" step=".01"></label><label>SITUAÇÃO<select id="uvStatus"><option value="disponivel">DISPONÍVEL</option><option value="reservado">RESERVADO</option><option value="vendido">VENDIDO</option><option value="indisponivel">INDISPONÍVEL</option></select></label></div><div class="used-actions"><button type="button" id="usedDeleteStock" style="color:#a22;margin-right:auto">EXCLUIR VEÍCULO</button><button type="button" id="usedCancelStock">CANCELAR</button><button type="submit" class="primary">SALVAR VEÍCULO</button></div></form>';
+vs.innerHTML='<form id="usedStockForm"><div class="row"><h2 id="usedStockTitle">CADASTRAR VEÍCULO</h2><button type="button" id="usedCloseStock">FECHAR ✕</button></div><div class="used-formgrid"><label>CÓDIGO DO ESTOQUE<input id="uvCode" maxlength="40"></label><label>MARCA *<input id="uvBrand" maxlength="70" required></label><label>MODELO *<input id="uvModel" maxlength="90" required></label><label>VERSÃO<input id="uvVersion" maxlength="100"></label><label>ANO / MODELO<input id="uvYear" maxlength="12" placeholder="2022/2023"></label><label>CHASSI<input id="uvChassis" maxlength="25"></label><label>PLACA<input id="uvPlate" maxlength="10"></label><label>QUILOMETRAGEM<input id="uvKm" type="number" min="0" step="1"></label><label>COR<input id="uvColor" maxlength="40"></label><label>PREÇO DE VENDA (R$)<input id="uvPrice" type="number" min="0" step=".01"></label><label>SITUAÇÃO<select id="uvStatus"><option value="disponivel">DISPONÍVEL</option><option value="reservado">RESERVADO</option><option value="vendido">VENDIDO</option><option value="indisponivel">INDISPONÍVEL</option></select></label></div><div class="used-actions"><button type="button" id="usedDeleteStock" style="color:#a22;margin-right:auto">EXCLUIR VEÍCULO</button><button type="button" id="usedCancelStock">CANCELAR</button><button type="submit" class="primary">SALVAR VEÍCULO</button></div></form>';
 document.body.appendChild(vs);
 function render(){
 $('usedDealsTab').classList.toggle('active',view==='negociacoes');$('usedStockTab').classList.toggle('active',view==='estoque');
@@ -49,7 +49,7 @@ if(view==='estoque'){
 const active=deals.filter(d=>!['vendido','perdido'].includes(d.stage)).length;
 const sold=deals.filter(d=>d.stage==='vendido');
 const shown=deals.filter(d=>(filter==='todos'||d.stage===filter)&&([d.name,d.phone,d.email,vehicleLabel(d.vehicleId),d.ref].join(' ').toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))));
-root.innerHTML='<div class="used-kpis"><article><small>NEGOCIAÇÕES EM ABERTO</small><strong>'+active+'</strong></article><article><small>VENDAS CONCLUÍDAS</small><strong>'+sold.length+'</strong></article><article><small>VALOR VENDIDO</small><strong>'+reais(sold.reduce((s,d)=>s+Number(d.price||0),0))+'</strong></article><article><small>CLIENTES CADASTRADOS</small><strong>'+deals.length+'</strong></article></div><div class="used-toolbar"><button class="primary" id="usedNewDeal">+ CADASTRAR CLIENTE</button><label>BUSCAR<input id="usedSearch" placeholder="Nome, veículo, WhatsApp..." value="'+esc(query)+'"></label><label>FILTRAR ETAPA<select id="usedFilter">'+opt('todos','TODAS AS ETAPAS',filter)+STAGES.map(s=>opt(s[0],s[1],filter)).join('')+'</select></label></div><div class="used-kanban">'+STAGES.map(s=>'<section class="used-column"><h3>'+s[1]+' ('+shown.filter(d=>d.stage===s[0]).length+')</h3>'+shown.filter(d=>d.stage===s[0]).map(d=>'<article class="used-card"><strong>'+esc(d.name)+'</strong><small>'+esc(vehicleLabel(d.vehicleId))+'</small><small>'+reais(d.price)+' • '+((d.docs||[]).length)+' anexo(s)</small><small>PRÓXIMO CONTATO: '+fmtDate(d.follow)+'</small><button data-deal="'+esc(d.id)+'">ABRIR FICHA</button></article>').join('')+'</section>').join('')+'</div>';
+root.innerHTML='<div class="used-kpis"><article><small>NEGOCIAÇÕES EM ABERTO</small><strong>'+active+'</strong></article><article><small>VENDAS CONCLUÍDAS</small><strong>'+sold.length+'</strong></article><article><small>VALOR VENDIDO</small><strong>'+reais(sold.reduce((s,d)=>s+Number(d.price||0),0))+'</strong></article><article><small>CLIENTES CADASTRADOS</small><strong>'+deals.length+'</strong></article></div><div class="used-toolbar"><button class="primary" id="usedNewDeal">+ CADASTRAR CLIENTE</button><label>BUSCAR<input id="usedSearch" placeholder="Nome, veículo, WhatsApp..." value="'+esc(query)+'"></label><label>FILTRAR ETAPA<select id="usedFilter">'+opt('todos','TODAS AS ETAPAS',filter)+STAGES.map(s=>opt(s[0],s[1],filter)).join('')+'</select></label></div><div class="used-kanban">'+STAGES.map(s=>'<section class="used-column"><h3>'+s[1]+' ('+shown.filter(d=>d.stage===s[0]).length+')</h3>'+shown.filter(d=>d.stage===s[0]).map(d=>'<article class="used-card"><strong>'+esc(d.name)+'</strong><small>'+esc(vehicleLabel(d.vehicleId))+'</small><small>'+reais(d.price)+' • '+((d.docs||[]).length)+' anexo(s)</small><small>PRÓXIMO CONTATO: '+fmtDate(d.follow)+'</small><button data-deal="'+esc(d.id)+'">ABRIR FICHA</button>'+(d.stage==='vendido'?'<button type="button" data-print-ficha="'+esc(d.id)+'">FICHA / PDF</button>':'')+'</article>').join('')+'</section>').join('')+'</div>';
 $('usedNewDeal').onclick=()=>openDeal();
 $('usedSearch').oninput=e=>{query=e.target.value;const pos=e.target.selectionStart;render();const el=$('usedSearch');el.focus();el.setSelectionRange(pos,pos)};
 $('usedFilter').onchange=e=>{filter=e.target.value;render()};
@@ -67,6 +67,7 @@ $('udEvent').value='';$('udDocInput').value='';
 $('usedDeleteDeal').hidden=!id;
 $('usedHistory').innerHTML='<b>HISTÓRICO DO ATENDIMENTO</b>'+((d.history||[]).length?(d.history||[]).slice().reverse().map(e=>'<p><small>'+esc(new Date(e.at).toLocaleString('pt-BR'))+'</small> — '+esc(e.text)+'</p>').join(''):'<p class="muted">Sem atualizações registradas.</p>');
 renderDocs(d);
+window.usadosFichaOpen?.(d);
 dlg.showModal();
 }
 function renderDocs(d){
@@ -79,9 +80,11 @@ e.preventDefault();
 const name=$('udName').value.trim();if(!name)return;
 const old=deals.find(x=>x.id===editing), d=old?structuredClone(old):{id:uid(),history:[],docs:[],createdAt:new Date().toISOString()};
 d.name=name;for(const [k,f] of Object.entries({udPhone:'phone',udEmail:'email',udVehicle:'vehicleId',udStage:'stage',udFollow:'follow',udSaleDate:'saleDate',udPayment:'payment',udRef:'ref',udNotes:'notes'}))d[f]=$(k).value.trim();
-d.price=Number($('udPrice').value||0);d.updatedAt=new Date().toISOString();
+d.price=Number($('udPrice').value||0);d.ficha=window.usadosFichaCapture?.() ?? d.ficha ?? {};d.updatedAt=new Date().toISOString();
 const msg=$('udEvent').value.trim();if(msg)(d.history||(d.history=[])).push({at:new Date().toISOString(),text:msg});
 if(d.stage==='vendido'&&d.vehicleId){const conflict=deals.find(x=>x.id!==d.id&&x.stage==='vendido'&&x.vehicleId===d.vehicleId);if(conflict){alert('Este veículo já consta como vendido para outro cliente.');return}}
+const becomingSold=d.stage==='vendido'&&(!old||old.stage!=='vendido');
+const printTab=becomingSold?window.usadosFichaReserve?.():null;
 const newDocs=[];
 try{
  for(const file of $('udDocInput').files){
@@ -95,18 +98,18 @@ try{
  if(old){deals[deals.findIndex(x=>x.id===d.id)]=d}else deals.push(d);
  for(const v of stock)if(v.soldDealId===d.id&&!(d.stage==='vendido'&&v.id===d.vehicleId)){v.soldDealId=null;v.status='disponivel'}
  if(d.stage==='vendido'&&d.vehicleId){const v=stock.find(x=>x.id===d.vehicleId);if(v){v.status='vendido';v.soldDealId=d.id}}
- save();dlg.close();render();notice('Ficha de cliente salva com sucesso');
+ save();dlg.close();render();notice('Ficha de cliente salva com sucesso');if(becomingSold)window.usadosFichaAfterSale?.(d,stock,printTab);
 }catch(err){alert('Não foi possível salvar: '+err.message)}
 };
 function openVehicle(id){
 editVehicle=id||null;const v=stock.find(x=>x.id===id)||{};
 $('usedStockTitle').textContent=id?'EDITAR VEÍCULO DO ESTOQUE':'NOVO VEÍCULO DO ESTOQUE';
-for(const [k,f] of Object.entries({uvCode:'code',uvBrand:'brand',uvModel:'model',uvVersion:'version',uvYear:'year',uvPlate:'plate',uvKm:'km',uvColor:'color',uvPrice:'price',uvStatus:'status'}))$(k).value=v[f]??(f==='status'?'disponivel':'');
+for(const [k,f] of Object.entries({uvCode:'code',uvBrand:'brand',uvModel:'model',uvVersion:'version',uvYear:'year',uvChassis:'chassis',uvPlate:'plate',uvKm:'km',uvColor:'color',uvPrice:'price',uvStatus:'status'}))$(k).value=v[f]??(f==='status'?'disponivel':'');
 $('usedDeleteStock').hidden=!id;vs.showModal();
 }
 $('usedStockForm').onsubmit=e=>{
 e.preventDefault();const v=stock.find(x=>x.id===editVehicle)||{id:uid()};
-for(const [k,f] of Object.entries({uvCode:'code',uvBrand:'brand',uvModel:'model',uvVersion:'version',uvYear:'year',uvPlate:'plate',uvColor:'color',uvStatus:'status'}))v[f]=$(k).value.trim();
+for(const [k,f] of Object.entries({uvCode:'code',uvBrand:'brand',uvModel:'model',uvVersion:'version',uvYear:'year',uvChassis:'chassis',uvPlate:'plate',uvColor:'color',uvStatus:'status'}))v[f]=$(k).value.trim();
 v.km=Number($('uvKm').value||0);v.price=Number($('uvPrice').value||0);
 if(v.soldDealId&&v.status!=='vendido'){alert('Há uma venda concluída vinculada a este veículo. Altere primeiro a ficha de venda.');return}
 if(!editVehicle)stock.push(v);
@@ -128,7 +131,7 @@ if(!data||!Array.isArray(data.deals)||!Array.isArray(data.stock)||!Array.isArray
 for(const f of data.files){if(!f.id||typeof f.data!=='string'||!f.data.startsWith('data:'))throw Error('Anexo inválido');await putDoc({id:f.id,name:f.name,category:f.category,blob:await load64(f.data)})}
 deals=data.deals;stock=data.stock;save();render();
 }
-window.usadosExport=exportAll;window.usadosImport=importAll;window.drawUsados=render;
+window.usadosExport=exportAll;window.usadosImport=importAll;window.drawUsados=render;window.usadosFichaAccess={getDeals:()=>deals,getStock:()=>stock};
 $('usedBackupBtn').onclick=async()=>{try{download(new Blob([JSON.stringify({format:'MOVAMI-USADOS',exportedAt:new Date().toISOString(),data:await exportAll()})],{type:'application/json'}),'MOVAMI_Usados_Backup_'+date()+'.json');notice('Backup de usados exportado')}catch(err){alert('Erro no backup: '+err.message)}};
 $('usedRestoreBtn').onclick=()=>$('usedRestoreFile').click();
 $('usedRestoreFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.format!=='MOVAMI-USADOS')throw Error('Arquivo não é backup de usados');if(!confirm('Substituir TODAS as fichas de usados e estoque por este backup?'))return;await importAll(x.data);notice('Backup restaurado')}catch(err){alert('Não foi possível importar: '+err.message)}finally{e.target.value=''}};
