@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/movami-exportar-blumenau.yml'
+      - 'movami/gerar_nomes_nao_mei_blumenau_github.py'
   workflow_dispatch:
 permissions:
   contents: write
