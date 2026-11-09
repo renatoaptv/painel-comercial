@@ -1,0 +1,15 @@
+MOVAMI | BLUMENAU/SC | BASE DE NOMES NAO-MEI
+Fonte: Receita Federal, competencia 2026-10.
+Sem filtros de capital social ou antiguidade.
+Total de nomes empresariais distintos: 43,864
+Total de estabelecimentos ativos nao-MEI de origem: 45.804
+
+MOVAMI_BLUMENAU_NOMES_PARTE_01.csv: 10,000 nomes
+MOVAMI_BLUMENAU_NOMES_PARTE_02.csv: 10,000 nomes
+MOVAMI_BLUMENAU_NOMES_PARTE_03.csv: 10,000 nomes
+MOVAMI_BLUMENAU_NOMES_PARTE_04.csv: 10,000 nomes
+MOVAMI_BLUMENAU_NOMES_PARTE_05.csv: 3,864 nomes
+
+Cada CSV tem cabecalho Empresa e uma linha por nome.
+Para conferir no Excel, abra o CSV e tecle Ctrl+End; desconte 1 linha de cabecalho.
+O painel MOVAMI exibe 80 registros por pagina na secao Base em Massa.
