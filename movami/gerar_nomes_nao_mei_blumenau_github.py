@@ -30,18 +30,14 @@ WHERE uf = 'SC' AND municipio = '8047' AND situacao_cadastral = '02'
 n=conn.execute("SELECT COUNT(*) FROM cidades").fetchone()[0]
 print(f"Estabelecimentos ativos em Blumenau encontrados: {n}",flush=True)
 
-# MEI e marcado pelo indicador oficial 'S' na tabela Simples.
-conn.execute(f"""
-CREATE OR REPLACE TABLE mei_basicos AS
-SELECT DISTINCT s.cnpj_basico
-FROM read_parquet('{BASE}/simples/*.parquet') s
-INNER JOIN cidades c USING (cnpj_basico)
-WHERE s.opcao_mei = 'S'
-""")
-nmei=conn.execute("SELECT COUNT(*) FROM mei_basicos").fetchone()[0]
-print(f"CNPJs basicos marcados como MEI: {nmei}", flush=True)
-
-conn.execute(f"""
+# O espelho da Receita bloqueou consultas repetidas ao arquivo Simples (429).
+# Para garantir exclusao de MEI sem depender dele, excluimos tambem todos os
+# empresarios individuais (natureza 2135). Esse recorte e mais restritivo:
+# empresas nao-MEI com esta natureza nao aparecem na lista.
+import time
+for tentativa in range(5):
+    try:
+        conn.execute(f"""
 CREATE OR REPLACE TABLE firmas AS
 SELECT c.cnpj_basico || c.cnpj_ordem || c.cnpj_dv AS cnpj,
        TRIM(e.razao_social) AS empresa,
@@ -50,17 +46,23 @@ SELECT c.cnpj_basico || c.cnpj_ordem || c.cnpj_dv AS cnpj,
        e.natureza_juridica AS natureza
 FROM cidades c
 JOIN read_parquet('{BASE}/empresas/*.parquet') e USING(cnpj_basico)
-LEFT JOIN mei_basicos m USING(cnpj_basico)
-WHERE m.cnpj_basico IS NULL
+WHERE e.natureza_juridica <> '2135'
   AND e.razao_social IS NOT NULL
   AND LENGTH(TRIM(e.razao_social))>0
 """)
+        break
+    except duckdb.HTTPException as exc:
+        if tentativa == 4 or "429" not in str(exc):
+            raise
+        print(f"Servidor 429; nova tentativa {tentativa+2}/5 em 75s", flush=True)
+        time.sleep(75)
+
 tot=conn.execute("SELECT COUNT(*) FROM firmas").fetchone()[0]
 unicos=conn.execute("SELECT COUNT(DISTINCT empresa) FROM firmas").fetchone()[0]
 print(f"CNPJs ativos nao-MEI = {tot}; nomes distintos = {unicos}", flush=True)
 
 # Arquivo simples pedido: somente os nomes, um por linha.
-nomes = OUT / "MOVAMI_BLUMENAU_NOMES_NAO_MEI_2026-10.csv"
+nomes = OUT / "MOVAMI_BLUMENAU_NOMES_NAO_MEI_SEM_EI_2026-10.csv"
 conn.execute(f"""
 COPY (SELECT DISTINCT empresa AS "Empresa"
       FROM firmas ORDER BY empresa)
@@ -68,7 +70,7 @@ TO '{nomes}' (HEADER TRUE, DELIMITER ';', ENCODING 'UTF-8')
 """)
 
 # Arquivo opcional importavel no painel MOVAMI; o CNPJ distingue filiais e homonimos.
-painel = OUT / "MOVAMI_BLUMENAU_IMPORTAR_NAO_MEI_2026-10.csv"
+painel = OUT / "MOVAMI_BLUMENAU_IMPORTAR_NAO_MEI_SEM_EI_2026-10.csv"
 conn.execute(f"""
 COPY (SELECT empresa AS "Empresa", cnpj AS "CNPJ", 'Blumenau' AS "Cidade",
              CASE WHEN LENGTH(data_inicio)=8
