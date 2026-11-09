@@ -1,0 +1,34 @@
+name: MOVAMI - Validar e dividir lista de Blumenau
+on:
+  push:
+    paths:
+      - '.github/workflows/movami-validar-dividir.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Contar nomes e dividir CSVs
+        run: python3 movami/validar_dividir_nomes_blumenau.py
+      - name: Publicar arquivos validados
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add movami/dados-blumenau/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Validar contagem e dividir nomes de Blumenau em lotes'
+            git push
+          fi
+      - name: Salvar pacote para baixar
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOVAMI-BLUMENAU-NOMES-LOTES
+          path: |
+            movami/dados-blumenau/MOVAMI_BLUMENAU_NOMES_PARTE_*.csv
+            movami/dados-blumenau/CONTAGEM_VERIFICADA.txt
+          retention-days: 30
