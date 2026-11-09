@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MOVAMI — Baixar Base de Blumenau</title>
+<style>
+:root{font-family:Arial,Helvetica,sans-serif;color-scheme:light}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#f6f6f6;color:#191919;display:grid;place-items:center;padding:20px}
+main{background:#fff;border-top:9px solid #ffcc00;box-shadow:0 10px 35px #0001;border-radius:14px;padding:28px;max-width:610px;width:100%}
+h1{font-size:26px;margin:0 0 12px}p{line-height:1.55}strong{color:#171717}small{color:#575757}
+button{width:100%;font-size:17px;cursor:pointer;font-weight:800;border:0;border-radius:8px;background:#ffcd00;color:#111;padding:17px;margin:9px 0}
+button:disabled{cursor:wait;opacity:.65}.secondary{background:#202020;color:white}
+#status{min-height:27px;font-weight:bold}.help{background:#faf9e8;border-radius:8px;padding:14px;margin-top:16px}
+a{color:#222;text-decoration:underline}
+</style></head><body><main>
+<h1>MOVAMI — Empresas de Blumenau</h1>
+<p><strong>45.804 estabelecimentos não-MEI</strong> da Receita Federal, competência outubro/2026.</p>
+<p>Escolha abaixo. O arquivo será <strong>baixado para seu computador</strong>, sem abrir a tabela no navegador e sem instalar programas.</p>
+<button id="base" type="button" data-file="MOVAMI_BLUMENAU_IMPORTAR_NAO_MEI.csv">BAIXAR CSV PARA IMPORTAR NO PAINEL</button>
+<button class="secondary" id="nomes" type="button" data-file="MOVAMI_BLUMENAU_SOMENTE_NOMES_NAO_MEI.csv">BAIXAR SOMENTE OS 43.864 NOMES</button>
+<p id="status" role="status" aria-live="polite"></p>
+<div class="help"><strong>Para importar no painel:</strong> Prospecção → Base de Empresas em Massa → Escolher arquivo → Importar Empresas.<br><br><small>A base será armazenada no navegador usado para importar. O arquivo não filtra idade nem capital social; esses critérios exigem validação antes de oferecer a locação.</small></div>
+<p><a href="./">Voltar ao painel MOVAMI</a></p>
+</main><script>
+for(const btn of document.querySelectorAll('button[data-file]')){
+ btn.addEventListener('click',async()=>{
+   const file=btn.dataset.file,status=document.getElementById('status');
+   btn.disabled=true;status.textContent='Preparando o download...';
+   try{
+     const response=await fetch('dados-blumenau/'+encodeURIComponent(file),{cache:'no-store'});
+     if(!response.ok)throw new Error('Não foi possível acessar o arquivo ('+response.status+').');
+     const blob=await response.blob();
+     const url=URL.createObjectURL(blob);
+     const a=document.createElement('a');a.href=url;a.download=file;
+     document.body.appendChild(a);a.click();a.remove();
+     status.textContent='Download iniciado: '+file;
+     setTimeout(()=>URL.revokeObjectURL(url),30000);
+   }catch(e){status.textContent='Falha no download: '+e.message+'. Tente novamente.'}
+   finally{btn.disabled=false}
+ });
+}
+</script></body></html>
