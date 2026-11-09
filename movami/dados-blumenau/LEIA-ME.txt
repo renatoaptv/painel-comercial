@@ -1,0 +1,6 @@
+Fonte: Receita Federal, competencia 2026-10, espelho publico Hugging Face.
+Municipio Blumenau (Receita 8047), situacao ativa (02), opcao MEI diferente de S.
+CNPJs nao-MEI: 45804
+Nomes distintos: 43864
+Sem filtro de capital social ou data de abertura.
+Empresarios individuais nao-MEI podem constar.
