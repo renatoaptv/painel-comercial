@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b221c" />
+  <meta name="description" content="Pife 104: jogo de baralho com 4 jogadores, distribuição automática, batida no descarte e Loba Doida." />
+  <title>Pife 104 | Loba Doida</title>
+  <style>
+:root{--bg:#071913;--bg2:#0c271d;--panel:#102e24;--panel2:#153d30;--line:#2a5949;--light:#f4f1e8;--muted:#b1c5b8;--accent:#ecc876;--accent2:#efdbad;--red:#ba343d;--green:#77d8a4;--shadow:0 18px 45px #0005;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--light);color-scheme:dark}*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 50% 20%,#164a37 0%,#0a251c 48%,#071913 100%);font-size:15px}button,input,select{font:inherit}button{cursor:pointer;touch-action:manipulation}button:disabled{cursor:not-allowed;opacity:.45}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f4d99b;outline-offset:2px}.wrap{max-width:1100px;padding:20px 22px 80px;margin:auto}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:13px}.logo{display:grid;place-items:center;width:47px;height:47px;flex-shrink:0;border:1px solid #cfb46d;border-radius:14px;color:var(--accent);font-size:26px;background:linear-gradient(140deg,#133e30,#0b221b);box-shadow:0 8px 20px #0004}.brand h1{margin:0;color:#fff;font-weight:850;letter-spacing:.07em;font-size:clamp(21px,4vw,30px)}.brand small{display:block;letter-spacing:.035em;color:var(--muted);font-size:12px}.top-actions{display:flex;gap:8px;align-items:center}.btn{border:1px solid #426757;background:#224639;color:#fff;border-radius:12px;padding:11px 15px;min-height:44px;font-weight:730;transition:background .16s,transform .16s;line-height:1.2}.btn:active{transform:translateY(1px)}.btn:hover:not(:disabled){background:#32624b}.btn.primary{color:#1b251c;background:var(--accent);border-color:var(--accent);font-weight:850}.btn.primary:hover:not(:disabled){background:#f7dfad}.btn.danger{background:#a63742;border-color:#bc5d65}.btn.danger:hover:not(:disabled){background:#bb4350}.btn.ghost{background:transparent;border-color:#4b6b5d}.btn.small{padding:9px 12px;font-size:13px;min-height:38px}.btn.full{width:100%}.pill{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:750;font-size:12px;border:1px solid #85724390;background:#77602822;padding:6px 9px;border-radius:100px}.intro,.panel,.gamepanel,.rules-panel{background:linear-gradient(155deg,#173d2f,#0f2b22);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}.intro{max-width:720px;margin:45px auto 18px;padding:30px}.intro h2{font-size:clamp(25px,5vw,36px);margin:10px 0}.intro p{color:var(--muted);line-height:1.6}.tagline{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.13em;font-weight:800}.name-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0}.field{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:12px;font-weight:700}.field input,.claim-select{background:#061c15;color:#fff;border:1px solid #3c6453;border-radius:10px;padding:13px 12px;width:100%;min-width:0;min-height:46px}.intro-actions{display:flex;gap:10px;flex-wrap:wrap}.note{color:var(--muted);font-size:12px;line-height:1.55}.note strong{color:var(--light)}.statusrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 14px}.status{background:#163d2e;border:1px solid #35634e;padding:7px 11px;border-radius:100px;font-size:12px;color:var(--muted)}.status b{color:var(--light)}.status.current{border-color:#e8c36f;background:#5e4b2336;color:var(--accent)}.board{position:relative;min-height:440px;display:grid;grid-template-columns:minmax(120px,1fr) minmax(280px,2fr) minmax(120px,1fr);grid-template-rows:115px 175px 115px;grid-template-areas:". top ." "left center right" ". bottom .";gap:6px;background:radial-gradient(ellipse at 50% 50%,#1a583f,#10402f 58%,#0d3125 100%);border:11px solid #153326;outline:2px solid #426b52;border-radius:46% / 32%;box-shadow:inset 0 1px 34px #0007,0 22px 45px #0006;overflow:hidden;padding:10px 18px}.board:after{content:"";position:absolute;inset:30px;border:1px solid #89ab7940;border-radius:42% / 34%;pointer-events:none}.seat{position:relative;z-index:2;max-width:190px;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:10px;border-radius:16px;margin:auto;width:100%;background:#081c15ad;border:1px solid #4a77594f;transition:border-color .2s}.seat.top{grid-area:top}.seat.right{grid-area:right}.seat.bottom{grid-area:bottom}.seat.left{grid-area:left}.seat.active{border:2px solid var(--accent);background:#335735}.seat.dealing{border-color:var(--green);background:#275b42}.seat .symbol{background:#30644a;color:white;display:grid;place-items:center;font-size:16px;border-radius:50%;width:28px;height:28px;font-weight:800}.seat.active .symbol{background:#e2c675;color:#172a21}.seat .seatname{font-size:13px;font-weight:830;word-break:break-word;max-width:100%;line-height:1.15}.seat .seatmeta{font-size:11px;color:#c5d5c4}.seat .labels{display:flex;gap:3px;flex-wrap:wrap;justify-content:center}.mini{font-size:10px;font-weight:800;border:1px solid #a98e51;color:#e8cc83;padding:2px 5px;border-radius:7px}.mini.cyan{border-color:#47917e;color:#85d9c1}.center-table{grid-area:center;display:flex;align-items:center;justify-content:center;gap:22px;position:relative;z-index:1}.pile-box{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:76px}.pile-box .caption{color:#d4e4d1;font-size:12px;font-weight:760}.stack{height:100px;width:70px;border-radius:11px;display:flex;align-items:center;justify-content:center;border:2px solid #edcf8e;box-shadow:3px 3px 0 #172d24,7px 7px 0 #294d38;transition:transform .12s}.stack.deck{background:repeating-linear-gradient(45deg,#153e35 0px,#153e35 7px,#d2af5f 8px,#d2af5f 9px,#133a31 10px,#133a31 15px);color:#f0cc7f;font-size:28px}.stack.deck:not(:disabled):hover{transform:translateY(-3px)}.stack.empty{background:#0b3123cc;border:2px dashed #709b72;box-shadow:none;color:#9cb6a1;font-weight:750;font-size:12px}.dealprogress{font-size:12px;color:var(--accent2);text-align:center}.gamepanel{margin:17px 0 0;padding:22px;min-height:220px}.section-heading{margin:0 0 5px;font-size:22px}.subheading{color:var(--muted);font-size:13px;margin:0 0 15px;line-height:1.5}.notice{background:#4c421b6a;color:#f4dc9b;padding:10px 12px;font-size:13px;border-left:3px solid var(--accent);border-radius:8px;margin:0 0 12px}.controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center}.private{border:1px dashed #5e7d64;border-radius:16px;padding:24px;margin:12px 0;background:#0b251acc;text-align:center}.private strong{display:block;font-size:20px;margin:4px 0 12px}.private .note{margin-bottom:16px}.cards{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:12px 0 17px}.card{background:#fcfaf3;color:#182225;border:2px solid #e1dccd;border-radius:9px;box-shadow:0 7px 12px #0003;position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;flex:none;width:69px;height:101px;padding:7px;user-select:none;font-weight:800;font-size:20px}.card.red{color:#bd3342}.card .corner{line-height:1;display:flex;flex-direction:column;align-items:center}.card .center-suit{font-size:33px;align-self:center;line-height:1}.card.mini-card{width:70px;height:100px}.card.click{cursor:pointer}.card.click:hover{transform:translateY(-5px)}.card.selected{transform:translateY(-9px);border-color:#f2d18b;box-shadow:0 0 0 3px #eaca79,0 14px 18px #0006}.card.inert{opacity:.65}.card.back{background:repeating-linear-gradient(45deg,#0d4031 0px,#0d4031 7px,#dbc178 8px,#dbc178 9px,#154b39 10px,#154b39 15px);color:#e5c477;border-color:#d9be71;align-items:center;justify-content:center;font-size:24px}.card.group{height:76px;width:52px;font-size:15px;padding:6px}.card.group .center-suit{font-size:23px}.handsummary{color:#b9d0bf;font-size:12px;margin-top:9px}.actions-info{margin-top:10px;font-size:12px;color:var(--muted)}.special{background:#624e284a;border:1px solid #bea0646f;border-radius:12px;padding:12px 13px;margin-bottom:14px;font-size:13px;color:#f6ddb2;line-height:1.5}.special strong{color:#fff}.winner{border:1px solid #c7ae65;background:radial-gradient(ellipse at top,#48522a,#133629 75%);border-radius:18px;text-align:center;padding:24px 18px}.winner .trophy{font-size:42px}.winner h2{font-size:30px;margin:5px 0;color:#ffe29a}.winner .cards{justify-content:center}.groups{display:flex;gap:11px;justify-content:center;flex-wrap:wrap;margin:15px 0}.meld{border:1px solid #466f56;border-radius:12px;padding:9px}.meld .cards{margin:7px 0 0}.meld-title{font-size:12px;color:#c3dbbf;font-weight:800}.rules-panel{padding:18px 20px;margin-top:18px}.rules-panel summary{cursor:pointer;font-weight:780;color:#f0daa2}.rules-panel li{margin:7px 0;color:var(--muted);font-size:13px}.smallprint{font-size:11px;color:#87ac97;text-align:center;margin:18px 0}.claim-panel{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin:14px 0}.claim-select{min-width:180px}.source{text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:#d6b86f;font-weight:900}.softline{border-top:1px solid #375b49;margin:14px 0}.winner-note{color:#b9d3ba;line-height:1.6}.draw-box{padding:9px 12px;background:#07201680;border-radius:12px;border:1px solid #365b48;margin-bottom:12px;font-size:13px}.draw-box strong{color:#f7d68a}.toast{position:fixed;z-index:30;bottom:20px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:14px 18px;background:#ebcc86;color:#19281f;box-shadow:0 14px 30px #0008;border-radius:12px;font-size:13px;font-weight:800;text-align:center;pointer-events:none}.footer-nav{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}.setup-divider{border:0;border-top:1px solid #48645055;margin:21px 0}.progress{height:9px;background:#0a2219;border-radius:99px;overflow:hidden;margin:11px 0}.progress>div{height:100%;background:var(--accent);transition:width .1s}.turn-label{color:var(--accent);font-weight:850;font-size:12px;letter-spacing:.08em;text-transform:uppercase}.phase-title{margin:5px 0 4px;font-size:20px}.how{max-width:800px;margin:20px auto}.how p,.how li{line-height:1.6;color:var(--muted)}@media(max-width:700px){.wrap{padding:13px 12px 40px}.topbar{margin-bottom:10px}.logo{width:40px;height:40px}.brand h1{font-size:21px}.top-actions .btn{padding:8px 10px;min-height:39px;font-size:11px}.board{grid-template-columns:minmax(74px,1fr) minmax(155px,2.1fr) minmax(74px,1fr);grid-template-rows:87px 130px 87px;border-width:7px;border-radius:32% / 25%;min-height:325px;gap:0;padding:5px}.board:after{inset:14px}.seat{padding:5px 2px;gap:2px;border-radius:10px}.seat .symbol{height:23px;width:23px;font-size:12px}.seat .seatname{font-size:11px;max-width:94px}.seat .seatmeta{font-size:9px}.mini{font-size:8px;padding:1px 3px}.center-table{gap:12px}.stack{height:79px;width:55px;border-radius:9px;font-size:22px}.pile-box{min-width:56px}.pile-box .caption{font-size:10px}.gamepanel{padding:16px 12px;border-radius:16px}.card{width:calc((100vw - 57px) / 5);max-width:66px;height:95px;padding:5px;font-size:17px}.card .center-suit{font-size:30px}.cards{gap:5px}.card.group{width:46px;height:73px;font-size:14px}.card.group .center-suit{font-size:20px}.intro{margin:17px auto;padding:19px 15px}.intro h2{font-size:26px}.name-grid{gap:9px}.claim-panel{grid-template-columns:1fr}.claim-select{width:100%}.btn{padding:12px 12px}.section-heading{font-size:19px}}@media(max-width:365px){.board{grid-template-columns:72px 1fr 72px}.center-table{gap:7px}.stack{height:72px;width:50px}.seat .seatname{font-size:10px}.card{height:86px}.cards{gap:3px}}@media(prefers-reduced-motion:reduce){*,*:after,*:before{animation:none!important;transition:none!important}}
+
+</style>
+</head>
+<body>
+  <main id="app" aria-live="polite"></main>
+  <script>
+(function (root) {
+  'use strict';
+  const SUITS = [
+    { key: 'H', symbol: '♥', name: 'Copas', red: true },
+    { key: 'D', symbol: '♦', name: 'Ouros', red: true },
+    { key: 'C', symbol: '♣', name: 'Paus', red: false },
+    { key: 'S', symbol: '♠', name: 'Espadas', red: false }
+  ];
+  const RANK_LABEL = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
+  const label = rank => RANK_LABEL[rank] || String(rank);
+  function createDeck() {
+    const cards = [];
+    for (let deck = 0; deck < 2; deck++) {
+      for (const suit of SUITS) {
+        for (let rank = 1; rank <= 13; rank++) {
+          cards.push({ id: `${deck}-${suit.key}-${rank}`, deck, suit: suit.key, symbol: suit.symbol, red: suit.red, rank, label: label(rank) });
+        }
+      }
+    }
+    return cards;
+  }
+  function shuffle(cards, random = Math.random) {
+    const result = cards.slice();
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+  function isTrinca(cards) {
+    return cards.length === 3 && cards.every(c => c.rank === cards[0].rank) && new Set(cards.map(c => c.suit)).size === 3;
+  }
+  function isSequence(cards) {
+    if (cards.length < 3 || !cards.every(c => c.suit === cards[0].suit)) return false;
+    const ranks = cards.map(c => c.rank);
+    if (new Set(ranks).size !== cards.length) return false;
+    const consecutive = nums => {
+      const sorted = nums.slice().sort((a,b) => a-b);
+      return sorted.every((v, i) => i === 0 || v === sorted[i-1] + 1);
+    };
+    if (consecutive(ranks)) return true;
+    if (ranks.includes(1)) return consecutive(ranks.map(r => r === 1 ? 14 : r));
+    return false;
+  }
+  function meldType(cards) {
+    if (isTrinca(cards)) return 'Trinca';
+    if (isSequence(cards)) return 'Sequência';
+    return null;
+  }
+  function winningPartition(cards) {
+    if (cards.length !== 9 || new Set(cards.map(c => c.id)).size !== 9) return null;
+    const memo = new Map();
+    function solve(mask) {
+      if (!mask) return [];
+      if (memo.has(mask)) return memo.get(mask);
+      const firstBit = mask & -mask;
+      for (let sub = mask; sub; sub = (sub - 1) & mask) {
+        if (!(sub & firstBit)) continue;
+        const group = [];
+        for (let i = 0; i < cards.length; i++) if (sub & (1 << i)) group.push(cards[i]);
+        if (group.length < 3) continue;
+        const type = meldType(group);
+        if (!type) continue;
+        const remaining = solve(mask ^ sub);
+        if (remaining !== null) {
+          const answer = [{ type, cards: group }, ...remaining];
+          memo.set(mask, answer);
+          return answer;
+        }
+      }
+      memo.set(mask, null);
+      return null;
+    }
+    return solve((1 << cards.length) - 1);
+  }
+  function isLobaDoida(cards) {
+    return cards.length === 9 && new Set(cards.map(c => c.rank)).size === 9;
+  }
+  function winningDiscardFromTen(cards) {
+    if (cards.length !== 10) return [];
+    const winning = [];
+    for (let i = 0; i < 10; i++) {
+      const nine = cards.filter((_, j) => j !== i);
+      const groups = winningPartition(nine);
+      if (groups) winning.push({ removed: cards[i], hand: nine, groups });
+    }
+    return winning;
+  }
+  function claimDiscard(cards, discarded) {
+    if (cards.length !== 9 || !discarded) return null;
+    return winningDiscardFromTen([...cards, discarded]).find(result => result.removed.id !== discarded.id) || null;
+  }
+  root.PifeRules = { SUITS, createDeck, shuffle, isTrinca, isSequence, meldType, winningPartition, isLobaDoida, winningDiscardFromTen, claimDiscard };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
+(() => {
+  'use strict';
+  const rules = window.PifeRules;
+  const el = document.getElementById('app');
+  const positions = ['top', 'right', 'bottom', 'left'];
+  const state = {
+    phase: 'setup', names: ['Jogador 1','Jogador 2','Jogador 3','Jogador 4'],
+    round: 0, starter: null, dealer: null, turn: null, deck: [], discard: [],
+    hands: [[],[],[],[]], dealingCount: 0, dealingTo: null, dealToken: 0,
+    inspectionIndex: null, inspected: 0, visible: false,
+    turnStep: 'draw', drawSource: null, drawnId: null, selectedId: null,
+    openingTurn: false, specialUsed: false, pending: null, claimant: null,
+    winner: null, winType: null, winningGroups: null, winningCards: null,
+    winDetail: '', notice: '', help: false
+  };
+  const esc = str => String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const num = n => String(n).padStart(2,'0');
+  const next = i => (i + 1) % 4;
+  const previous = i => (i + 3) % 4;
+  const currentHand = () => state.hands[state.phase === 'inspection' ? state.inspectionIndex : state.turn];
+  const topDiscard = () => state.discard[state.discard.length - 1];
+  function cardHtml(c, opts = {}) {
+    if (!c) return '<div class="stack empty">—</div>';
+    const selected = opts.selected === c.id;
+    const classes = ['card', c.red ? 'red' : '', opts.small ? 'group' : '', opts.clickable ? 'click' : '', selected ? 'selected' : '', opts.inert ? 'inert' : ''].filter(Boolean).join(' ');
+    const attrib = opts.clickable ? `data-action="select-card" data-card="${c.id}" role="button" tabindex="0" aria-label="Selecionar ${esc(c.label)} de ${esc(c.symbol)}"` : '';
+    return `<div class="${classes}" ${attrib} title="${esc(c.label)} de ${esc(c.symbol)}"><div class="corner">${esc(c.label)}<span style="font-size:.8em">${c.symbol}</span></div><span class="center-suit">${c.symbol}</span></div>`;
+  }
+  function backHtml() { return '<div class="card back" aria-label="Carta virada">✦</div>'; }
+  function header() {
+    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · Loba Doida</small></div></div><div class="top-actions">${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
+  }
+  function setup() {
+    return `<section class="intro"><div class="tagline">Baralho brasileiro · 104 cartas</div><h2>Uma mesa. Quatro jogadores. Um vencedor.</h2><p>O robô embaralha e distribui uma carta por vez. Cada jogador recebe nove cartas e joga individualmente. Passe o aparelho para o jogador da vez para manter as mãos em segredo.</p><div class="name-grid">${state.names.map((name,i) => `<label class="field">Jogador ${i+1}<input id="name${i}" maxlength="22" value="${esc(name)}" autocomplete="off" /></label>`).join('')}</div><div class="intro-actions"><button class="btn primary" data-action="start">Sortear e distribuir</button></div><hr class="setup-divider"/><p class="note"><strong>Esta primeira versão é local:</strong> quatro pessoas no mesmo celular ou computador, alternando a visualização das mãos. Não precisa de internet depois de abrir a página. O multiplayer em quatro aparelhos poderá ser a próxima etapa.</p></section>`;
+  }
+  function seatHtml(i) {
+    const active = state.phase === 'turn' && state.turn === i || state.phase === 'inspection' && state.inspectionIndex === i;
+    const dealing = state.phase === 'dealing' && state.dealingTo === i;
+    const labels = [i === state.starter ? '<span class="mini">COMEÇA</span>' : '',i === state.dealer ? '<span class="mini cyan">DÁ CARTAS</span>' : ''].join('');
+    return `<div class="seat ${positions[i]} ${active?'active':''} ${dealing?'dealing':''}"><div class="symbol">${i+1}</div><div class="seatname">${esc(state.names[i])}</div><div class="seatmeta">${state.hands[i].length} ${state.hands[i].length===1?'carta':'cartas'}</div><div class="labels">${labels}</div></div>`;
+  }
+  function board() {
+    const drawReady = state.phase === 'turn' && state.turnStep === 'draw' && state.visible;
+    const discardTop = topDiscard();
+    const top = state.phase === 'dealing' ? `<div class="dealprogress">Distribuindo ${state.dealingCount}/36</div>` : '';
+    return `<div class="statusrow"><span class="status">Rodada <b>${num(state.round)}</b></span><span class="status">Distribuidor: <b>${esc(state.names[state.dealer])}</b></span><span class="status current">Começa: <b>${esc(state.names[state.starter])}</b></span><span class="status">Bolo: <b>${state.deck.length} cartas</b></span></div><section class="board" aria-label="Mesa com quatro jogadores em sentido horário">${[0,1,2,3].map(seatHtml).join('')}<div class="center-table"><div class="pile-box"><button class="stack deck" title="Bolo de compras" data-action="buy-stock" ${drawReady&&state.deck.length ? '' : 'disabled'}>♠</button><span class="caption">BOLO · ${state.deck.length}</span></div><div class="pile-box">${discardTop ? `<button class="stack" style="background:#fdfaf2;color:${discardTop.red?'#b52d37':'#111d20'};font-size:20px;flex-direction:column;font-weight:850" data-action="buy-discard" ${drawReady ? '' : 'disabled'}>${esc(discardTop.label)}<span style="font-size:29px">${discardTop.symbol}</span></button>` : '<div class="stack empty">VAZIO</div>'}<span class="caption">DESCARTE</span></div></div></section>${top}`;
+  }
+  function dealPanel() {
+    return `<section class="gamepanel"><span class="turn-label">Distribuição automática</span><h2 class="phase-title">Uma carta de cada vez, em sentido horário</h2><p class="subheading">${esc(state.names[state.dealer])} é o distribuidor desta rodada. ${esc(state.names[state.starter])} recebe a primeira carta e inicia a partida.</p><div class="progress"><div style="width:${Math.round(state.dealingCount/36*100)}%"></div></div><p class="note">${state.dealingCount} de 36 cartas entregues. As outras 68 formarão o bolo de compras.</p></section>`;
+  }
+  function hidePanel(title, description) {
+    return `<div class="private"><div class="tagline">Mão protegida</div><strong>${esc(title)}</strong><p class="note">${esc(description)} Mantenha a tela voltada apenas para o jogador indicado.</p><button class="btn primary" data-action="reveal">Mostrar minhas cartas</button></div>`;
+  }
+  function inspectPanel() {
+    const player = state.inspectionIndex;
+    const hand = state.hands[player];
+    const step = state.inspected + 1;
+    const title = `Conferência ${step} de 4: ${state.names[player]}`;
+    let content = !state.visible ? hidePanel(state.names[player], 'Confira as 9 cartas recebidas antes de começar a rodada.') : `<div class="cards">${hand.map(c=>cardHtml(c)).join('')}</div><div class="special"><strong>LOBA DOIDA:</strong> válida apenas agora, com 9 valores diferentes, sem nenhum par. Se declarar, ganha imediatamente.</div><div class="controls"><button class="btn danger" data-action="loba" ${rules.isLobaDoida(hand)?'':'disabled'}>BATER LOBA DOIDA</button><button class="btn primary" data-action="initial-win" ${rules.winningPartition(hand)?'':'disabled'}>Bater com 9 cartas</button><button class="btn" data-action="inspect-next">Não vou bater · Próximo</button><button class="btn ghost" data-action="hide">Ocultar</button></div><p class="actions-info">${rules.isLobaDoida(hand)?'Você recebeu uma Loba Doida válida.':'Não há Loba Doida nesta mão.'} ${rules.winningPartition(hand)?'Também há uma combinação comum completa.':''}</p>`;
+    return `<section class="gamepanel"><span class="turn-label">Antes da primeira compra</span><h2 class="phase-title">${esc(title)}</h2><p class="subheading">Cada jogador confere suas cartas separadamente. Ao confirmar, o aparelho passa ao próximo no sentido horário.</p>${content}</section>`;
+  }
+  function turnPanel() {
+    const player = state.turn;
+    if (!state.visible) return `<section class="gamepanel"><span class="turn-label">Vez de jogar</span><h2 class="phase-title">${esc(state.names[player])}</h2>${hidePanel(state.names[player], 'É sua vez. Confira sua mão sem mostrar aos adversários.')}</section>`;
+    const hand = state.hands[player];
+    const selected = hand.find(c => c.id === state.selectedId);
+    const nineAfter = selected ? hand.filter(c => c.id !== selected.id) : null;
+    const winningGroups = nineAfter ? rules.winningPartition(nineAfter) : null;
+    const canSpecial = state.openingTurn && player === state.starter && !state.specialUsed && state.turnStep === 'discard' && state.drawSource === 'stock' && state.drawnId !== null && hand.some(c=>c.id===state.drawnId);
+    let content = `<div class="cards" aria-label="Sua mão">${hand.map(c=>cardHtml(c,{clickable:state.turnStep==='discard',selected:state.selectedId})).join('')}</div>`;
+    if (state.turnStep === 'draw') {
+      content += `<div class="draw-box">Você tem <strong>9 cartas</strong>. Compre uma carta do bolo${state.discard.length?' ou pegue a última carta descartada':''}.</div><div class="controls"><button class="btn primary" data-action="buy-stock" ${state.deck.length?'':'disabled'}>Comprar do bolo</button>${state.discard.length?'<button class="btn" data-action="buy-discard">Pegar do descarte</button>':''}<button class="btn ghost" data-action="hide">Ocultar cartas</button></div>`;
+    } else {
+      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. Toque na carta que quer descartar; as outras nove devem formar sua batida.</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls"><button class="btn primary" data-action="win-after-discard" ${selected&&winningGroups?'':'disabled'}>BATER COM 9 CARTAS</button><button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}<button class="btn ghost" data-action="hide">Ocultar</button></div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
+    }
+    return `<section class="gamepanel"><span class="turn-label">Jogador da vez · ${state.turnStep==='draw'?'Comprar':'Descartar ou bater'}</span><h2 class="phase-title">${esc(state.names[player])}</h2><p class="subheading">${state.turnStep==='draw'?'Compre uma carta para jogar.':'Escolha uma carta para sair, ficando com nove na mão.'}</p>${content}</section>`;
+  }
+  function claimPanel() {
+    const c = state.pending.card;
+    return `<section class="gamepanel"><span class="turn-label">Descarte na mesa · Chance de batida</span><h2 class="phase-title">Alguém pode bater nesta carta?</h2><p class="subheading">${esc(state.names[state.pending.by])} descartou <strong>${esc(c.label)} ${c.symbol}</strong>. Qualquer outro jogador armado pode bater agora, mesmo fora da própria vez.</p><div class="claim-panel"><label class="field">Quem quer bater?<select id="claimant" class="claim-select">${state.names.map((n,i) => i === state.pending.by ? '' : `<option value="${i}" ${state.claimant===i?'selected':''}>${esc(n)}</option>`).join('')}</select></label><button class="btn danger" data-action="claim">Tentar bater neste descarte</button></div><div class="controls"><button class="btn primary" data-action="pass-claim">Ninguém bateu · Continuar</button></div><p class="actions-info">Para bater, o jogador usa a carta descartada e retira uma carta da própria mão, terminando com 9 cartas válidas. O jogo verifica a combinação sem exibir as cartas dos adversários.</p></section>`;
+  }
+  function winnerPanel() {
+    if (state.phase === 'exhausted') return `<section class="gamepanel"><div class="winner"><div class="trophy">♠</div><h2>Bolo esgotado</h2><p class="winner-note">A rodada terminou sem vencedor porque não há mais cartas no bolo. Esta é uma regra provisória para a primeira versão.</p><button class="btn primary" data-action="next-round">Próxima rodada</button></div></section>`;
+    const special = state.winType === 'LOBA DOIDA';
+    const groupDisplay = state.winningGroups && !special ? `<div class="groups">${state.winningGroups.map(g=>`<div class="meld"><div class="meld-title">${esc(g.type)}</div><div class="cards">${g.cards.map(c=>cardHtml(c,{small:true})).join('')}</div></div>`).join('')}</div>` : '';
+    return `<section class="gamepanel"><div class="winner"><div class="trophy">${special?'★':'♛'}</div><div class="tagline">Rodada encerrada · Vencedor</div><h2>${esc(state.names[state.winner])}</h2><p class="winner-note"><strong>${esc(state.winType)}</strong>${state.winDetail?' · '+esc(state.winDetail):''}</p><div class="cards">${state.winningCards.map(c=>cardHtml(c)).join('')}</div>${groupDisplay}<p class="note">Na próxima rodada, <strong>${esc(state.names[state.starter])}</strong> dará as cartas, e <strong>${esc(state.names[next(state.starter)])}</strong> será o primeiro a receber e jogar.</p><div class="controls" style="justify-content:center"><button class="btn primary" data-action="next-round">Jogar próxima rodada</button><button class="btn ghost" data-action="new-game">Reiniciar jogo</button></div></div></section>`;
+  }
+  function helpHtml() {
+    return `<section class="rules-panel"><details ${state.help?'open':''}><summary>Regras da mesa · leia aqui</summary><ol><li>Quatro jogadores individuais, 104 cartas (2 baralhos de 52), 9 cartas para cada um e sem curingas.</li><li>No começo, o sistema sorteia quem começa; o distribuidor fica à direita no sentido de rotação da mesa.</li><li>Na rodada seguinte, o jogador que começou a anterior passa a ser o distribuidor. O próximo no sentido horário recebe a primeira carta e começa.</li><li>As cartas são distribuídas uma por uma, em sentido horário, até que todos tenham nove; as restantes ficam no bolo.</li><li>Trincas: mesmo valor e três naipes diferentes. Sequências: 3 a 9 cartas consecutivas do mesmo naipe; o Ás pode ser baixo (A-2-3) ou alto (Q-K-A).</li><li>Para bater, formam-se combinações válidas com exatamente nove cartas. Pode-se aproveitar o descarte de qualquer jogador para bater.</li><li>Loba Doida: nove valores diferentes na distribuição. Precisa ser declarada na conferência inicial, antes das compras; ganha imediatamente.</li><li>Apenas quem inicia a rodada pode recusar a primeira carta comprada do bolo: descarta essa carta e recebe outra. Isso vale só no seu primeiro turno.</li><li>Ao terminar o bolo, esta versão encerra a rodada sem vencedor. A regra pode ser ajustada depois.</li></ol></details></section>`;
+  }
+  function render() {
+    let body = '';
+    if (state.phase === 'setup') body = setup();
+    else {
+      body = board();
+      if (state.phase === 'dealing') body += dealPanel();
+      if (state.phase === 'inspection') body += inspectPanel();
+      if (state.phase === 'turn') body += turnPanel();
+      if (state.phase === 'claim') body += claimPanel();
+      if (state.phase === 'won' || state.phase === 'exhausted') body += winnerPanel();
+    }
+    el.innerHTML = `<div class="wrap">${header()}${state.notice?`<div class="notice">${esc(state.notice)}</div>`:''}${body}${helpHtml()}<p class="smallprint">Pife 104 · versão local de demonstração · cada jogador vê apenas a própria mão</p></div>`;
+  }
+  function notice(message) { state.notice = message; render(); }
+  function startGame() {
+    const names = state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
+    state.names = names;
+    state.round = 0;
+    state.starter = Math.floor(Math.random() * 4);
+    state.dealer = previous(state.starter);
+    nextRound(true);
+  }
+  function nextRound(first=false) {
+    state.dealToken++;
+    if (!first) {
+      state.dealer = state.starter;
+      state.starter = next(state.dealer);
+    }
+    state.round++;
+    state.deck = rules.shuffle(rules.createDeck());
+    state.discard = [];
+    state.hands = [[],[],[],[]];
+    state.turn = state.starter;
+    state.phase = 'dealing';
+    state.dealingCount = 0;
+    state.dealingTo = state.starter;
+    state.visible = false;
+    state.inspectionIndex = state.starter;
+    state.inspected = 0;
+    state.selectedId = null;
+    state.openingTurn = true;
+    state.specialUsed = false;
+    state.pending = null;
+    state.claimant = null;
+    state.turnStep = 'draw';
+    state.drawnId = null;
+    state.drawSource = null;
+    state.winner = null;
+    state.winType = null;
+    state.winDetail = '';
+    state.winningGroups = null;
+    state.winningCards = null;
+    state.notice = '';
+    const token = state.dealToken;
+    render();
+    function dealOne() {
+      if (state.phase !== 'dealing' || token !== state.dealToken) return;
+      const recipient = (state.starter + state.dealingCount) % 4;
+      const card = state.deck.pop();
+      state.hands[recipient].push(card);
+      state.dealingTo = recipient;
+      state.dealingCount++;
+      render();
+      if (state.dealingCount < 36) {
+        setTimeout(dealOne, 48);
+      } else {
+        setTimeout(() => {
+          if (state.phase !== 'dealing' || token !== state.dealToken) return;
+          state.phase = 'inspection';
+          state.dealingTo = null;
+          state.inspectionIndex = state.starter;
+          state.inspected = 0;
+          render();
+        }, 350);
+      }
+    }
+    setTimeout(dealOne, 150);
+  }
+  function inspectNext() {
+    state.visible = false;
+    state.inspected++;
+    if (state.inspected >= 4) {
+      state.phase = 'turn';
+      state.turn = state.starter;
+      state.turnStep = 'draw';
+    } else state.inspectionIndex = next(state.inspectionIndex);
+    render();
+  }
+  function win(player, type, cards, groups, detail='') {
+    state.winner = player;
+    state.winType = type;
+    state.winningCards = cards.slice();
+    state.winningGroups = groups;
+    state.winDetail = detail;
+    state.phase = 'won';
+    state.visible = true;
+    state.notice = '';
+    render();
+  }
+  function draw(source) {
+    if (state.phase !== 'turn' || state.turnStep !== 'draw' || !state.visible) return;
+    let card;
+    if (source === 'discard') {
+      if (!state.discard.length) return notice('Não há carta no descarte.');
+      card = state.discard.pop();
+    } else {
+      if (!state.deck.length) { state.phase = 'exhausted'; return render(); }
+      card = state.deck.pop();
+    }
+    state.hands[state.turn].push(card);
+    state.drawnId = card.id;
+    state.drawSource = source;
+    state.selectedId = null;
+    state.turnStep = 'discard';
+    state.notice = '';
+    render();
+  }
+  function discardCard(isWin) {
+    if (state.phase !== 'turn' || state.turnStep !== 'discard' || !state.visible || !state.selectedId) return;
+    const hand = state.hands[state.turn];
+    const selected = hand.find(c=>c.id===state.selectedId);
+    if (!selected) return;
+    const nine = hand.filter(c => c.id !== selected.id);
+    const groups = rules.winningPartition(nine);
+    if (isWin) {
+      if (!groups) return notice('As 9 cartas restantes ainda não formam uma batida válida.');
+      state.hands[state.turn] = nine;
+      state.discard.push(selected);
+      return win(state.turn,'BATIDA',nine,groups,'9 cartas válidas');
+    }
+    state.hands[state.turn] = nine;
+    state.discard.push(selected);
+    state.pending = { card: selected, by: state.turn, after: 'next-turn' };
+    state.claimant = next(state.turn);
+    state.phase = 'claim';
+    state.visible = false;
+    state.selectedId = null;
+    state.openingTurn = false;
+    state.notice = '';
+    render();
+  }
+  function rejectFirst() {
+    const special = state.phase === 'turn' && state.turn === state.starter && state.openingTurn && !state.specialUsed && state.turnStep === 'discard' && state.drawSource === 'stock' && state.visible;
+    if (!special) return;
+    const hand = state.hands[state.turn];
+    const bought = hand.find(c=>c.id === state.drawnId);
+    if (!bought) return;
+    state.hands[state.turn] = hand.filter(c=>c.id!==bought.id);
+    state.discard.push(bought);
+    state.specialUsed = true;
+    state.pending = { card: bought, by: state.turn, after: 'replacement' };
+    state.claimant = next(state.turn);
+    state.phase = 'claim';
+    state.visible = false;
+    state.selectedId = null;
+    state.notice = 'A primeira carta foi recusada. Antes da nova compra, qualquer adversário pode bater nesse descarte.';
+    render();
+  }
+  function claim() {
+    if (state.phase !== 'claim') return;
+    const chooser = document.getElementById('claimant');
+    const claimant = Number(chooser?.value);
+    if (!Number.isInteger(claimant) || claimant<0 || claimant>3 || claimant === state.pending.by) return;
+    state.claimant = claimant;
+    const candidate = rules.claimDiscard(state.hands[claimant], state.pending.card);
+    if (!candidate) return notice(`${state.names[claimant]} ainda não consegue formar uma batida válida com esta carta.`);
+    const claimed = state.discard.pop();
+    if (!claimed || claimed.id !== state.pending.card.id) throw new Error('Erro de consistência no descarte.');
+    state.hands[claimant] = candidate.hand;
+    return win(claimant,'BATIDA NO DESCARTE',candidate.hand,candidate.groups,`Pegou ${claimed.label} ${claimed.symbol} descartado por ${state.names[state.pending.by]}`);
+  }
+  function passClaim() {
+    if (state.phase !== 'claim') return;
+    const after = state.pending.after;
+    if (after === 'replacement') {
+      state.pending = null;
+      state.phase = 'turn';
+      state.turnStep = 'discard';
+      state.visible = false;
+      state.selectedId = null;
+      if (!state.deck.length) {state.phase='exhausted';return render();}
+      const card = state.deck.pop();
+      state.hands[state.turn].push(card);
+      state.drawnId = card.id;
+      state.drawSource = 'replacement';
+      state.notice = `${state.names[state.turn]} recebeu a segunda carta. Agora deve escolher uma carta para descartar ou bater.`;
+      render();
+      return;
+    }
+    state.turn = next(state.pending.by);
+    state.turnStep = 'draw';
+    state.drawnId = null;
+    state.drawSource = null;
+    state.specialUsed = state.specialUsed;
+    state.selectedId = null;
+    state.phase = 'turn';
+    state.visible = false;
+    state.pending = null;
+    state.notice = '';
+    render();
+  }
+  function reset() {
+    state.dealToken++;
+    state.phase='setup';
+    state.notice='';
+    state.visible=false;
+    render();
+  }
+  function toggleHelp() {
+    state.help = !state.help;
+    const d = document.querySelector('.rules-panel details');
+    if (d) d.open = state.help;
+  }
+  el.addEventListener('click', event => {
+    const node = event.target.closest('[data-action]');
+    if (!node || node.hasAttribute('disabled')) return;
+    const action = node.dataset.action;
+    if (action === 'toggle-help') return toggleHelp();
+    if (action === 'start') return startGame();
+    if (action === 'new-game') return reset();
+    if (action === 'next-round') return nextRound();
+    if (action === 'reveal') {state.visible=true;return render();}
+    if (action === 'hide') {state.visible=false;return render();}
+    if (action === 'inspect-next') return inspectNext();
+    if (action === 'loba') {
+      const hand=state.hands[state.inspectionIndex];
+      if (state.phase==='inspection'&&state.visible&&rules.isLobaDoida(hand)) return win(state.inspectionIndex,'LOBA DOIDA',hand,null,'Declarada na conferência inicial, antes de comprar');
+    }
+    if (action === 'initial-win') {
+      const hand=state.hands[state.inspectionIndex];
+      const groups=rules.winningPartition(hand);
+      if (state.phase==='inspection'&&state.visible&&groups) return win(state.inspectionIndex,'BATIDA NA DISTRIBUIÇÃO',hand,groups);
+    }
+    if (action === 'buy-stock') return draw('stock');
+    if (action === 'buy-discard') return draw('discard');
+    if (action === 'select-card') { if(state.phase==='turn'&&state.turnStep==='discard'&&state.visible){state.selectedId=node.dataset.card;render();} return; }
+    if (action === 'discard') return discardCard(false);
+    if (action === 'win-after-discard') return discardCard(true);
+    if (action === 'reject-first') return rejectFirst();
+    if (action === 'claim') return claim();
+    if (action === 'pass-claim') return passClaim();
+  });
+  el.addEventListener('keydown', event => {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('[data-action="select-card"]')) {
+      event.preventDefault();event.target.click();
+    }
+  });
+  el.addEventListener('change', event => {
+    if (event.target.id === 'claimant') state.claimant = Number(event.target.value);
+  });
+  el.addEventListener('toggle', event => {
+    if (event.target.matches('.rules-panel details')) state.help = event.target.open;
+  },true);
+  // Status de inspeção e regras disponível para testes automatizados em navegador.
+  window.Pife104Debug = { state, rules };
+  render();
+})();
+
+</script>
+</body>
+</html>
