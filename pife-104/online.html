@@ -445,11 +445,18 @@ async function refresh(){
  try{
   var result=await api("state");
   if(epoch!==sessionEpoch)return;
+  var hadError=!!errText;
   errText="";
-  if(result.state.revision!==lastRevision||!game)setState(result.state);
+  if(hadError||result.state.revision!==lastRevision||!game)setState(result.state);
  }catch(e){
   if(epoch===sessionEpoch){
    var msg=String(e.message||"");
+   if(/Sala não encontrada|Essa sala expirou|Esta sala expirou/.test(msg)){
+    leaveRoom(false);
+    noticeText="A sala anterior não está mais disponível. Você pode retomar outra partida salva.";
+    render();
+    return;
+   }
    if(profileToken&&/acesso a esta sala|Faça login na sala|Seu acesso/.test(msg)){
     try{
      var restored=await api("resume-profile",{code:room,profileToken:profileToken});
@@ -587,6 +594,8 @@ try{
 if(room&&token){refresh();}
 else{showLanding();if(profileToken)loadActiveMatches(true);}
 window.addEventListener("resize",function(){if(game)render();});
+window.addEventListener("online",function(){if(room&&token)refresh();});
+window.addEventListener("offline",function(){if(game){errText="Sem internet. A partida continua salva; tentando reconectar...";render();}});
 window.addEventListener("pagehide",function(){if(voiceChat)voiceChat.leave();});
 setInterval(function(){if(room&&token)refresh();var timer=document.getElementById("claim-timer");if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";},1200);
 })();
