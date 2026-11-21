@@ -86,7 +86,7 @@ function btn(text,action,cls,disabled){return '<button class="btn '+(cls||"")+'"
 function header(){
  var playing=game?.publicMatch&&['turn','claim'].includes(game.phase)&&!game.players[game.seat]?.eliminated;
  var label=playing?'Abandonar':'← Trocar sala';
- var nav=game?'<button class="back leave" type="button" data-action="leave-room">'+label+'</button><a class="back" href="./">Início do jogo</a>':'<a class="back" href="./">← Início do jogo</a>';
+ var nav=game?'<button class="back leave" type="button" data-action="leave-room">'+label+'</button>'+(playing?'':'<a class="back" href="./">Início do jogo</a>'):'<a class="back" href="./">← Início do jogo</a>';
  return '<header class="top"><div><h1>Pif-Paf / <span>Caxeta do Gael</span></h1><p>104 cartas · 2 a 4 jogadores · multiplayer online</p></div><div class="top-actions">'+nav+'</div></header>';
 }
 function showLanding(){
@@ -288,8 +288,15 @@ async function leavePublicMatch(){
  if(!window.confirm('Abandonar a partida? Você perderá '+amount+' moedas virtuais, que serão divididas entre os jogadores restantes. Suas cartas retornarão ao bolo.'))return;
  busy=true;
  try{
-  var response=await api('leave-match');
-  if(response.state)setState(response.state);
+  var seat=game.seat,done=false;
+  // Uma atualização automática concorrente pode vencer o pedido; confirmar
+  // no servidor que a saída foi registrada antes de apagar a credencial.
+  for(var attempt=0;attempt<3;attempt++){
+   var response=await api('leave-match');
+   if(response.state)setState(response.state);
+   if(response.state&&(response.state.players[seat]?.eliminated||['won','exhausted'].includes(response.state.phase))){done=true;break;}
+  }
+  if(!done)throw Error('A saída ainda não foi confirmada pelo servidor.');
   leaveRoom(false);
  }catch(error){busy=false;showError('Não foi possível registrar a saída. Verifique a internet e tente novamente. '+(error.message||''));}
 }
