@@ -622,7 +622,7 @@
   function startGame() {
     ensureAudio();
     startMusic();
-    const names = state.mode='bots' ? [(document.getElementById('name0')?.value||'').trim().slice(0,22)||'Você','Robô 1','Robô 2','Robô 3'] : state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
+    const names = state.mode==='bots' ? [(document.getElementById('name0')?.value||'').trim().slice(0,22)||'Você','Robô 1','Robô 2','Robô 3'] : state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
     state.names = names;
     state.round = 0;
     state.starter = Math.floor(Math.random() * 4);
