@@ -99,6 +99,10 @@
  .cards.hand-cards .card{width:43px;height:84px;margin-left:-17px;font-size:15px}
  .cards.hand-cards .card .center-suit{font-size:23px}
 }
+
+.music-button{white-space:nowrap;border-color:#a78d54;color:#f4daa3}
+.music-button[aria-pressed="false"]{opacity:.78;border-color:#486451;color:#bfd0c5}
+@media(max-width:480px){.topbar{flex-wrap:wrap}.top-actions{width:100%;justify-content:flex-end;gap:6px}.music-button{margin-right:auto}.top-actions .btn{font-size:11px;min-height:36px;padding:8px 10px}}
 </style>
 </head>
 <body>
@@ -221,6 +225,91 @@
   const currentHand = () => state.hands[state.phase === 'inspection' ? state.inspectionIndex : state.turn];
   const topDiscard = () => state.discard[state.discard.length - 1];
   const isBot = i => state.mode === 'bots' && i !== 0;
+
+  // Trilha original e discreta, sintetizada localmente, sem arquivos externos.
+  // Web Audio é iniciado somente após interação do jogador (iOS/Android).
+  const music = { enabled:true, ctx:null, master:null, timer:null, step:0, nextTime:0 };
+  const musicNotes = [
+    659.25,783.99,493.88,783.99,659.25,587.33,392,0,
+    440,523.25,659.25,523.25,392,440,493.88,0,
+    440,523.25,659.25,523.25,440,392,349.23,0,
+    493.88,587.33,698.46,587.33,493.88,440,392,0
+  ];
+  const musicChords = [
+    [261.63,329.63,392,493.88],
+    [220,261.63,329.63,392],
+    [174.61,220,261.63,329.63],
+    [196,246.94,293.66,349.23]
+  ];
+  function musicTone(frequency, at, duration, gainAmount, type='sine') {
+    const ctx=music.ctx;
+    if (!ctx || !music.master) return;
+    const osc=ctx.createOscillator();
+    const volume=ctx.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(frequency,at);
+    volume.gain.setValueAtTime(0.0001,at);
+    volume.gain.exponentialRampToValueAtTime(gainAmount,at+0.035);
+    volume.gain.exponentialRampToValueAtTime(0.0001,at+duration);
+    osc.connect(volume);
+    volume.connect(music.master);
+    osc.start(at);
+    osc.stop(at+duration+0.025);
+    osc.onended=()=>{ osc.disconnect(); volume.disconnect(); };
+  }
+  function musicSchedule() {
+    if (!music.enabled || !music.ctx || music.ctx.state!=='running') return;
+    const stepSeconds=60/92/2;
+    while (music.nextTime < music.ctx.currentTime+0.35) {
+      const i=music.step%musicNotes.length;
+      const note=musicNotes[i];
+      if (note) musicTone(note,music.nextTime,0.22,0.075,'sine');
+      if (i%8===0) {
+        const chord=musicChords[Math.floor(i/8)];
+        chord.forEach((freq,index)=>musicTone(freq,music.nextTime,2.4,index===0?0.018:0.010,'triangle'));
+        musicTone(chord[0]/2,music.nextTime,1.05,0.026,'sine');
+      }
+      music.step++;
+      music.nextTime+=stepSeconds;
+    }
+  }
+  function startMusic() {
+    if (!music.enabled) return;
+    try {
+      if (!music.ctx) {
+        const AudioCtor=window.AudioContext||window.webkitAudioContext;
+        if (!AudioCtor) {music.enabled=false;render();return;}
+        music.ctx=new AudioCtor();
+        music.master=music.ctx.createGain();
+        music.master.gain.value=0.56;
+        music.master.connect(music.ctx.destination);
+      }
+      if (music.ctx.state==='suspended') music.ctx.resume().catch(()=>{});
+      music.nextTime=music.ctx.currentTime+0.08;
+      if (!music.timer) {
+        musicSchedule();
+        music.timer=setInterval(musicSchedule,110);
+      }
+    } catch(e) {
+      music.enabled=false;
+      render();
+    }
+  }
+  function stopMusic() {
+    if (music.timer) {clearInterval(music.timer);music.timer=null;}
+    if (music.ctx && music.ctx.state==='running') music.ctx.suspend().catch(()=>{});
+  }
+  function toggleMusic() {
+    music.enabled=!music.enabled;
+    if (music.enabled) startMusic();
+    else stopMusic();
+    render();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopMusic();
+    else if (music.enabled && music.ctx) startMusic();
+  });
+
   function cardHtml(c, opts = {}) {
     if (!c) return '<div class="stack empty">—</div>';
     const selected = opts.selected === c.id;
@@ -363,14 +452,14 @@
     }
   }
   function header() {
-    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions">${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
+    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions"><button class="btn ghost small music-button" data-action="toggle-music" aria-pressed="${music.enabled}" aria-label="${music.enabled?'Desligar':'Ligar'} música de fundo">${music.enabled?'♫ Música ON':'♫ Música OFF'}</button>${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
   }
   function setup() {
     return `<section class="intro"><div class="tagline">Pife para celular · 104 cartas</div><h2>Quatro jogadores. Um vencedor.</h2><p>O sistema embaralha e distribui as cartas uma por uma. Escolha como deseja jogar:</p>
       <div class="mode-switch" role="group" aria-label="Modo de jogo"><button class="mode-option ${state.mode==='bots'?'on':''}" data-action="mode-bots" aria-pressed="${state.mode==='bots'}">🤖 Eu contra 3 robôs<small>Teste sozinho pelo celular</small></button><button class="mode-option ${state.mode==='local'?'on':''}" data-action="mode-local" aria-pressed="${state.mode==='local'}">♠ 4 pessoas<small>Revezando o mesmo aparelho</small></button></div>
       <div class="name-grid">${(state.mode==='bots'?[0]:[0,1,2,3]).map(i=>`<label class="field">${state.mode==='bots'?'Seu nome':'Jogador '+(i+1)}<input id="name${i}" maxlength="22" value="${esc(state.names[i])}" autocomplete="off" /></label>`).join('')}</div>
       <div class="intro-actions"><button class="btn primary full" data-action="start">Iniciar partida</button><button class="btn ghost full" data-action="share-game">Compartilhar link do jogo</button></div>
-      <p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
+      <p class="note">♫ Música ambiente suave: começa ao iniciar a partida e pode ser ligada/desligada no alto da tela.</p><p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
   }
   function seatHtml(i) {
     const active = state.phase === 'turn' && state.turn === i || state.phase === 'inspection' && state.inspectionIndex === i;
@@ -448,6 +537,7 @@
   }
   function notice(message) { state.notice = message; render(); }
   function startGame() {
+    startMusic();
     const names = state.mode==='bots' ? [(document.getElementById('name0')?.value||'').trim().slice(0,22)||'Você','Robô 1','Robô 2','Robô 3'] : state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
     state.names = names;
     state.round = 0;
@@ -737,6 +827,7 @@
     const node = event.target.closest('[data-action]');
     if (!node || node.hasAttribute('disabled')) return;
     const action = node.dataset.action;
+    if (action === 'toggle-music') return toggleMusic();
     if (action === 'toggle-help') return toggleHelp();
     if (action === 'mode-bots' || action === 'mode-local') {
       const current = document.getElementById('name0')?.value;
