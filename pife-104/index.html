@@ -103,6 +103,8 @@
 .music-button{white-space:nowrap;border-color:#a78d54;color:#f4daa3}
 .music-button[aria-pressed="false"]{opacity:.78;border-color:#486451;color:#bfd0c5}
 @media(max-width:480px){.topbar{flex-wrap:wrap}.top-actions{width:100%;justify-content:flex-end;gap:6px}.music-button{margin-right:auto}.top-actions .btn{font-size:11px;min-height:36px;padding:8px 10px}}
+
+@media(max-width:480px){.top-actions{gap:5px}.top-actions .music-button{font-size:10px;padding:7px 8px;min-height:35px}.top-actions .btn{flex-shrink:0}}
 </style>
 </head>
 <body>
@@ -241,6 +243,92 @@
     [174.61,220,261.63,329.63],
     [196,246.94,293.66,349.23]
   ];
+
+  // Efeitos originais produzidos por síntese Web Audio, sem arquivos externos.
+  const effects={enabled:true,gain:null,noise:null};
+  function ensureAudio() {
+    try {
+      if (!music.ctx) {
+        const AudioCtor=window.AudioContext||window.webkitAudioContext;
+        if (!AudioCtor) return null;
+        const ctx=new AudioCtor();
+        music.ctx=ctx;
+        music.master=ctx.createGain();
+        music.master.gain.value=music.enabled?0.56:0;
+        music.master.connect(ctx.destination);
+        effects.gain=ctx.createGain();
+        effects.gain.gain.value=effects.enabled?0.24:0;
+        effects.gain.connect(ctx.destination);
+        const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*0.40),ctx.sampleRate);
+        const samples=buffer.getChannelData(0);
+        for(let i=0;i<samples.length;i++)samples[i]=Math.random()*2-1;
+        effects.noise=buffer;
+      }
+      if (music.ctx.state==='suspended' && !document.hidden) music.ctx.resume().catch(()=>{});
+      return music.ctx;
+    }catch(e){return null;}
+  }
+  function effectTone(freq,at,duration,loudness,type='sine',endFreq=freq) {
+    const ctx=music.ctx;
+    if(!ctx || !effects.gain)return;
+    const osc=ctx.createOscillator(),env=ctx.createGain();
+    osc.type=type;
+    osc.frequency.setValueAtTime(freq,at);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,endFreq),at+duration);
+    env.gain.setValueAtTime(0.0001,at);
+    env.gain.exponentialRampToValueAtTime(loudness,at+0.012);
+    env.gain.exponentialRampToValueAtTime(0.0001,at+duration);
+    osc.connect(env);env.connect(effects.gain);
+    osc.start(at);osc.stop(at+duration+0.02);
+    osc.onended=()=>{osc.disconnect();env.disconnect();};
+  }
+  function effectPaper(at,duration,loudness,cutoff=1300) {
+    const ctx=music.ctx;
+    if(!ctx || !effects.noise || !effects.gain)return;
+    const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),env=ctx.createGain();
+    source.buffer=effects.noise;
+    filter.type='lowpass';filter.frequency.value=cutoff;
+    env.gain.setValueAtTime(0.0001,at);
+    env.gain.exponentialRampToValueAtTime(loudness,at+0.014);
+    env.gain.exponentialRampToValueAtTime(0.0001,at+duration);
+    source.connect(filter);filter.connect(env);env.connect(effects.gain);
+    source.start(at);source.stop(at+duration+0.012);
+    source.onended=()=>{source.disconnect();filter.disconnect();env.disconnect();};
+  }
+  function playEffect(kind) {
+    if(!effects.enabled || document.hidden)return;
+    const ctx=ensureAudio();
+    if(!ctx)return;
+    const t=ctx.currentTime+0.025;
+    if(kind==='deal') {
+      effectPaper(t,0.052,0.095,1450);
+      effectTone(270,t+0.018,0.052,0.08,'triangle',220);
+    }else if(kind==='buy') {
+      effectPaper(t,0.12,0.23,1550);
+      effectPaper(t+0.055,0.08,0.1,950);
+      effectTone(340,t+0.015,0.12,0.075,'sine',450);
+    }else if(kind==='discard') {
+      effectPaper(t,0.16,0.28,1200);
+      effectTone(430,t+0.075,0.11,0.19,'triangle',250);
+    }else if(kind==='move') {
+      effectPaper(t,0.07,0.06,1250);
+    }else if(kind==='win') {
+      [523.25,659.25,783.99,1046.5].forEach((freq,i)=>{
+        effectTone(freq,t+i*0.125,0.30,0.30,'triangle');
+        effectTone(freq*1.5,t+i*0.125,0.24,0.065,'sine');
+      });
+    }
+  }
+  function toggleEffects() {
+    effects.enabled=!effects.enabled;
+    if(effects.enabled) {
+      ensureAudio();
+      if(effects.gain)effects.gain.gain.value=0.24;
+      playEffect('buy');
+    }else if(effects.gain)effects.gain.gain.value=0;
+    render();
+  }
+
   function musicTone(frequency, at, duration, gainAmount, type='sine') {
     const ctx=music.ctx;
     if (!ctx || !music.master) return;
@@ -275,39 +363,33 @@
   }
   function startMusic() {
     if (!music.enabled) return;
-    try {
-      if (!music.ctx) {
-        const AudioCtor=window.AudioContext||window.webkitAudioContext;
-        if (!AudioCtor) {music.enabled=false;render();return;}
-        music.ctx=new AudioCtor();
-        music.master=music.ctx.createGain();
-        music.master.gain.value=0.56;
-        music.master.connect(music.ctx.destination);
-      }
-      if (music.ctx.state==='suspended') music.ctx.resume().catch(()=>{});
-      music.nextTime=music.ctx.currentTime+0.08;
-      if (!music.timer) {
-        musicSchedule();
-        music.timer=setInterval(musicSchedule,110);
-      }
-    } catch(e) {
-      music.enabled=false;
-      render();
+    const ctx=ensureAudio();
+    if (!ctx)return;
+    music.master.gain.value=0.56;
+    if(!music.timer) {
+      music.nextTime=ctx.currentTime+0.08;
+      musicSchedule();
+      music.timer=setInterval(musicSchedule,110);
     }
   }
   function stopMusic() {
-    if (music.timer) {clearInterval(music.timer);music.timer=null;}
-    if (music.ctx && music.ctx.state==='running') music.ctx.suspend().catch(()=>{});
+    if(music.timer){clearInterval(music.timer);music.timer=null;}
+    if(music.master)music.master.gain.value=0;
+    // O canal dos efeitos continua funcionando com a música desligada.
+    if(document.hidden && music.ctx && music.ctx.state==='running')music.ctx.suspend().catch(()=>{});
   }
   function toggleMusic() {
     music.enabled=!music.enabled;
-    if (music.enabled) startMusic();
+    if(music.enabled)startMusic();
     else stopMusic();
     render();
   }
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopMusic();
-    else if (music.enabled && music.ctx) startMusic();
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)stopMusic();
+    else if(music.ctx){
+      ensureAudio();
+      if(music.enabled)startMusic();
+    }
   });
 
   function cardHtml(c, opts = {}) {
@@ -452,14 +534,14 @@
     }
   }
   function header() {
-    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions"><button class="btn ghost small music-button" data-action="toggle-music" aria-pressed="${music.enabled}" aria-label="${music.enabled?'Desligar':'Ligar'} música de fundo">${music.enabled?'♫ Música ON':'♫ Música OFF'}</button>${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
+    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions"><button class="btn ghost small music-button" data-action="toggle-music" aria-pressed="${music.enabled}" aria-label="${music.enabled?'Desligar':'Ligar'} música de fundo">${music.enabled?'♫ Música ON':'♫ Música OFF'}</button><button class="btn ghost small music-button" data-action="toggle-effects" aria-pressed="${effects.enabled}" aria-label="${effects.enabled?'Desligar':'Ligar'} efeitos sonoros">${effects.enabled?'♪ Efeitos ON':'♪ Efeitos OFF'}</button>${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
   }
   function setup() {
     return `<section class="intro"><div class="tagline">Pife para celular · 104 cartas</div><h2>Quatro jogadores. Um vencedor.</h2><p>O sistema embaralha e distribui as cartas uma por uma. Escolha como deseja jogar:</p>
       <div class="mode-switch" role="group" aria-label="Modo de jogo"><button class="mode-option ${state.mode==='bots'?'on':''}" data-action="mode-bots" aria-pressed="${state.mode==='bots'}">🤖 Eu contra 3 robôs<small>Teste sozinho pelo celular</small></button><button class="mode-option ${state.mode==='local'?'on':''}" data-action="mode-local" aria-pressed="${state.mode==='local'}">♠ 4 pessoas<small>Revezando o mesmo aparelho</small></button></div>
       <div class="name-grid">${(state.mode==='bots'?[0]:[0,1,2,3]).map(i=>`<label class="field">${state.mode==='bots'?'Seu nome':'Jogador '+(i+1)}<input id="name${i}" maxlength="22" value="${esc(state.names[i])}" autocomplete="off" /></label>`).join('')}</div>
       <div class="intro-actions"><button class="btn primary full" data-action="start">Iniciar partida</button><button class="btn ghost full" data-action="share-game">Compartilhar link do jogo</button></div>
-      <p class="note">♫ Música ambiente suave: começa ao iniciar a partida e pode ser ligada/desligada no alto da tela.</p><p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
+      <p class="note">♫ Música ambiente e efeitos sonoros para comprar, distribuir, descartar e bater. Os dois sons podem ser ligados ou desligados separadamente no alto da tela.</p><p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
   }
   function seatHtml(i) {
     const active = state.phase === 'turn' && state.turn === i || state.phase === 'inspection' && state.inspectionIndex === i;
@@ -537,8 +619,9 @@
   }
   function notice(message) { state.notice = message; render(); }
   function startGame() {
+    ensureAudio();
     startMusic();
-    const names = state.mode==='bots' ? [(document.getElementById('name0')?.value||'').trim().slice(0,22)||'Você','Robô 1','Robô 2','Robô 3'] : state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
+    const names = state.mode='bots' ? [(document.getElementById('name0')?.value||'').trim().slice(0,22)||'Você','Robô 1','Robô 2','Robô 3'] : state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
     state.names = names;
     state.round = 0;
     state.starter = Math.floor(Math.random() * 4);
@@ -587,6 +670,7 @@
       state.hands[recipient].push(card);
       state.dealingTo = recipient;
       state.dealingCount++;
+      if(state.dealingCount%4===1)playEffect('deal');
       render();
       if (state.dealingCount < 36) {
         setTimeout(dealOne, 48);
@@ -629,6 +713,7 @@
     state.winningGroups = groups;
     state.winDetail = detail;
     state.phase = 'won';
+    playEffect('win');
     state.visible = true;
     state.notice = '';
     render();
@@ -651,6 +736,7 @@
     state.organizeFirstId = null;
     state.turnStep = 'discard';
     state.notice = '';
+    playEffect('buy');
     render();
   }
   function discardCard(isWin) {
@@ -670,6 +756,7 @@
     state.organizeMode = false;
     state.organizeFirstId = null;
     state.discard.push(selected);
+    playEffect('discard');
     state.pending = { card: selected, by: state.turn, after: 'next-turn' };
     state.claimant = next(state.turn);
     state.phase = 'claim';
@@ -687,6 +774,7 @@
     if (!bought) return;
     state.hands[state.turn] = hand.filter(c=>c.id!==bought.id);
     state.discard.push(bought);
+    playEffect('discard');
     state.specialUsed = true;
     state.pending = { card: bought, by: state.turn, after: 'replacement' };
     state.claimant = next(state.turn);
@@ -730,6 +818,7 @@
       if (!state.deck.length) {state.phase='exhausted';return render();}
       const card = state.deck.pop();
       state.hands[state.turn].push(card);
+      playEffect('buy');
       state.drawnId = card.id;
       state.drawSource = 'replacement';
       state.notice = `${state.names[state.turn]} recebeu a segunda carta. Agora deve escolher uma carta para descartar ou bater.`;
@@ -828,6 +917,7 @@
     if (!node || node.hasAttribute('disabled')) return;
     const action = node.dataset.action;
     if (action === 'toggle-music') return toggleMusic();
+    if (action === 'toggle-effects') return toggleEffects();
     if (action === 'toggle-help') return toggleHelp();
     if (action === 'mode-bots' || action === 'mode-local') {
       const current = document.getElementById('name0')?.value;
