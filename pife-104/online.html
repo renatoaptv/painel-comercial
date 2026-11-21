@@ -14,6 +14,7 @@
 @media(max-width:480px){.top{flex-wrap:wrap;gap:9px}.top-actions{width:100%;justify-content:flex-end}.top-actions .back{font-size:12px;padding:8px 11px}}
 </style></head>
 <body><div class="app" id="app"></div>
+<script src="./voice-chat.js?v=1"></script>
 <script>
 (function(){
 "use strict";
@@ -24,6 +25,11 @@ var STORAGE_KEY="gael_pifpaf_online_v1";
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
 var audio={ctx:null,timer:null,step:0,time:0,resuming:false,unlocked:false};
 var sessionEpoch=0;
+var voiceChat=window.GaelVoiceChat?window.GaelVoiceChat({
+ getAuth:function(){return game?{code:room,token:token,seat:game.seat,players:game.players}:null;},
+ onChange:function(){if(game)render();},
+ onAudioMode:function(active){if(active&&audio.ctx)audioStart();}
+}):null;
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
 function card(c){return '<div class="card '+(c.suit==="H"||c.suit==="D"?"red ":"")+(selected===c.id?"selected":"")+'" role="button" tabindex="0" data-id="'+c.id+'" aria-label="'+esc(cardTitle(c))+'"><span class="corner">'+esc(c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit]+'</span><span class="symbol">'+suits[c.suit]+'</span></div>';}
@@ -147,13 +153,17 @@ function render(){
  if(!game)return showLanding();
  var body=header()+messageHtml();
  if(game.phase==="lobby")body+=renderLobby();
- else body+=board()+currentStatus()+handView();
- body+='<footer class="footer">Mesa online · 2 a 4 participantes · Só você recebe suas cartas · Música e efeitos automáticos</footer>';
+ else body+=board();
+ if(voiceChat)body+=voiceChat.html();
+ else body+='<div class="notice">Chat de voz indisponível. Atualize a página.</div>';
+ if(game.phase!=="lobby")body+=currentStatus()+handView();
+ body+='<footer class="footer">Mesa online · 2 a 4 participantes · Cartas privadas · Conversa por voz opcional</footer>';
  app.innerHTML=body;
 }
 function link(){return new URL("./online.html?s="+encodeURIComponent(room),location.href).href;}
 function leaveRoom(){
  // Sair do aparelho não encerra a partida dos outros participantes.
+ if(voiceChat)voiceChat.leave();
  sessionEpoch++;
  localStorage.removeItem(STORAGE_KEY);
  token="";room="";game=null;lastRevision=-1;selected="";order=[];
@@ -199,7 +209,10 @@ function audioStart(){
   if(document.hidden)return;
   // O Safari pode silenciar Web Audio no modo silencioso se a sessão ficar em "auto".
   if(window.navigator&&window.navigator.audioSession){
-   try{if(window.navigator.audioSession.type!=="playback")window.navigator.audioSession.type="playback";}catch(e){}
+   try{
+    var audioMode=voiceChat&&voiceChat.isListening()?"play-and-record":"playback";
+    if(window.navigator.audioSession.type!==audioMode)window.navigator.audioSession.type=audioMode;
+   }catch(e){}
   }
   if(audio.ctx&&audio.ctx.state==="closed"){audio.ctx=null;audio.unlocked=false;audio.timer=null;}
   if(!audio.ctx){
@@ -361,6 +374,7 @@ app.addEventListener("click",function(e){
  var btnNode=e.target.closest("[data-action]");if(!btnNode||btnNode.disabled)return;
  var action=btnNode.dataset.action;
  audioStart();
+ if(voiceChat&&voiceChat.handle(action))return;
  if(action==="leave-room"){sound("ui");leaveRoom();return;}
  if(!game||game.phase==="lobby"||action==="share"||action==="copy-code")sound("ui");
  if(action==="create"||action==="join"){
@@ -394,6 +408,7 @@ try{
 if(room&&token){refresh();}
 else showLanding();
 window.addEventListener("resize",function(){if(game)render();});
+window.addEventListener("pagehide",function(){if(voiceChat)voiceChat.leave();});
 setInterval(function(){if(room&&token)refresh();var timer=document.getElementById("claim-timer");if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";},1200);
 })();
 </script></body></html>
