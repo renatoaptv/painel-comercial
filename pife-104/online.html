@@ -269,8 +269,9 @@ function audioTick(){
  // Nunca acumular notas ao voltar de outra aba ou durante lentidão do celular.
  for(var queued=0;queued<3&&audio.time<audio.ctx.currentTime+.26;queued++){
   var i=audio.step%notes.length;
-  if(notes[i])tone(notes[i],audio.time,.28,.068,"triangle");
-  if(i%8===0)tone(i===0?261.63:220,audio.time,1.65,.021,"sine");
+  var mix=voiceChat&&voiceChat.isListening()?0.62:1;
+  if(notes[i])tone(notes[i],audio.time,.28,.068*mix,"triangle");
+  if(i%8===0)tone(i===0?261.63:220,audio.time,1.65,.021*mix,"sine");
   audio.step++;audio.time+=duration;
  }
 }
