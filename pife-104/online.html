@@ -41,7 +41,7 @@ var sessionEpoch=0;
 var voiceChat=window.GaelVoiceChat?window.GaelVoiceChat({
  getAuth:function(){return game?{code:room,token:token,seat:game.seat,players:game.players}:null;},
  onChange:function(){if(game)render();},
- onAudioMode:function(active){if(active&&audio.ctx)audioStart();}
+ onAudioMode:function(){if(audio.ctx)audioStart();}
 }):null;
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
