@@ -44,9 +44,18 @@
 .saved-game-btn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:38px;text-align:left;font-size:12px;margin-top:8px}
 .saved-game-btn small{font-size:10px;color:#bcd4c1;white-space:nowrap}
 .profile-footnote{text-align:center;color:#94b6a4;font-size:11px;margin:9px 0;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
+.fairness-panel{margin:5px 0 10px;padding:9px 11px;background:#0a2b21;border:1px solid #49705a;border-radius:12px}
+.fair-head{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:12px;font-weight:800;color:#f2d58d}
+.fair-head code{color:#b1d0c0;font-size:10px;font-weight:600;word-break:break-all}
+.fairness-panel p{font-size:11px;line-height:1.4;margin:5px 0 0;color:#b7d1be}
+.fairness-panel .controls{margin:7px 0 0}
+.fairness-panel .btn{min-height:31px;padding:6px 11px;font-size:11px}
+.fairness-panel .fair-result.good{color:#a9e8b6;font-weight:750}
+.fairness-panel .fair-result.bad{color:#ffb7b3;font-weight:750}
 </style></head>
 <body><div class="app" id="app"></div>
 <script src="./voice-chat.js?v=2"></script>
+<script src="./fairness.js?v=1"></script>
 <script>
 (function(){
 "use strict";
@@ -61,6 +70,7 @@ var activeMatches=[],loadingActive=false,activeLoaded=false;
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
 var audio={ctx:null,timer:null,step:0,time:0,resuming:false,unlocked:false};
 var sessionEpoch=0;
+var lastFairnessResult=null,fairnessBusy=false;
 var voiceChat=window.GaelVoiceChat?window.GaelVoiceChat({
  getAuth:function(){return game?{code:room,token:token,seat:game.seat,players:game.players}:null;},
  onChange:function(){if(game)render();},
@@ -130,13 +140,33 @@ function seatAt(index,where){
  var pos=where;
  return '<div class="seat '+pos+(index===game.seat?" mine":"")+(index===game.turn?" turn":"")+'"><div class="seatname">'+(index===game.seat?"★ ":"")+esc(p.name)+(p.bot?' 🤖':'')+'</div><div class="cards-count">'+(count||"")+'</div></div>';
 }
+function fairnessPanel(){
+ var f=game?.fairness;
+ if(!f)return '';
+ var short=f.commitment?f.commitment.slice(0,14).toUpperCase():'';
+ var ended=['won','exhausted','abandoned'].includes(game.phase);
+ var description=ended?'Semente revelada após a rodada. Confira a ordem das 104 cartas com SHA-256.':'Ordem das cartas registrada no servidor antes da distribuição. A semente permanece secreta até a rodada terminar.';
+ var action=ended?'<div class="controls">'+btn(fairnessBusy?'Verificando...':'Verificar baralho','verify-fairness','ghost',fairnessBusy)+'</div>':'';
+ var result=lastFairnessResult&&lastFairnessResult.round===game.round?'<p class="fair-result '+(lastFairnessResult.ok?'good':'bad')+'">'+(lastFairnessResult.ok?'✓ ':'! ')+esc(lastFairnessResult.reason)+'</p>':'';
+ return '<section class="fairness-panel"><div class="fair-head"><span>🔒 Baralho auditável</span><code>'+esc(short)+'…</code></div><p>'+description+'</p>'+action+result+'</section>';
+}
+async function verifyFairness(){
+ var audit=game?.fairness;if(!audit||!audit.seed||fairnessBusy)return;
+ fairnessBusy=true;render();
+ try{
+  if(!window.GaelFairness)throw Error('Verificador indisponível. Atualize o jogo.');
+  var result=await window.GaelFairness.verify(audit);
+  lastFairnessResult={round:audit.round,ok:result.ok,reason:result.reason};
+ }catch(error){lastFairnessResult={round:audit.round,ok:false,reason:error.message||'Não foi possível conferir o sorteio.'};}
+ finally{fairnessBusy=false;render();}
+}
 function board(){
  var n=game.players.length,rel=function(k){return (game.seat+k)%n;};
  var place=function(index,pos){return index===null?'<div class="seat seat-empty '+pos+'"><div class="cards-count">—</div></div>':seatAt(index,pos);};
  var topSeat=n===2?rel(1):rel(2),leftSeat=n===4?rel(3):null,rightSeat=n>=3?rel(1):null;
  var topCard=game.discardTop;
  var canBuy=game.phase==="turn"&&game.turn===game.seat&&game.step==="draw";
- return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+n+' jogadores</span></div>'+
+ return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+n+' jogadores</span>'+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill">Tempo: <strong id="turn-countdown">'+Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+'s</strong></span>':'')+'</div>'+
  '<section class="table" aria-label="Mesa com '+n+' jogadores">'+
  place(topSeat,"top")+place(leftSeat,"left")+place(rightSeat,"right")+place(rel(0),"bottom")+
  '<div class="center"><div class="pile"><button class="stock" data-action="draw-stock" '+(canBuy&&game.drawCount?"":"disabled")+' aria-label="Comprar do bolo">♠</button><div class="caption">BOLO</div></div>'+
@@ -213,6 +243,7 @@ function currentStatus(){
    (game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>');
   return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+' bateu!</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+nextControls+'</section>';
  }
+ if(game.phase==="abandoned")return '<section class="panel waiting"><span class="kicker">Partida pública encerrada</span><h2>Jogador ausente</h2><p class="lead">'+esc(game.message||'Tempo de jogada esgotado.')+'</p><p class="tip">Ninguém recebeu vitória por abandono. Você pode encontrar novos adversários.</p><div class="controls">'+btn("Encontrar novos adversários","public-rematch","primary full")+'</div></section>';
  if(game.phase==="exhausted")return '<section class="panel waiting"><h2>Bolo esgotado</h2>'+
   (game.publicMatch?'<p class="lead">'+game.readyCount+' de '+game.players.length+' prontos.</p><div class="controls">'+
   (game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary"))+
@@ -227,6 +258,7 @@ function render(){
  var body=header()+messageHtml();
  if(game.phase==="lobby")body+=renderLobby();
  else body+=board();
+ if(game.phase!=="lobby")body+=fairnessPanel();
  if(voiceChat)body+=voiceChat.html();
  else body+='<div class="notice">Chat de voz indisponível. Atualize a página.</div>';
  if(game.phase!=="lobby")body+=currentStatus()+handView();
@@ -253,7 +285,7 @@ function showError(msg){errText=String(msg||"Erro de conexão.");noticeText="";r
 function setState(state){
  var old=game;
  game=state;room=state.code;lastRevision=state.revision;
- if(!old||old.round!==state.round){order=[];selected="";}
+ if(!old||old.round!==state.round){order=[];selected="";lastFairnessResult=null;}
  else if(old.turn!==state.turn||old.phase!==state.phase){selected="";}
  if(old && old.revision!==state.revision){
   if(old.phase!=="won"&&state.phase==="won")sound("win");
@@ -533,6 +565,7 @@ app.addEventListener("click",function(e){
  var btnNode=e.target.closest("[data-action]");if(!btnNode||btnNode.disabled)return;
  var action=btnNode.dataset.action;
  audioStart();
+ if(action==="verify-fairness"){verifyFairness();return;}
  if(voiceChat&&voiceChat.handle(action))return;
  if(action==="leave-room"){sound("ui");leaveRoom();return;}
  if(action==="profile-copy"){copyProfileKey();return;}
@@ -566,7 +599,7 @@ app.addEventListener("click",function(e){
  }
  if(action==="public-cancel"){doAction("public-cancel");return;}
  if(action==="public-rematch"){
-  if(!game||!game.publicMatch||!(game.phase==="won"||game.phase==="exhausted"))return;
+  if(!game||!game.publicMatch||!(game.phase==="won"||game.phase==="exhausted"||game.phase==="abandoned"))return;
   var nextTarget=game.target||game.players.length;
   var nextName=game.players[game.seat]?.name||"Jogador";
   leaveRoom(false);
@@ -597,6 +630,12 @@ window.addEventListener("resize",function(){if(game)render();});
 window.addEventListener("online",function(){if(room&&token)refresh();});
 window.addEventListener("offline",function(){if(game){errText="Sem internet. A partida continua salva; tentando reconectar...";render();}});
 window.addEventListener("pagehide",function(){if(voiceChat)voiceChat.leave();});
-setInterval(function(){if(room&&token)refresh();var timer=document.getElementById("claim-timer");if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";},1200);
+setInterval(function(){
+ if(room&&token)refresh();
+ var timer=document.getElementById("claim-timer");
+ if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";
+ var turnTimer=document.getElementById("turn-countdown");
+ if(turnTimer&&game?.turnDeadline)turnTimer.textContent=Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+"s";
+},1200);
 })();
 </script></body></html>
