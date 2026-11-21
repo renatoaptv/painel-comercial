@@ -37,7 +37,42 @@ async function verify(fairness){
  if(commitment!==fairness.commitment)return {ok:false,reason:"O compromisso criptográfico não corresponde à semente."};
  const deck=await reconstructDeck(fairness.seed);
  if(deck.length!==104||fairness.deckIds.length!==104||deck.some((id,i)=>id!==fairness.deckIds[i]))return {ok:false,reason:"A sequência publicada não coincide com o baralho gerado pela semente."};
- return {ok:true,reason:"Semente, compromisso e ordem das 104 cartas conferem."};
+ const recycled=Array.isArray(fairness.recycles)?fairness.recycles:[];
+ for(let i=0;i<recycled.length;i++){
+  const r=recycled[i];
+  if(!r||typeof r.seed!=="string"||!(/^[0-9a-f]{64}$/).test(r.seed)||!Array.isArray(r.inputIds)||!Array.isArray(r.deckIds)){
+   return {ok:false,reason:"Prova de devolução de cartas incompleta."};
+  }
+  if(await digest("gael-pife104-recycle-v1:"+r.seed)!==r.commitment){
+   return {ok:false,reason:"Compromisso de reembaralhamento não confere."};
+  }
+  const shuffled=await shuffleIds(r.inputIds.slice(),r.seed,"gael-pife104-recycle-v1:");
+  if(shuffled.length!==r.deckIds.length||shuffled.some((id,j)=>id!==r.deckIds[j])||
+     new Set(r.inputIds).size!==r.inputIds.length||r.count<1){
+   return {ok:false,reason:"Cartas devolvidas não correspondem ao novo bolo."};
+  }
+ }
+ return {ok:true,reason:recycled.length?
+   "Embaralhamento inicial e "+recycled.length+" devolução(ões) de cartas conferem.":
+   "Semente, compromisso e ordem das 104 cartas conferem."};
 }
-window.GaelFairness={verify,reconstructDeck,digest};
+async function shuffleIds(cards,seed,label){
+ let words=[],counter=0;
+ async function randomIndex(n){
+  const limit=0x100000000-(0x100000000%n);
+  for(;;){
+   if(!words.length){
+    const bytes=new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256",new TextEncoder().encode(label+seed+":"+(counter++))));
+    for(let k=0;k<bytes.length;k+=4)words.push(((bytes[k]*0x1000000)+(bytes[k+1]<<16)+(bytes[k+2]<<8)+bytes[k+3])>>>0);
+   }
+   const number=words.shift();
+   if(number<limit)return number%n;
+  }
+ }
+ for(let i=cards.length-1;i>0;i--){
+  const j=await randomIndex(i+1);[cards[i],cards[j]]=[cards[j],cards[i]];
+ }
+ return cards;
+}
+window.GaelFairness={verify,reconstructDeck,shuffleIds,digest};
 })();
