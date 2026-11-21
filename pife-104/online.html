@@ -52,10 +52,13 @@
 .fairness-panel .btn{min-height:31px;padding:6px 11px;font-size:11px}
 .fairness-panel .fair-result.good{color:#a9e8b6;font-weight:750}
 .fairness-panel .fair-result.bad{color:#ffb7b3;font-weight:750}
+.seat.seat-out{opacity:.45;border-style:dashed;box-shadow:none}
+.forfeit-note{font-size:11px;line-height:1.45;border:1px solid #8e733f;border-radius:10px;padding:8px 11px;background:#49381780;color:#f2daab;margin:8px 0}
+.forfeit-note strong{color:#ffe2a3}
 </style></head>
 <body><div class="app" id="app"></div>
 <script src="./voice-chat.js?v=2"></script>
-<script src="./fairness.js?v=1"></script>
+<script src="./fairness.js?v=2"></script>
 <script>
 (function(){
 "use strict";
@@ -81,7 +84,9 @@ function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.r
 function card(c){return '<div class="card '+(c.suit==="H"||c.suit==="D"?"red ":"")+(selected===c.id?"selected":"")+'" role="button" tabindex="0" data-id="'+c.id+'" aria-label="'+esc(cardTitle(c))+'"><span class="corner">'+esc(c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit]+'</span><span class="symbol">'+suits[c.suit]+'</span></div>';}
 function btn(text,action,cls,disabled){return '<button class="btn '+(cls||"")+'" data-action="'+action+'" '+(disabled?"disabled":"")+'>'+text+"</button>";}
 function header(){
- var nav=game?'<button class="back leave" type="button" data-action="leave-room">← Trocar sala</button><a class="back" href="./">Início do jogo</a>':'<a class="back" href="./">← Início do jogo</a>';
+ var playing=game?.publicMatch&&['turn','claim'].includes(game.phase)&&!game.players[game.seat]?.eliminated;
+ var label=playing?'Abandonar':'← Trocar sala';
+ var nav=game?'<button class="back leave" type="button" data-action="leave-room">'+label+'</button><a class="back" href="./">Início do jogo</a>':'<a class="back" href="./">← Início do jogo</a>';
  return '<header class="top"><div><h1>Pif-Paf / <span>Caxeta do Gael</span></h1><p>104 cartas · 2 a 4 jogadores · multiplayer online</p></div><div class="top-actions">'+nav+'</div></header>';
 }
 function showLanding(){
@@ -136,16 +141,17 @@ function renderLobby(){
 }
 function seatAt(index,where){
  var p=game.players[index];if(!p)return "";
- var count=game.phase==="lobby"?"":p.cardCount+" cartas";
+ var count=game.phase==="lobby"?"":(p.eliminated?"SAIU · 0 🪙":p.cardCount+" cartas · "+(p.coins??100)+" 🪙");
  var pos=where;
- return '<div class="seat '+pos+(index===game.seat?" mine":"")+(index===game.turn?" turn":"")+'"><div class="seatname">'+(index===game.seat?"★ ":"")+esc(p.name)+(p.bot?' 🤖':'')+'</div><div class="cards-count">'+(count||"")+'</div></div>';
+ return '<div class="seat '+pos+(index===game.seat?" mine":"")+(index===game.turn&&!p.eliminated?" turn":"")+(p.eliminated?" seat-out":"")+'"><div class="seatname">'+(index===game.seat?"★ ":"")+esc(p.name)+(p.bot?' 🤖':'')+'</div><div class="cards-count">'+(count||"")+'</div></div>';
 }
 function fairnessPanel(){
  var f=game?.fairness;
  if(!f)return '';
  var short=f.commitment?f.commitment.slice(0,14).toUpperCase():'';
  var ended=['won','exhausted','abandoned'].includes(game.phase);
- var description=ended?'Semente revelada após a rodada. Confira a ordem das 104 cartas com SHA-256.':'Ordem das cartas registrada no servidor antes da distribuição. A semente permanece secreta até a rodada terminar.';
+ var count=Array.isArray(f.recycles)?f.recycles.length:0;
+ var description=ended?'Confira a ordem inicial'+(count?' e '+count+' devolução(ões) de cartas':'')+' com SHA-256.':'Baralho registrado no servidor'+(count?' · '+count+' devolução(ões) de cartas auditadas':'')+'. A semente só aparece ao final.';
  var action=ended?'<div class="controls">'+btn(fairnessBusy?'Verificando...':'Verificar baralho','verify-fairness','ghost',fairnessBusy)+'</div>':'';
  var result=lastFairnessResult&&lastFairnessResult.round===game.round?'<p class="fair-result '+(lastFairnessResult.ok?'good':'bad')+'">'+(lastFairnessResult.ok?'✓ ':'! ')+esc(lastFairnessResult.reason)+'</p>':'';
  return '<section class="fairness-panel"><div class="fair-head"><span>🔒 Baralho auditável</span><code>'+esc(short)+'…</code></div><p>'+description+'</p>'+action+result+'</section>';
@@ -166,7 +172,7 @@ function board(){
  var topSeat=n===2?rel(1):rel(2),leftSeat=n===4?rel(3):null,rightSeat=n>=3?rel(1):null;
  var topCard=game.discardTop;
  var canBuy=game.phase==="turn"&&game.turn===game.seat&&game.step==="draw";
- return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+n+' jogadores</span>'+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill">Tempo: <strong id="turn-countdown">'+Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+'s</strong></span>':'')+'</div>'+
+ return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+(game.activeCount??n)+' ativos</span><span class="pill">🪙 '+(game.players[game.seat]?.coins??100)+'</span>'+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill">Tempo: <strong id="turn-countdown">'+Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+'s</strong></span>':'')+'</div>'+
  '<section class="table" aria-label="Mesa com '+n+' jogadores">'+
  place(topSeat,"top")+place(leftSeat,"left")+place(rightSeat,"right")+place(rel(0),"bottom")+
  '<div class="center"><div class="pile"><button class="stock" data-action="draw-stock" '+(canBuy&&game.drawCount?"":"disabled")+' aria-label="Comprar do bolo">♠</button><div class="caption">BOLO</div></div>'+
@@ -229,6 +235,9 @@ function handView(){
  content+='</section>';return content;
 }
 function currentStatus(){
+ if(game.players[game.seat]?.eliminated){
+  return '<section class="panel waiting"><h2>Você saiu da rodada</h2><p class="lead">Suas moedas virtuais foram distribuídas aos participantes restantes. Suas cartas voltaram ao bolo.</p><div class="controls">'+btn("Buscar nova partida","public-rematch","primary full")+'</div></section>';
+ }
  if(game.phase==="claim"&&game.pending){
   var waiting=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000));
   return '<section class="panel"><span class="kicker">Descarte disponível</span><h2>'+(canClaim()?"Você pode bater nesta carta!":"Conferindo o descarte...")+'</h2><p class="lead">'+esc(game.players[game.pending.by].name)+' descartou '+esc(cardTitle(game.pending.card))+'. Outros jogadores podem bater durante esta janela.</p><div class="statusbar"><span class="pill">Prazo <strong id="claim-timer">'+waiting+'s</strong></span></div>'+(canClaim()?'<div class="controls">'+btn("BATER NO DESCARTE","claim","green full")+'</div>':"")+'</section>';
@@ -237,15 +246,15 @@ function currentStatus(){
   var w=game.winner;var p=game.players[w.seat];
   var groups=(w.groups||[]).map(function(g){return '<div class="group">'+esc(g.kind)+'<div class="cards-mini">'+g.cards.map(function(c){return '<span class="mini-card '+(c.suit==="H"||c.suit==="D"?"red":"")+'">'+esc(cardTitle(c))+'</span>';}).join("")+'</div></div>';}).join("");
   var nextControls=game.publicMatch?
-   '<p class="lead">'+game.readyCount+' de '+game.players.length+' prontos para a próxima rodada.</p><div class="controls">'+
-   (game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary"))+
+   '<p class="lead">'+game.readyCount+' de '+(game.activeCount??game.players.length)+' prontos para a próxima rodada.</p><div class="controls">'+
+   (game.activeCount<2?'':(game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary")))+
    btn("Encontrar novos adversários","public-rematch","ghost")+'</div>':
    (game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>');
-  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+' bateu!</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+nextControls+'</section>';
+  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+(w.type==="Vitória por abandono"?" venceu por abandono!":" bateu!")+'</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+nextControls+'</section>';
  }
  if(game.phase==="abandoned")return '<section class="panel waiting"><span class="kicker">Partida pública encerrada</span><h2>Jogador ausente</h2><p class="lead">'+esc(game.message||'Tempo de jogada esgotado.')+'</p><p class="tip">Ninguém recebeu vitória por abandono. Você pode encontrar novos adversários.</p><div class="controls">'+btn("Encontrar novos adversários","public-rematch","primary full")+'</div></section>';
  if(game.phase==="exhausted")return '<section class="panel waiting"><h2>Bolo esgotado</h2>'+
-  (game.publicMatch?'<p class="lead">'+game.readyCount+' de '+game.players.length+' prontos.</p><div class="controls">'+
+  (game.publicMatch?'<p class="lead">'+game.readyCount+' de '+(game.activeCount??game.players.length)+' prontos.</p><div class="controls">'+
   (game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary"))+
   btn("Encontrar novos adversários","public-rematch","ghost")+'</div>':
   (game.seat===0?'<div class="controls">'+btn("Nova rodada","next-round","primary full")+'</div>':'<p class="lead">Aguardando nova rodada.</p>'))+'</section>';
@@ -258,15 +267,32 @@ function render(){
  var body=header()+messageHtml();
  if(game.phase==="lobby")body+=renderLobby();
  else body+=board();
- if(game.phase!=="lobby")body+=fairnessPanel();
+ if(game.phase!=="lobby"){
+  if(game.lastForfeit){
+   var ev=game.lastForfeit;
+   body+='<div class="forfeit-note">🪙 <strong>'+esc(game.players[ev.seat]?.name||'Jogador')+' saiu:</strong> '+ev.lost+' moedas distribuídas · '+ev.returned+' cartas voltaram ao bolo.</div>';
+  }
+  body+=fairnessPanel();
+ }
  if(voiceChat)body+=voiceChat.html();
  else body+='<div class="notice">Chat de voz indisponível. Atualize a página.</div>';
- if(game.phase!=="lobby")body+=currentStatus()+handView();
+ if(game.phase!=="lobby")body+=currentStatus()+(game.players[game.seat]?.eliminated?'':handView());
  if(profileToken)body+='<div class="profile-footnote">Perfil salvo · '+btn("Copiar chave de recuperação","profile-copy","ghost")+'</div>';
  body+='<footer class="footer">Mesa online · 2 a 4 participantes · Cartas privadas · Conversa por voz opcional</footer>';
  app.innerHTML=body;
 }
 function link(){return new URL("./online.html?s="+encodeURIComponent(room),location.href).href;}
+async function leavePublicMatch(){
+ if(busy)return;
+ var amount=game?.players[game.seat]?.coins??100;
+ if(!window.confirm('Abandonar a partida? Você perderá '+amount+' moedas virtuais, que serão divididas entre os jogadores restantes. Suas cartas retornarão ao bolo.'))return;
+ busy=true;
+ try{
+  var response=await api('leave-match');
+  if(response.state)setState(response.state);
+  leaveRoom(false);
+ }catch(error){busy=false;showError('Não foi possível registrar a saída. Verifique a internet e tente novamente. '+(error.message||''));}
+}
 function leaveRoom(cancelSearch=true){
  // Sair do aparelho não encerra a partida dos outros participantes.
  if(cancelSearch&&game?.publicMatch&&game.phase==="lobby"&&room&&token){
@@ -567,7 +593,11 @@ app.addEventListener("click",function(e){
  audioStart();
  if(action==="verify-fairness"){verifyFairness();return;}
  if(voiceChat&&voiceChat.handle(action))return;
- if(action==="leave-room"){sound("ui");leaveRoom();return;}
+ if(action==="leave-room"){
+  sound("ui");
+  if(game?.publicMatch&&['turn','claim'].includes(game.phase)&&!game.players[game.seat]?.eliminated){leavePublicMatch();return;}
+  leaveRoom();return;
+ }
  if(action==="profile-copy"){copyProfileKey();return;}
  if(action==="saved-games-refresh"){loadActiveMatches(false);return;}
  if(action==="resume-active"){
@@ -599,7 +629,7 @@ app.addEventListener("click",function(e){
  }
  if(action==="public-cancel"){doAction("public-cancel");return;}
  if(action==="public-rematch"){
-  if(!game||!game.publicMatch||!(game.phase==="won"||game.phase==="exhausted"||game.phase==="abandoned"))return;
+  if(!game||!game.publicMatch||!(game.phase==="won"||game.phase==="exhausted"||game.phase==="abandoned"||game.players[game.seat]?.eliminated))return;
   var nextTarget=game.target||game.players.length;
   var nextName=game.players[game.seat]?.name||"Jogador";
   leaveRoom(false);
