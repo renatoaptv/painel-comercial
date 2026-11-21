@@ -31,14 +31,14 @@ window.GaelVoiceChat=function(config){
   return data;
  }
  function status(){
-  if(v.joining)return "Solicitando microfone...";
-  if(!v.joined)return v.error||"Converse com seus amigos enquanto joga.";
+  if(v.joining)return "Abrindo microfone...";
+  if(!v.joined)return v.error||"Fale com quem está na sua sala.";
   var active=v.presence.filter(function(p){return p.seat!==credentials()?.seat;});
   var connected=Array.from(v.peers.values()).filter(function(p){return p.pc.connectionState==="connected";}).length;
-  if(v.muted)return "Microfone silenciado. Você ainda pode ouvir os outros.";
-  if(active.length===0)return "Microfone ativo · aguardando outros jogadores entrarem no áudio.";
-  if(connected===active.length)return "Conversa conectada com "+connected+" jogador(es).";
-  return "Microfone ligado · conectando com os outros jogadores...";
+  if(v.muted)return "Microfone mudo · você continua ouvindo.";
+  if(active.length===0)return "Microfone ativo · aguardando amigos.";
+  if(connected===active.length)return "Conectado com "+connected+" "+(connected===1?"jogador":"jogadores")+".";
+  return "Conectando áudio...";
  }
  function html(){
   var a=credentials();if(!a||!a.code||!Array.isArray(a.players))return "";
@@ -46,20 +46,20 @@ window.GaelVoiceChat=function(config){
   var roster=people.map(function(p){
    var here=v.presence.find(function(item){return item.seat===p.seat;});
    var self=p.seat===a.seat;
-   var label=self?(v.joined?(v.muted?"Seu microfone mudo":"Você no áudio"):"Você"):
-    (here?(here.muted?"Microfone mudo":v.peers.get(p.seat)?.pc.connectionState==="connected"?"Conectado":"No áudio"):"Fora do áudio");
+   var label=self?(v.joined?(v.muted?"Mudo":"Você"):"Você"):
+    (here?(here.muted?"Mudo":v.peers.get(p.seat)?.pc.connectionState==="connected"?"Conectado":"No áudio"):"Fora");
    return '<span class="voice-person '+(here?"voice-in":"")+'">'+(self?"★ ":"")+escapeText(p.name)+' <small>'+escapeText(label)+'</small></span>';
   }).join("");
   var controls=v.joined?
-   '<button class="btn '+(v.muted?"green":"ghost")+'" data-action="voice-mute">'+(v.muted?"🎙 Reativar microfone":"🔇 Silenciar meu microfone")+'</button>'+
-   '<button class="btn ghost" data-action="voice-leave">Sair do áudio</button>':
-   '<button class="btn primary full" data-action="voice-join" '+(v.joining?"disabled":"")+'>🎙 '+(v.joining?"Conectando...":"Entrar no chat de voz")+'</button>';
-  if(v.needsTap&&v.joined)controls+='<button class="btn green full" data-action="voice-hear">🔊 Ativar som dos amigos</button>';
-  return '<section class="panel voice-panel" aria-label="Chat de voz da sala"><div class="voice-heading"><div><span class="kicker">Conversa ao vivo</span><h2>🎧 Áudio da mesa</h2></div><span class="voice-dot '+(v.joined?"on":"")+'"></span></div>'+
+   '<button class="btn '+(v.muted?"green":"ghost")+'" data-action="voice-mute">'+(v.muted?"🎙 Ativar mic":"🔇 Mudo")+'</button>'+
+   '<button class="btn ghost" data-action="voice-leave">Sair</button>':
+   '<button class="btn primary" data-action="voice-join" '+(v.joining?"disabled":"")+'>🎙 '+(v.joining?"Conectando...":"Entrar no áudio")+'</button>';
+  if(v.needsTap&&v.joined)controls+='<button class="btn green" data-action="voice-hear">🔊 Ouvir amigos</button>';
+  return '<section class="panel voice-panel" aria-label="Chat de voz da sala"><div class="voice-heading"><h2>🎧 Áudio da mesa</h2><span class="voice-dot '+(v.joined?"on":"")+'"></span></div>'+
    '<p class="voice-status">'+escapeText(status())+'</p><div class="voice-people">'+roster+'</div>'+
    (v.error&&v.joined?'<p class="voice-error">'+escapeText(v.error)+'</p>':"")+
    '<div class="controls voice-controls">'+controls+'</div>'+
-   '<p class="tip voice-note">Microfone somente após sua autorização. Sem gravação. Use fones para evitar eco; a música do jogo continua mais baixa durante a conversa.</p></section>';
+   '<p class="tip voice-note">Sem gravação · Use fones para evitar eco.</p></section>';
  }
  function closePeer(seat){
   var p=v.peers.get(seat);if(!p)return;
