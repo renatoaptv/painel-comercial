@@ -206,9 +206,18 @@ function currentStatus(){
  if(game.phase==="won"&&game.winner){
   var w=game.winner;var p=game.players[w.seat];
   var groups=(w.groups||[]).map(function(g){return '<div class="group">'+esc(g.kind)+'<div class="cards-mini">'+g.cards.map(function(c){return '<span class="mini-card '+(c.suit==="H"||c.suit==="D"?"red":"")+'">'+esc(cardTitle(c))+'</span>';}).join("")+'</div></div>';}).join("");
-  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+' bateu!</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+(game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>')+'</section>';
+  var nextControls=game.publicMatch?
+   '<p class="lead">'+game.readyCount+' de '+game.players.length+' prontos para a próxima rodada.</p><div class="controls">'+
+   (game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary"))+
+   btn("Encontrar novos adversários","public-rematch","ghost")+'</div>':
+   (game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>');
+  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+' bateu!</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+nextControls+'</section>';
  }
- if(game.phase==="exhausted")return '<section class="panel waiting"><h2>Bolo esgotado</h2>'+(game.seat===0?'<div class="controls">'+btn("Nova rodada","next-round","primary full")+'</div>':'<p class="lead">Aguardando nova rodada.</p>')+'</section>';
+ if(game.phase==="exhausted")return '<section class="panel waiting"><h2>Bolo esgotado</h2>'+
+  (game.publicMatch?'<p class="lead">'+game.readyCount+' de '+game.players.length+' prontos.</p><div class="controls">'+
+  (game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary"))+
+  btn("Encontrar novos adversários","public-rematch","ghost")+'</div>':
+  (game.seat===0?'<div class="controls">'+btn("Nova rodada","next-round","primary full")+'</div>':'<p class="lead">Aguardando nova rodada.</p>'))+'</section>';
  if(game.phase==="turn"&&game.turn!==game.seat)return '<section class="panel waiting"><span class="spinner"></span><strong>'+(game.players[game.turn].bot?'🤖 '+esc(game.players[game.turn].name)+' está jogando':'Vez de '+esc(game.players[game.turn].name))+'</strong><p class="tip">Sua mão continua visível somente para você.</p></section>';
  return "";
 }
@@ -549,6 +558,14 @@ app.addEventListener("click",function(e){
   doAction(action,{name:name});return;
  }
  if(action==="public-cancel"){doAction("public-cancel");return;}
+ if(action==="public-rematch"){
+  if(!game||!game.publicMatch||!(game.phase==="won"||game.phase==="exhausted"))return;
+  var nextTarget=game.target||game.players.length;
+  var nextName=game.players[game.seat]?.name||"Jogador";
+  leaveRoom(false);
+  doAction("public-find",{name:nextName,target:nextTarget});
+  return;
+ }
  if(action==="share"){shareInvite();return;}
  if(action==="copy-code"){copyCode();return;}
  if(action==="draw-stock"){doAction("draw",{source:"stock"});return;}
