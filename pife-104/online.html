@@ -22,7 +22,7 @@ var app=document.getElementById("app");
 var game=null,token="",room="",selected="",order=[],busy=false,polling=false,drag=null,ignoreClick=false,errText="",noticeText="",lastRevision=-1;
 var STORAGE_KEY="gael_pifpaf_online_v1";
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
-var audio={ctx:null,timer:null,step:0,time:0,resuming:false};
+var audio={ctx:null,timer:null,step:0,time:0,resuming:false,unlocked:false};
 var sessionEpoch=0;
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
@@ -178,20 +178,46 @@ function setState(state){
 function beginAudioScheduler(){
  if(document.hidden||!audio.ctx||audio.ctx.state!=="running"||audio.timer)return;
  audio.time=audio.ctx.currentTime+0.08;
- audio.timer=setInterval(audioTick,130);
+ audio.timer=setInterval(audioTick,115);
  audioTick();
+}
+function unlockAudioOnGesture(){
+ if(!audio.ctx||audio.unlocked)return;
+ // Um oscilador quase inaudível libera a saída Web Audio dentro do toque no iPhone.
+ try{
+  var ctx=audio.ctx,osc=ctx.createOscillator(),gain=ctx.createGain();
+  osc.frequency.setValueAtTime(440,ctx.currentTime);
+  gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.04);
+  osc.onended=function(){osc.disconnect();gain.disconnect();};
+  audio.unlocked=true;
+ }catch(e){}
 }
 function audioStart(){
  try{
   if(document.hidden)return;
+  // O Safari pode silenciar Web Audio no modo silencioso se a sessão ficar em "auto".
+  if(window.navigator&&window.navigator.audioSession){
+   try{window.navigator.audioSession.type="playback";}catch(e){}
+  }
+  if(audio.ctx&&audio.ctx.state==="closed"){audio.ctx=null;audio.unlocked=false;audio.timer=null;}
   if(!audio.ctx){
    var C=window.AudioContext||window.webkitAudioContext;if(!C)return;
    audio.ctx=new C();
-   audio.ctx.onstatechange=function(){if(audio.ctx&&audio.ctx.state==="running")beginAudioScheduler();};
+   audio.unlocked=false;
+   audio.ctx.onstatechange=function(){
+    if(!audio.ctx)return;
+    if(audio.ctx.state==="running")beginAudioScheduler();
+    else audioPause();
+   };
   }
+  unlockAudioOnGesture();
   if(audio.ctx.state==="running"){beginAudioScheduler();return;}
-  if(audio.ctx.state==="suspended"&&!audio.resuming){
+  // iOS usa "interrupted" ao alternar de app, além de "suspended".
+  if((audio.ctx.state==="suspended"||audio.ctx.state==="interrupted")&&!audio.resuming){
    audio.resuming=true;
+   setTimeout(function(){audio.resuming=false;},900);
    Promise.resolve(audio.ctx.resume()).then(function(){
     audio.resuming=false;
     if(audio.ctx&&audio.ctx.state==="running")beginAudioScheduler();
@@ -201,7 +227,7 @@ function audioStart(){
 }
 function audioPause(){
  if(audio.timer){clearInterval(audio.timer);audio.timer=null;}
- if(audio.ctx&&audio.ctx.state==="running")audio.ctx.suspend().catch(function(){});
+ // Evitar suspend() manual: versões do Safari podem não restabelecer a saída depois.
 }
 function tone(freq,at,duration,vol,wave){
  if(!audio.ctx)return;
@@ -217,8 +243,8 @@ function audioTick(){
  // Nunca acumular notas ao voltar de outra aba ou durante lentidão do celular.
  for(var queued=0;queued<3&&audio.time<audio.ctx.currentTime+.26;queued++){
   var i=audio.step%notes.length;
-  if(notes[i])tone(notes[i],audio.time,.22,.014,"sine");
-  if(i%8===0)tone(i===0?261.63:220,audio.time,1.8,.006,"triangle");
+  if(notes[i])tone(notes[i],audio.time,.28,.068,"triangle");
+  if(i%8===0)tone(i===0?261.63:220,audio.time,1.65,.021,"sine");
   audio.step++;audio.time+=duration;
  }
 }
@@ -231,6 +257,7 @@ function sound(kind){if(!audio.ctx||audio.ctx.state!=="running")return;var t=aud
  else if(kind==="type"){tone(720,t,.035,.008,"sine");}
 }
 // Navegadores móveis exigem um toque real para liberar música e efeitos.
+// A música permanece associada à página e não à sala: recarregar não encerra a partida.
 document.addEventListener("pointerdown",audioStart,{capture:true,passive:true});
 document.addEventListener("touchstart",audioStart,{capture:true,passive:true});
 document.addEventListener("keydown",function(){audioStart();},true);
