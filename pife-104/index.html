@@ -24,6 +24,62 @@
 .hand-cards .card:active{cursor:grabbing}
 .hand-cards .card.dragging{position:relative;z-index:50;opacity:.97;pointer-events:none;transform:translate(var(--drag-x,0px),var(--drag-y,0px)) scale(1.06);border-color:#f2d18b;box-shadow:0 16px 32px #000a,0 0 0 3px #eaca79;transition:none}
 .hand-cards .card.drop-target{outline:3px solid #77d8a4;outline-offset:2px}
+
+/* Estilo mobile-first: a área do descarte fica acima da mão do jogador. */
+.mode-switch{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.mode-option{background:#09271d;border:2px solid #396951;border-radius:13px;color:#eff7f0;padding:14px 10px;text-align:left;font-weight:800;min-height:80px}
+.mode-option.on{background:#4a532f;border-color:#efd080}
+.mode-option small{display:block;color:#c1d4c7;margin-top:7px;font-weight:500;font-size:11px;line-height:1.3}
+.discard-zone{border:2px dashed transparent;border-radius:14px;padding:4px;transition:background .12s,border-color .12s}
+.discard-zone.discard-target{border-color:#ffdb79;background:#b58d334f;box-shadow:0 0 22px #edca7b7f}
+.hand-cards .card{touch-action:none;cursor:grab;-webkit-user-select:none;-webkit-touch-callout:none}
+.hand-cards .card:active{cursor:grabbing}
+.hand-cards .card.dragging{position:relative;z-index:50;opacity:.96;pointer-events:none;transform:translate(var(--drag-x,0px),var(--drag-y,0px)) scale(1.06);border-color:#f2d18b;box-shadow:0 16px 32px #000a,0 0 0 3px #eaca79;transition:none}
+.hand-cards .card.drop-target{outline:3px solid #77d8a4;outline-offset:2px}
+.bot-backs{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0}
+.bot-back{display:grid;place-items:center;width:26px;height:40px;background:repeating-linear-gradient(45deg,#103b30,#103b30 5px,#d8b56e 6px,#d8b56e 7px);color:#f0d28c;border-radius:5px;border:1px solid #dbbf77}
+@media(max-width:700px){
+ body{font-size:14px}
+ .wrap{padding:9px 10px 32px}
+ .topbar{margin-bottom:7px}
+ .logo{width:36px;height:36px;border-radius:9px}
+ .brand h1{font-size:19px}
+ .brand small{font-size:10px}
+ .top-actions{gap:5px}
+ .top-actions .btn{padding:7px;font-size:10px;min-height:34px}
+ .statusrow{gap:4px;margin:4px 0 8px}
+ .status{padding:4px 7px;font-size:10px}
+ .board{grid-template-columns:minmax(65px,1fr) minmax(145px,2fr) minmax(65px,1fr);grid-template-rows:53px 91px 53px;min-height:202px;border-width:6px;border-radius:28% / 23%;padding:3px 4px}
+ .board:after{inset:9px}
+ .seat{padding:2px 1px;gap:1px;max-width:150px}
+ .seat .symbol{width:19px;height:19px;font-size:10px}
+ .seat .seatname{font-size:10px;line-height:1}
+ .seat .seatmeta{font-size:9px}
+ .seat .labels{gap:2px}
+ .mini{font-size:7px;padding:1px 2px}
+ .center-table{gap:8px}
+ .pile-box{gap:2px;min-width:51px}
+ .pile-box .caption{font-size:9px}
+ .stack{height:62px;width:45px;border-radius:7px}
+ .gamepanel{margin-top:10px;padding:12px 10px;min-height:0}
+ .phase-title{font-size:18px}
+ .subheading{font-size:12px;margin:4px 0 10px}
+ .cards.hand-cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:8px 0 12px;overflow:visible;max-width:100%;padding:0}
+ .cards.hand-cards .card{width:100%;height:87px;max-width:none;font-size:18px;margin:0;padding:5px}
+ .cards.hand-cards .card .center-suit{font-size:29px}
+ .organize-toolbar{margin:0 0 10px;gap:6px}
+ .organize-toolbar .btn{padding:8px;font-size:11px;min-height:34px}
+ .arrange-help{font-size:11px;margin:0 0 8px}
+ .draw-box{font-size:12px;padding:7px 9px;margin:4px 0 8px}
+ .controls{gap:6px}
+ .controls .btn{padding:10px;font-size:12px;min-height:40px}
+ .rules-panel{padding:12px;margin-top:12px}
+ .intro{margin:12px auto;padding:17px 13px}
+ .intro h2{font-size:25px}
+}
+@media(max-width:700px){.seat.top{transform:translateY(3px)}.seat.bottom{transform:translateY(-7px)}.board{border-radius:27% / 18%}}
+@media(max-width:360px){.cards.hand-cards .card{height:76px;font-size:16px}.board{grid-template-columns:62px 1fr 62px}.center-table{gap:3px}.pile-box{min-width:45px}}
+
 </style>
 </head>
 <body>
@@ -129,7 +185,7 @@
   const el = document.getElementById('app');
   const positions = ['top', 'right', 'bottom', 'left'];
   const state = {
-    phase: 'setup', names: ['Jogador 1','Jogador 2','Jogador 3','Jogador 4'],
+    phase: 'setup', mode: 'bots', names: ['Você','Robô 1','Robô 2','Robô 3'],
     round: 0, starter: null, dealer: null, turn: null, deck: [], discard: [],
     hands: [[],[],[],[]], dealingCount: 0, dealingTo: null, dealToken: 0,
     inspectionIndex: null, inspected: 0, visible: false,
@@ -145,6 +201,7 @@
   const previous = i => (i + 3) % 4;
   const currentHand = () => state.hands[state.phase === 'inspection' ? state.inspectionIndex : state.turn];
   const topDiscard = () => state.discard[state.discard.length - 1];
+  const isBot = i => state.mode === 'bots' && i !== 0;
   function cardHtml(c, opts = {}) {
     if (!c) return '<div class="stack empty">—</div>';
     const selected = opts.selected === c.id;
@@ -157,7 +214,7 @@
   function backHtml() { return '<div class="card back" aria-label="Carta virada">✦</div>'; }
 
   function organizingTools() {
-    return `<p class="arrange-help">Segure e arraste qualquer carta para a posição desejada. Toque rápido para selecionar uma carta na hora de descartar.</p><div class="organize-toolbar"><button class="btn ghost small" data-action="sort-rank">Ordenar por valor</button><button class="btn ghost small" data-action="sort-suit">Ordenar por naipe</button></div>`;
+    return `<p class="arrange-help">Segure e arraste para organizar. Quando tiver 10 cartas, arraste uma até o DESCARTE na mesa para jogar fora.</p><div class="organize-toolbar"><button class="btn ghost small" data-action="sort-rank">Ordenar por valor</button><button class="btn ghost small" data-action="sort-suit">Ordenar por naipe</button></div>`;
   }
   function handHtml(hand, canDiscard=false) {
     return `<div class="cards hand-cards" aria-label="Suas cartas">${hand.map(c=>cardHtml(c,{clickable:true,selected:canDiscard?state.selectedId:null})).join('')}</div>${organizingTools()}`;
@@ -188,23 +245,124 @@
     render();
   }
 
+  let autoTimer=null;
+  function botHandScore(cards){
+    let score=0;
+    for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++){
+      const a=cards[i],b=cards[j];
+      if(a.rank===b.rank && a.suit!==b.suit)score+=5.5;
+      if(a.suit===b.suit){
+        let gap=Math.abs(a.rank-b.rank);
+        if(gap===1)score+=4;
+        if(gap===2)score+=2;
+        if((a.rank===1&&b.rank>=12)||(b.rank===1&&a.rank>=12))score+=1;
+      }
+    }
+    for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++)for(let k=j+1;k<cards.length;k++){
+      if(rules.meldType([cards[i],cards[j],cards[k]]))score+=12;
+    }
+    return score;
+  }
+  function bestNineOfTen(hand){
+    return hand.map((removed,i)=>({removed,hand:hand.filter((_,j)=>i!==j),score:botHandScore(hand.filter((_,j)=>i!==j))})).sort((a,b)=>b.score-a.score || (a.removed.id===state.drawnId?-1:b.removed.id===state.drawnId?1:0))[0];
+  }
+  function nextEligibleClaim(){
+    if(!state.pending)return null;
+    for(let j=1;j<=3;j++){
+      const i=(state.pending.by+j)%4;
+      if(i===0 && state.pending.skipHuman)continue;
+      if(rules.claimDiscard(state.hands[i],state.pending.card))return i;
+    }
+    return null;
+  }
+  function botMove(){
+    if(state.mode!=='bots'||state.phase!=='turn'||!isBot(state.turn))return;
+    const hand=state.hands[state.turn];
+    if(state.turnStep==='draw'){
+      const initial=rules.winningPartition(hand);
+      if(initial)return win(state.turn,'BATIDA',hand,initial,'9 cartas completas');
+      const discard=topDiscard();
+      let source='stock';
+      if(discard){
+        const best=bestNineOfTen([...hand,discard]);
+        if(rules.claimDiscard(hand,discard) || best.score>botHandScore(hand)+2)source='discard';
+      }
+      if(source==='stock'&&!state.deck.length && state.discard.length)source='discard';
+      return draw(source);
+    }
+    const possible=rules.winningDiscardFromTen(hand);
+    if(possible.length){
+      state.selectedId=possible[0].removed.id;
+      return discardCard(true);
+    }
+    const best=bestNineOfTen(hand);
+    if(state.openingTurn && state.turn===state.starter && !state.specialUsed && state.drawSource==='stock' && best.removed.id===state.drawnId && state.deck.length){
+      return rejectFirstBot();
+    }
+    state.selectedId=best.removed.id;
+    return discardCard(false);
+  }
+  function rejectFirstBot(){
+    // Permite ao robô que iniciou a rodada exercer a mesma regra especial.
+    const hand=state.hands[state.turn];
+    const bought=hand.find(c=>c.id===state.drawnId);
+    if(!bought)return;
+    state.hands[state.turn]=hand.filter(c=>c.id!==bought.id);
+    state.discard.push(bought);
+    state.specialUsed=true;
+    state.pending={card:bought,by:state.turn,after:'replacement'};
+    state.claimant=next(state.turn);
+    state.phase='claim';state.visible=false;state.selectedId=null;
+    state.notice=state.names[state.turn]+' recusou a primeira carta.';
+    render();
+  }
+  function botClaimOrAdvance(){
+    if(state.mode!=='bots'||state.phase!=='claim')return;
+    const winner=nextEligibleClaim();
+    if(winner===0)return;
+    if(winner!==null){
+      const candidate=rules.claimDiscard(state.hands[winner],state.pending.card);
+      if(!candidate)return passClaim(true);
+      const discarded=state.discard.pop();
+      if(!discarded || discarded.id!==state.pending.card.id)throw Error('Erro no descarte');
+      // A carta que saiu da mão do vencedor volta para o monte de descartes.
+      state.discard.push(candidate.removed);
+      const by=state.pending.by;
+      state.hands[winner]=candidate.hand;
+      return win(winner,'BATIDA NO DESCARTE',candidate.hand,candidate.groups,'Pegou descarte de '+state.names[by]);
+    }
+    return passClaim(true);
+  }
+  function scheduleAutomation(){
+    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+    if(state.mode!=='bots')return;
+    if(state.phase==='turn' && isBot(state.turn)){
+      autoTimer=setTimeout(botMove,state.turnStep==='draw'?640:670);
+    }else if(state.phase==='claim'){
+      if(nextEligibleClaim()!==0)autoTimer=setTimeout(botClaimOrAdvance,570);
+    }
+  }
   function header() {
     return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions">${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
   }
   function setup() {
-    return `<section class="intro"><div class="tagline">Baralho brasileiro · 104 cartas</div><h2>Uma mesa. Quatro jogadores. Um vencedor.</h2><p>O robô embaralha e distribui uma carta por vez. Cada jogador recebe nove cartas e joga individualmente. Passe o aparelho para o jogador da vez para manter as mãos em segredo.</p><div class="name-grid">${state.names.map((name,i) => `<label class="field">Jogador ${i+1}<input id="name${i}" maxlength="22" value="${esc(name)}" autocomplete="off" /></label>`).join('')}</div><div class="intro-actions"><button class="btn primary" data-action="start">Sortear e distribuir</button></div><hr class="setup-divider"/><p class="note"><strong>Esta primeira versão é local:</strong> quatro pessoas no mesmo celular ou computador, alternando a visualização das mãos. Não precisa de internet depois de abrir a página. O multiplayer em quatro aparelhos poderá ser a próxima etapa.</p></section>`;
+    return `<section class="intro"><div class="tagline">Pife para celular · 104 cartas</div><h2>Quatro jogadores. Um vencedor.</h2><p>O robô embaralha e distribui as cartas uma por uma. Escolha como deseja jogar:</p>
+      <div class="mode-switch" role="group" aria-label="Modo de jogo"><button class="mode-option ${state.mode==='bots'?'on':''}" data-action="mode-bots" aria-pressed="${state.mode==='bots'}">🤖 Eu contra 3 robôs<small>Teste sozinho pelo celular</small></button><button class="mode-option ${state.mode==='local'?'on':''}" data-action="mode-local" aria-pressed="${state.mode==='local'}">♠ 4 pessoas<small>Revezando o mesmo aparelho</small></button></div>
+      <div class="name-grid">${(state.mode==='bots'?[0]:[0,1,2,3]).map(i=>`<label class="field">${state.mode==='bots'?'Seu nome':'Jogador '+(i+1)}<input id="name${i}" maxlength="22" value="${esc(state.names[i])}" autocomplete="off" /></label>`).join('')}</div>
+      <div class="intro-actions"><button class="btn primary full" data-action="start">Iniciar partida</button><button class="btn ghost full" data-action="share-game">Compartilhar link do jogo</button></div>
+      <p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
   }
   function seatHtml(i) {
     const active = state.phase === 'turn' && state.turn === i || state.phase === 'inspection' && state.inspectionIndex === i;
     const dealing = state.phase === 'dealing' && state.dealingTo === i;
     const labels = [i === state.starter ? '<span class="mini">COMEÇA</span>' : '',i === state.dealer ? '<span class="mini cyan">DÁ CARTAS</span>' : ''].join('');
-    return `<div class="seat ${positions[i]} ${active?'active':''} ${dealing?'dealing':''}"><div class="symbol">${i+1}</div><div class="seatname">${esc(state.names[i])}</div><div class="seatmeta">${state.hands[i].length} ${state.hands[i].length===1?'carta':'cartas'}</div><div class="labels">${labels}</div></div>`;
+    return `<div class="seat ${positions[i]} ${active?'active':''} ${dealing?'dealing':''}"><div class="symbol">${i+1}</div><div class="seatname">${esc(state.names[i])}${isBot(i)?' <span aria-label="Robô">🤖</span>':''}</div><div class="seatmeta">${state.hands[i].length} ${state.hands[i].length===1?'carta':'cartas'}</div><div class="labels">${labels}</div></div>`;
   }
   function board() {
     const drawReady = state.phase === 'turn' && state.turnStep === 'draw' && state.visible;
     const discardTop = topDiscard();
     const top = state.phase === 'dealing' ? `<div class="dealprogress">Distribuindo ${state.dealingCount}/36</div>` : '';
-    return `<div class="statusrow"><span class="status">Rodada <b>${num(state.round)}</b></span><span class="status">Distribuidor: <b>${esc(state.names[state.dealer])}</b></span><span class="status current">Começa: <b>${esc(state.names[state.starter])}</b></span><span class="status">Bolo: <b>${state.deck.length} cartas</b></span></div><section class="board" aria-label="Mesa com quatro jogadores em sentido horário">${[0,1,2,3].map(seatHtml).join('')}<div class="center-table"><div class="pile-box"><button class="stack deck" title="Bolo de compras" data-action="buy-stock" ${drawReady&&state.deck.length ? '' : 'disabled'}>♠</button><span class="caption">BOLO · ${state.deck.length}</span></div><div class="pile-box">${discardTop ? `<button class="stack" style="background:#fdfaf2;color:${discardTop.red?'#b52d37':'#111d20'};font-size:20px;flex-direction:column;font-weight:850" data-action="buy-discard" ${drawReady ? '' : 'disabled'}>${esc(discardTop.label)}<span style="font-size:29px">${discardTop.symbol}</span></button>` : '<div class="stack empty">VAZIO</div>'}<span class="caption">DESCARTE</span></div></div></section>${top}`;
+    return `<div class="statusrow"><span class="status">Rodada <b>${num(state.round)}</b></span><span class="status">Distribuidor: <b>${esc(state.names[state.dealer])}</b></span><span class="status current">Começa: <b>${esc(state.names[state.starter])}</b></span><span class="status">Bolo: <b>${state.deck.length} cartas</b></span></div><section class="board" aria-label="Mesa com quatro jogadores em sentido horário">${[0,1,2,3].map(seatHtml).join('')}<div class="center-table"><div class="pile-box"><button class="stack deck" title="Bolo de compras" data-action="buy-stock" ${drawReady&&state.deck.length ? '' : 'disabled'}>♠</button><span class="caption">BOLO · ${state.deck.length}</span></div><div class="pile-box discard-zone" data-dropzone="discard" aria-label="Área para descartar cartas">${discardTop ? `<button class="stack" style="background:#fdfaf2;color:${discardTop.red?'#b52d37':'#111d20'};font-size:20px;flex-direction:column;font-weight:850" data-action="buy-discard" ${drawReady ? '' : 'disabled'}>${esc(discardTop.label)}<span style="font-size:29px">${discardTop.symbol}</span></button>` : '<div class="stack empty">VAZIO</div>'}<span class="caption">DESCARTE</span></div></div></section>${top}`;
   }
   function dealPanel() {
     return `<section class="gamepanel"><span class="turn-label">Distribuição automática</span><h2 class="phase-title">Uma carta de cada vez, em sentido horário</h2><p class="subheading">${esc(state.names[state.dealer])} é o distribuidor desta rodada. ${esc(state.names[state.starter])} recebe a primeira carta e inicia a partida.</p><div class="progress"><div style="width:${Math.round(state.dealingCount/36*100)}%"></div></div><p class="note">${state.dealingCount} de 36 cartas entregues. As outras 68 formarão o bolo de compras.</p></section>`;
@@ -216,12 +374,13 @@
     const player = state.inspectionIndex;
     const hand = state.hands[player];
     const step = state.inspected + 1;
-    const title = `Conferência ${step} de 4: ${state.names[player]}`;
-    let content = !state.visible ? hidePanel(state.names[player], 'Confira e organize as 9 cartas recebidas antes de começar a rodada.') : `${handHtml(hand)}<div class="controls"><button class="btn primary" data-action="initial-win" ${rules.winningPartition(hand)?'':'disabled'}>Bater com 9 cartas</button><button class="btn" data-action="inspect-next">Não vou bater · Próximo</button><button class="btn ghost" data-action="hide">Ocultar</button></div>${rules.winningPartition(hand)?'<p class="actions-info">Você já tem uma combinação válida para bater.</p>':''}`;
-    return `<section class="gamepanel"><span class="turn-label">Antes da primeira compra</span><h2 class="phase-title">${esc(title)}</h2><p class="subheading">Cada jogador confere suas cartas separadamente. Ao confirmar, o aparelho passa ao próximo no sentido horário.</p>${content}</section>`;
+    const title = state.mode === 'bots' ? 'Organize suas 9 cartas' : `Conferência ${step} de 4: ${state.names[player]}`;
+    let content = !state.visible ? hidePanel(state.names[player], 'Confira e organize as 9 cartas recebidas antes de começar a rodada.') : `${handHtml(hand)}<div class="controls"><button class="btn primary" data-action="initial-win" ${rules.winningPartition(hand)?'':'disabled'}>Bater com 9 cartas</button><button class="btn" data-action="inspect-next">${state.mode==='bots'?'Começar a jogar':'Não vou bater · Próximo'}</button><button class="btn ghost" data-action="hide">Ocultar</button></div>${rules.winningPartition(hand)?'<p class="actions-info">Você já tem uma combinação válida para bater.</p>':''}`;
+    return `<section class="gamepanel"><span class="turn-label">Antes da primeira compra</span><h2 class="phase-title">${esc(title)}</h2><p class="subheading">${state.mode==='bots'?'Arraste as cartas para organizar sua mão. Os robôs também receberam nove cartas.':'Cada jogador confere suas cartas separadamente. Ao confirmar, o aparelho passa ao próximo no sentido horário.'}</p>${content}</section>`;
   }
   function turnPanel() {
     const player = state.turn;
+    if (isBot(player)) return `<section class="gamepanel bot-thinking"><span class="turn-label">Jogada automática</span><h2 class="phase-title">🤖 ${esc(state.names[player])} está jogando...</h2><p class="subheading">O robô compra, avalia as combinações e descarta. Suas cartas permanecem ocultas.</p><div class="bot-backs">${state.hands[player].map(()=>'<span class="bot-back">♠</span>').join('')}</div></section>`;
     if (!state.visible) return `<section class="gamepanel"><span class="turn-label">Vez de jogar</span><h2 class="phase-title">${esc(state.names[player])}</h2>${hidePanel(state.names[player], 'É sua vez. Confira sua mão sem mostrar aos adversários.')}</section>`;
     const hand = state.hands[player];
     const selected = hand.find(c => c.id === state.selectedId);
@@ -232,12 +391,17 @@
     if (state.turnStep === 'draw') {
       content += `<div class="draw-box">Você tem <strong>9 cartas</strong>. Compre uma carta do bolo${state.discard.length?' ou pegue a última carta descartada':''}.</div><div class="controls"><button class="btn primary" data-action="buy-stock" ${state.deck.length?'':'disabled'}>Comprar do bolo</button>${state.discard.length?'<button class="btn" data-action="buy-discard">Pegar do descarte</button>':''}<button class="btn ghost" data-action="hide">Ocultar cartas</button></div>`;
     } else {
-      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. Toque na carta que quer descartar; as outras nove devem formar sua batida.</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls"><button class="btn primary" data-action="win-after-discard" ${selected&&winningGroups?'':'disabled'}>BATER COM 9 CARTAS</button><button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}<button class="btn ghost" data-action="hide">Ocultar</button></div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
+      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. <strong>Arraste uma carta até o DESCARTE na mesa</strong>, ou toque nela para selecionar. Para bater, deixe nove cartas válidas.</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls"><button class="btn primary" data-action="win-after-discard" ${selected&&winningGroups?'':'disabled'}>BATER COM 9 CARTAS</button><button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}<button class="btn ghost" data-action="hide">Ocultar</button></div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
     }
     return `<section class="gamepanel"><span class="turn-label">Jogador da vez · ${state.turnStep==='draw'?'Comprar':'Descartar ou bater'}</span><h2 class="phase-title">${esc(state.names[player])}</h2><p class="subheading">${state.turnStep==='draw'?'Compre uma carta para jogar.':'Escolha uma carta para sair, ficando com nove na mão.'}</p>${content}</section>`;
   }
   function claimPanel() {
     const c = state.pending.card;
+    if (state.mode==='bots') {
+      const eligible = nextEligibleClaim();
+      const humanCan = eligible===0;
+      return `<section class="gamepanel"><span class="turn-label">Carta descartada</span><h2 class="phase-title">${humanCan?'Você pode bater no descarte!':'Verificando batida...'}</h2><p class="subheading">${esc(state.names[state.pending.by])} descartou ${esc(c.label)} ${c.symbol}.</p>${humanCan?'<div class="controls"><button class="btn danger" data-action="claim">BATER COM ESTA CARTA</button><button class="btn primary" data-action="pass-claim">Não vou bater · Continuar</button></div>':'<p class="note">Os jogadores verificam o descarte antes da próxima vez.</p>'}</section>`;
+    }
     return `<section class="gamepanel"><span class="turn-label">Descarte na mesa · Chance de batida</span><h2 class="phase-title">Alguém pode bater nesta carta?</h2><p class="subheading">${esc(state.names[state.pending.by])} descartou <strong>${esc(c.label)} ${c.symbol}</strong>. Qualquer outro jogador armado pode bater agora, mesmo fora da própria vez.</p><div class="claim-panel"><label class="field">Quem quer bater?<select id="claimant" class="claim-select">${state.names.map((n,i) => i === state.pending.by ? '' : `<option value="${i}" ${state.claimant===i?'selected':''}>${esc(n)}</option>`).join('')}</select></label><button class="btn danger" data-action="claim">Tentar bater neste descarte</button></div><div class="controls"><button class="btn primary" data-action="pass-claim">Ninguém bateu · Continuar</button></div><p class="actions-info">Para bater, o jogador usa a carta descartada e retira uma carta da própria mão, terminando com 9 cartas válidas. O jogo verifica a combinação sem exibir as cartas dos adversários.</p></section>`;
   }
   function winnerPanel() {
@@ -246,7 +410,7 @@
     return `<section class="gamepanel"><div class="winner"><div class="trophy">♛</div><div class="tagline">Rodada encerrada · Vencedor</div><h2>${esc(state.names[state.winner])}</h2><p class="winner-note"><strong>${esc(state.winType)}</strong>${state.winDetail?' · '+esc(state.winDetail):''}</p><div class="cards">${state.winningCards.map(c=>cardHtml(c)).join('')}</div>${groupDisplay}<p class="note">Na próxima rodada, <strong>${esc(state.names[state.starter])}</strong> dará as cartas, e <strong>${esc(state.names[next(state.starter)])}</strong> será o primeiro a receber e jogar.</p><div class="controls" style="justify-content:center"><button class="btn primary" data-action="next-round">Jogar próxima rodada</button><button class="btn ghost" data-action="new-game">Reiniciar jogo</button></div></div></section>`;
   }
   function helpHtml() {
-    return `<section class="rules-panel"><details ${state.help?'open':''}><summary>Regras da mesa · leia aqui</summary><ol><li>Quatro jogadores individuais, 104 cartas (2 baralhos de 52), 9 cartas para cada um e sem curingas.</li><li>No começo, o sistema sorteia quem começa; o distribuidor fica à direita no sentido de rotação da mesa.</li><li>Na rodada seguinte, o jogador que começou a anterior passa a ser o distribuidor. O próximo no sentido horário recebe a primeira carta e começa.</li><li>As cartas são distribuídas uma por uma, em sentido horário, até que todos tenham nove; as restantes ficam no bolo.</li><li>Trincas: mesmo valor e três naipes diferentes. Sequências: 3 a 9 cartas consecutivas do mesmo naipe; o Ás pode ser baixo (A-2-3) ou alto (Q-K-A).</li><li>Para bater, formam-se combinações válidas com exatamente nove cartas. Pode-se aproveitar o descarte de qualquer jogador para bater.</li><li>Segure e arraste uma carta para mudar sua posição, inclusive no celular. Um toque rápido seleciona a carta para descartar; também é possível ordenar por valor e naipe.</li><li>Apenas quem inicia a rodada pode recusar a primeira carta comprada do bolo: descarta essa carta e recebe outra. Isso vale só no seu primeiro turno.</li><li>Ao terminar o bolo, esta versão encerra a rodada sem vencedor. A regra pode ser ajustada depois.</li></ol></details></section>`;
+    return `<section class="rules-panel"><details ${state.help?'open':''}><summary>Regras da mesa · leia aqui</summary><ol><li>Quatro jogadores individuais, 104 cartas (2 baralhos de 52), 9 cartas para cada um e sem curingas.</li><li>No começo, o sistema sorteia quem começa; o distribuidor fica à direita no sentido de rotação da mesa.</li><li>Na rodada seguinte, o jogador que começou a anterior passa a ser o distribuidor. O próximo no sentido horário recebe a primeira carta e começa.</li><li>As cartas são distribuídas uma por uma, em sentido horário, até que todos tenham nove; as restantes ficam no bolo.</li><li>Trincas: mesmo valor e três naipes diferentes. Sequências: 3 a 9 cartas consecutivas do mesmo naipe; o Ás pode ser baixo (A-2-3) ou alto (Q-K-A).</li><li>Para bater, formam-se combinações válidas com exatamente nove cartas. Pode-se aproveitar o descarte de qualquer jogador para bater.</li><li>Arraste as cartas para organizar sua mão. Depois de comprar e ficar com dez cartas, arraste a carta até a pilha de descarte para jogá-la fora. Um toque rápido também permite selecionar e descartar.</li><li>Apenas quem inicia a rodada pode recusar a primeira carta comprada do bolo: descarta essa carta e recebe outra. Isso vale só no seu primeiro turno.</li><li>No modo contra robôs, as outras três mãos são jogadas automaticamente; cada pessoa que abrir o link terá uma partida própria.</li><li>Ao terminar o bolo, esta versão encerra a rodada sem vencedor. A regra pode ser ajustada depois.</li></ol></details></section>`;
   }
   function render() {
     let body = '';
@@ -259,11 +423,12 @@
       if (state.phase === 'claim') body += claimPanel();
       if (state.phase === 'won' || state.phase === 'exhausted') body += winnerPanel();
     }
-    el.innerHTML = `<div class="wrap">${header()}${state.notice?`<div class="notice">${esc(state.notice)}</div>`:''}${body}${helpHtml()}<p class="smallprint">Pife 104 · versão local de demonstração · cada jogador vê apenas a própria mão</p></div>`;
+    el.innerHTML = `<div class="wrap">${header()}${state.notice?`<div class="notice">${esc(state.notice)}</div>`:''}${body}${helpHtml()}<p class="smallprint">Pife 104 · ${state.mode==='bots'?'1 jogador contra 3 robôs':'4 jogadores no mesmo aparelho'} · todas as mãos são individuais</p></div>`;
+    scheduleAutomation();
   }
   function notice(message) { state.notice = message; render(); }
   function startGame() {
-    const names = state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
+    const names = state.mode==='bots' ? [(document.getElementById('name0')?.value||'').trim().slice(0,22)||'Você','Robô 1','Robô 2','Robô 3'] : state.names.map((name,i) => (document.getElementById('name'+i)?.value || '').trim().slice(0,22) || `Jogador ${i+1}`);
     state.names = names;
     state.round = 0;
     state.starter = Math.floor(Math.random() * 4);
@@ -285,7 +450,7 @@
     state.dealingCount = 0;
     state.dealingTo = state.starter;
     state.visible = false;
-    state.inspectionIndex = state.starter;
+    state.inspectionIndex = state.mode==='bots'?0:state.starter;
     state.inspected = 0;
     state.selectedId = null;
     state.organizeMode = false;
@@ -320,7 +485,7 @@
           if (state.phase !== 'dealing' || token !== state.dealToken) return;
           state.phase = 'inspection';
           state.dealingTo = null;
-          state.inspectionIndex = state.starter;
+          state.inspectionIndex = state.mode==='bots'?0:state.starter;
           state.inspected = 0;
           render();
         }, 350);
@@ -330,6 +495,13 @@
   }
   function inspectNext() {
     state.visible = false;
+    if (state.mode==='bots') {
+      state.phase='turn';
+      state.turn=state.starter;
+      state.turnStep='draw';
+      state.inspected=4;
+      return render();
+    }
     state.organizeMode = false;
     state.organizeFirstId = null;
     state.inspected++;
@@ -352,7 +524,7 @@
     render();
   }
   function draw(source) {
-    if (state.phase !== 'turn' || state.turnStep !== 'draw' || !state.visible) return;
+    if (state.phase !== 'turn' || state.turnStep !== 'draw' || (!state.visible && !isBot(state.turn))) return;
     let card;
     if (source === 'discard') {
       if (!state.discard.length) return notice('Não há carta no descarte.');
@@ -372,7 +544,7 @@
     render();
   }
   function discardCard(isWin) {
-    if (state.phase !== 'turn' || state.turnStep !== 'discard' || !state.visible || !state.selectedId) return;
+    if (state.phase !== 'turn' || state.turnStep !== 'discard' || (!state.visible && !isBot(state.turn)) || !state.selectedId) return;
     const hand = state.hands[state.turn];
     const selected = hand.find(c=>c.id===state.selectedId);
     if (!selected) return;
@@ -419,18 +591,23 @@
   function claim() {
     if (state.phase !== 'claim') return;
     const chooser = document.getElementById('claimant');
-    const claimant = Number(chooser?.value);
+    const claimant = state.mode==='bots'?0:Number(chooser?.value);
     if (!Number.isInteger(claimant) || claimant<0 || claimant>3 || claimant === state.pending.by) return;
     state.claimant = claimant;
     const candidate = rules.claimDiscard(state.hands[claimant], state.pending.card);
     if (!candidate) return notice(`${state.names[claimant]} ainda não consegue formar uma batida válida com esta carta.`);
     const claimed = state.discard.pop();
     if (!claimed || claimed.id !== state.pending.card.id) throw new Error('Erro de consistência no descarte.');
+    state.discard.push(candidate.removed);
     state.hands[claimant] = candidate.hand;
     return win(claimant,'BATIDA NO DESCARTE',candidate.hand,candidate.groups,`Pegou ${claimed.label} ${claimed.symbol} descartado por ${state.names[state.pending.by]}`);
   }
-  function passClaim() {
+  function passClaim(forceAdvance=false) {
     if (state.phase !== 'claim') return;
+    if (state.mode==='bots' && !forceAdvance && nextEligibleClaim()===0) {
+      state.pending.skipHuman=true;
+      return render();
+    }
     state.organizeMode = false;
     state.organizeFirstId = null;
     const after = state.pending.after;
@@ -462,6 +639,7 @@
     render();
   }
   function reset() {
+    if (autoTimer) clearTimeout(autoTimer);
     state.dealToken++;
     state.phase='setup';
     state.organizeMode=false;
@@ -476,59 +654,85 @@
     if (d) d.open = state.help;
   }
   let ignoreCardClick = false;
-  let dragGesture = null;
+  let gesture = null;
+  function canDragDiscard(){return state.phase==='turn' && state.turnStep==='discard' && state.visible && !isBot(state.turn) && state.hands[state.turn].length===10;}
+  function dragTargetAt(x,y){
+    const node=document.elementFromPoint(x,y);
+    if (!node) return null;
+    if (canDragDiscard() && node.closest('[data-dropzone="discard"]')) return {kind:'discard',node:node.closest('[data-dropzone="discard"]')};
+    const card=node.closest('.hand-cards [data-action="select-card"]');
+    return card ? {kind:'card',node:card} : null;
+  }
   el.addEventListener('pointerdown', event => {
-    if (event.button !== undefined && event.button !== 0) return;
+    if (event.button!==undefined && event.button!==0) return;
     if (!handToOrganize()) return;
     const node=event.target.closest('.hand-cards [data-action="select-card"]');
     if (!node) return;
-    dragGesture={id:node.dataset.card,pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false,node,target:null};
-    try { node.setPointerCapture(event.pointerId); } catch(e) {}
+    gesture={id:node.dataset.card,pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false,node,target:null};
+    try{node.setPointerCapture(event.pointerId)}catch(e){}
   });
   el.addEventListener('pointermove', event => {
-    const g=dragGesture;
+    const g=gesture;
     if (!g || event.pointerId!==g.pointerId) return;
     const dx=event.clientX-g.x,dy=event.clientY-g.y;
-    if (!g.moved && Math.hypot(dx,dy)<8) return;
+    if (!g.moved && Math.hypot(dx,dy)<9) return;
     g.moved=true;
-    if (event.cancelable) event.preventDefault();
+    if(event.cancelable)event.preventDefault();
     g.node.classList.add('dragging');
     g.node.style.setProperty('--drag-x',dx+'px');
     g.node.style.setProperty('--drag-y',dy+'px');
-    if (g.target) g.target.classList.remove('drop-target');
-    const target=document.elementFromPoint(event.clientX,event.clientY)?.closest('.hand-cards [data-action="select-card"]');
-    g.target=target && target!==g.node ? target : null;
-    if (g.target) g.target.classList.add('drop-target');
+    if(g.target)g.target.node.classList.remove('drop-target','discard-target');
+    g.target=dragTargetAt(event.clientX,event.clientY);
+    if(g.target && g.target.node!==g.node)g.target.node.classList.add(g.target.kind==='discard'?'discard-target':'drop-target');
+    if(event.pointerType==='touch' && event.clientY<65)window.scrollBy(0,-8);
+    if(event.pointerType==='touch' && event.clientY>window.innerHeight-40)window.scrollBy(0,8);
   });
-  function cleanGesture(g) {
-    if (g.target) g.target.classList.remove('drop-target');
+  function clearGesture(g){
+    if(g.target)g.target.node.classList.remove('drop-target','discard-target');
     g.node.classList.remove('dragging');
-    g.node.style.removeProperty('--drag-x');
-    g.node.style.removeProperty('--drag-y');
-    try { if (g.node.hasPointerCapture(g.pointerId)) g.node.releasePointerCapture(g.pointerId); } catch(e) {}
+    g.node.style.removeProperty('--drag-x');g.node.style.removeProperty('--drag-y');
+    try{if(g.node.hasPointerCapture(g.pointerId))g.node.releasePointerCapture(g.pointerId)}catch(e){}
   }
   el.addEventListener('pointerup', event => {
-    const g=dragGesture;
-    if (!g || event.pointerId!==g.pointerId) return;
-    dragGesture=null;
-    const target=g.moved?document.elementFromPoint(event.clientX,event.clientY)?.closest('.hand-cards [data-action="select-card"]'):null;
-    cleanGesture(g);
-    if (!g.moved) return;
+    const g=gesture;
+    if(!g || event.pointerId!==g.pointerId)return;
+    gesture=null;
+    const target=g.moved?dragTargetAt(event.clientX,event.clientY):null;
+    clearGesture(g);
+    if(!g.moved)return;
     ignoreCardClick=true;
-    setTimeout(()=>{ignoreCardClick=false;},250);
-    if (target && target.dataset.card!==g.id) moveCard(g.id,target.dataset.card);
+    setTimeout(()=>{ignoreCardClick=false},250);
+    if(target?.kind==='discard' && canDragDiscard()){
+      state.selectedId=g.id;
+      discardCard(false);
+    } else if(target?.kind==='card' && target.node.dataset.card!==g.id){
+      moveCard(g.id,target.node.dataset.card);
+    }
   });
   el.addEventListener('pointercancel', event => {
-    const g=dragGesture;
-    if (!g || event.pointerId!==g.pointerId) return;
-    dragGesture=null;
-    cleanGesture(g);
+    if(!gesture || gesture.pointerId!==event.pointerId)return;
+    const g=gesture;gesture=null;clearGesture(g);
   });
   el.addEventListener('click', event => {
     const node = event.target.closest('[data-action]');
     if (!node || node.hasAttribute('disabled')) return;
     const action = node.dataset.action;
     if (action === 'toggle-help') return toggleHelp();
+    if (action === 'mode-bots' || action === 'mode-local') {
+      const current = document.getElementById('name0')?.value;
+      if(current)state.names[0]=current.trim().slice(0,22);
+      state.mode=action==='mode-bots'?'bots':'local';
+      if(state.mode==='bots')state.names=[state.names[0]||'Você','Robô 1','Robô 2','Robô 3'];
+      else if(state.names[1]?.startsWith('Robô'))state.names=[state.names[0], 'Jogador 2','Jogador 3','Jogador 4'];
+      return render();
+    }
+    if (action === 'share-game') {
+      const url='https://renatoaptv.github.io/painel-comercial/pife-104/';
+      if (navigator.share) navigator.share({title:'Pife 104',text:'Jogue Pife 104 no celular',url}).catch(()=>{});
+      else if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(()=>notice('Link copiado para compartilhar.')).catch(()=>window.prompt('Copie o link do jogo:',url));
+      else window.prompt('Copie o link do jogo:',url);
+      return;
+    }
     if (action === 'start') return startGame();
     if (action === 'new-game') return reset();
     if (action === 'next-round') return nextRound();
@@ -558,7 +762,7 @@
         else return moveCard(state.organizeFirstId,node.dataset.card);
         return render();
       }
-      if (state.phase==='turn' && state.turnStep==='discard' && state.visible) {state.selectedId=node.dataset.card;render();}
+      if (state.phase==='turn' && state.turnStep==='discard' && state.visible && !isBot(state.turn)) {state.selectedId=node.dataset.card;render();}
       return;
     }
     if (action === 'discard') return discardCard(false);
