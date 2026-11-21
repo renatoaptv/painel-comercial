@@ -199,7 +199,7 @@ function audioStart(){
   if(document.hidden)return;
   // O Safari pode silenciar Web Audio no modo silencioso se a sessão ficar em "auto".
   if(window.navigator&&window.navigator.audioSession){
-   try{window.navigator.audioSession.type="playback";}catch(e){}
+   try{if(window.navigator.audioSession.type!=="playback")window.navigator.audioSession.type="playback";}catch(e){}
   }
   if(audio.ctx&&audio.ctx.state==="closed"){audio.ctx=null;audio.unlocked=false;audio.timer=null;}
   if(!audio.ctx){
@@ -209,7 +209,7 @@ function audioStart(){
    audio.ctx.onstatechange=function(){
     if(!audio.ctx)return;
     if(audio.ctx.state==="running")beginAudioScheduler();
-    else audioPause();
+    else {if(audio.ctx.state==="interrupted")audio.unlocked=false;audioPause();}
    };
   }
   unlockAudioOnGesture();
