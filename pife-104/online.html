@@ -41,6 +41,8 @@
 .profile-bar .btn,.profile-footnote .btn{min-height:30px;font-size:11px;padding:6px 9px}
 .recovery-box{padding:10px;border:1px solid #62846c;border-radius:10px;margin-top:10px;background:#08261d}
 .recovery-box .input{font-size:12px}
+.saved-game-btn{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:38px;text-align:left;font-size:12px;margin-top:8px}
+.saved-game-btn small{font-size:10px;color:#bcd4c1;white-space:nowrap}
 .profile-footnote{text-align:center;color:#94b6a4;font-size:11px;margin:9px 0;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
 </style></head>
 <body><div class="app" id="app"></div>
@@ -55,6 +57,7 @@ var STORAGE_KEY="gael_pifpaf_online_v1";
 var PROFILE_KEY="gael_pifpaf_profile_access_v1";
 var profileToken=localStorage.getItem(PROFILE_KEY)||"";
 var playerProfile=null,recoveryOpen=false;
+var activeMatches=[],loadingActive=false,activeLoaded=false;
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
 var audio={ctx:null,timer:null,step:0,time:0,resuming:false,unlocked:false};
 var sessionEpoch=0;
@@ -77,6 +80,14 @@ function showLanding(){
  var identity=profileToken?'<span class="pill"><icon class="identity-dot"></icon> Perfil salvo neste celular</span>'+btn("Copiar chave de recuperação","profile-copy","ghost"):'<span class="pill">Perfil gratuito · criado ao começar</span>';
  var restore=recoveryOpen?'<div class="recovery-box"><label class="label" for="recoverykey">Sua chave de recuperação (é pessoal)</label><input class="input" id="recoverykey" type="password" autocomplete="off" placeholder="Cole a chave do seu perfil">'+
  '<div class="controls">'+btn("Recuperar meu perfil","profile-restore","green")+btn("Fechar","recovery-close","ghost")+'</div></div>':'';
+ var savedRooms=profileToken&&(loadingActive||activeMatches.length)?
+  '<div class="recovery-box"><span class="kicker">Suas partidas salvas</span>'+
+  (loadingActive?'<p class="tip"><span class="spinner"></span> Procurando partidas...</p>':'')+
+  activeMatches.slice(0,5).map(function(r){
+   var description=r.publicMatch?'Pública':'Privada';
+   var phase=r.phase==="lobby"?"Aguardando jogadores":r.phase==="won"||r.phase==="exhausted"?"Rodada encerrada":"Em andamento";
+   return '<button class="btn ghost saved-game-btn" data-action="resume-active" data-code="'+esc(r.code)+'">↪ Continuar · '+esc(description)+' · '+esc(r.code)+' <small>'+esc(phase)+'</small></button>';
+  }).join('')+'</div>':'';
  app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Jogue com pessoas reais</span><h2>Encontre adversários agora</h2>'+
  '<p class="lead">Sem código de sala. Escolha uma partida pública e o jogo encontra outros jogadores automaticamente.</p>'+
  '<label class="label" for="playername">Seu nome de jogador</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
@@ -86,7 +97,7 @@ function showLanding(){
  '<div class="controls">'+btn("Criar sala com amigos","create","ghost full",busy)+'</div>'+
  '<label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
  '<div class="controls">'+btn("Entrar na sala","join","ghost",busy)+btn("Recuperar partida","resume-profile","ghost",busy||!profileToken)+'</div>'+
- '<div class="profile-bar">'+identity+btn(recoveryOpen?"Fechar recuperação":"Tenho uma chave de acesso",recoveryOpen?"recovery-close":"recovery-open","ghost")+'</div>'+restore+
+ '<div class="profile-bar">'+identity+btn(recoveryOpen?"Fechar recuperação":"Tenho uma chave de acesso",recoveryOpen?"recovery-close":"recovery-open","ghost")+'</div>'+savedRooms+restore+
  '</section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · 104 cartas · partida salva no servidor · música e efeitos</footer>';
 }
 function messageHtml(){return errText?'<div class="notice err">'+esc(errText)+'</div>':noticeText?'<div class="notice">'+esc(noticeText)+'</div>':"";}
@@ -227,6 +238,7 @@ function leaveRoom(cancelSearch=true){
  busy=false;polling=false;drag=null;ignoreClick=false;errText="";noticeText="";
  try{history.replaceState(null,"",new URL("./online.html",location.href).href);}catch(_){}
  render();
+ if(profileToken)loadActiveMatches(true);
 }
 function showError(msg){errText=String(msg||"Erro de conexão.");noticeText="";render();}
 function setState(state){
@@ -340,6 +352,25 @@ document.addEventListener("visibilitychange",function(){
  else if(audio.ctx)audioStart();
 });
 window.addEventListener("pageshow",function(){if(audio.ctx&&!document.hidden)audioStart();});
+async function loadActiveMatches(silent){
+ if(!profileToken||game||loadingActive)return;
+ loadingActive=true;
+ var access=profileToken,epoch=sessionEpoch;
+ try{
+  var data=await api("profile-active",{profileToken:access});
+  if(epoch!==sessionEpoch||access!==profileToken)return;
+  activeMatches=Array.isArray(data.rooms)?data.rooms:[];
+  activeLoaded=true;
+ }catch(e){
+  if(epoch===sessionEpoch&&access===profileToken){
+   activeMatches=[];activeLoaded=true;
+   if(!silent)errText=e.message;
+  }
+ }finally{
+  loadingActive=false;
+  if(!game&&epoch===sessionEpoch)render();
+ }
+}
 async function ensureProfile(name){
  if(profileToken){
   var p=await api("profile-get",{profileToken:profileToken});
@@ -370,9 +401,9 @@ async function recoverProfile(){
   localStorage.setItem(PROFILE_KEY,profileToken);
   localStorage.setItem("gael_online_name",result.profile.name);
   recoveryOpen=false;errText="";
-  noticeText="Perfil recuperado! Para voltar à partida, informe o código da sala e toque em Recuperar partida.";
+  noticeText="Perfil recuperado! Suas partidas disponíveis aparecerão abaixo.";
  }catch(e){errText=e.message;}
- finally{busy=false;render();}
+ finally{busy=false;render();if(!errText)loadActiveMatches(true);}
 }
 async function api(action,extra){
  var body=Object.assign({action:action,code:room,token:token},extra||{});
@@ -489,6 +520,13 @@ app.addEventListener("click",function(e){
  if(voiceChat&&voiceChat.handle(action))return;
  if(action==="leave-room"){sound("ui");leaveRoom();return;}
  if(action==="profile-copy"){copyProfileKey();return;}
+ if(action==="saved-games-refresh"){loadActiveMatches(false);return;}
+ if(action==="resume-active"){
+  var target=btnNode.dataset.code||"";
+  if(!/^[A-Z2-9]{6}$/.test(target)){showError("Sala inválida.");return;}
+  if(!profileToken){showError("Recupere primeiro seu perfil.");return;}
+  doAction("resume-profile",{code:target,profileToken:profileToken});return;
+ }
  if(action==="recovery-open"){recoveryOpen=true;render();return;}
  if(action==="recovery-close"){recoveryOpen=false;render();return;}
  if(action==="profile-restore"){recoverProfile();return;}
@@ -530,7 +568,7 @@ try{
  if(saved&&saved.code&&saved.token&&(!urlCode||saved.code===urlCode.toUpperCase())){room=saved.code;token=saved.token;}
 }catch(_){}
 if(room&&token){refresh();}
-else showLanding();
+else{showLanding();if(profileToken)loadActiveMatches(true);}
 window.addEventListener("resize",function(){if(game)render();});
 window.addEventListener("pagehide",function(){if(voiceChat)voiceChat.leave();});
 setInterval(function(){if(room&&token)refresh();var timer=document.getElementById("claim-timer");if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";},1200);
