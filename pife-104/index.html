@@ -310,6 +310,12 @@
       effectTone(430,t+0.075,0.11,0.19,'triangle',250);
     }else if(kind==='move') {
       effectPaper(t,0.07,0.06,1250);
+    }else if(kind==='ui') {
+      effectTone(640,t,0.07,0.052,'sine',790);
+    }else if(kind==='focus') {
+      effectTone(520,t,0.085,0.042,'sine',610);
+    }else if(kind==='type') {
+      effectTone(720,t,0.035,0.014,'sine',750);
     }else if(kind==='win') {
       [523.25,659.25,783.99,1046.5].forEach((freq,i)=>{
         effectTone(freq,t+i*0.125,0.30,0.30,'triangle');
@@ -366,6 +372,28 @@
     // O canal dos efeitos continua funcionando com a música desligada.
     if(document.hidden && music.ctx && music.ctx.state==='running')music.ctx.suspend().catch(()=>{});
   }
+  // iPhone/Android exigem uma ação real para liberar a saída de áudio.
+  // Iniciar no primeiro toque, inclusive no campo de nome ou código da sala.
+  function enableAmbientOnInteraction() {
+    ensureAudio();
+    startMusic();
+  }
+  document.addEventListener('pointerdown',enableAmbientOnInteraction,{capture:true,passive:true});
+  document.addEventListener('touchstart',enableAmbientOnInteraction,{capture:true,passive:true});
+  let lastTypingSound=0;
+  document.addEventListener('keydown',event=>{
+    enableAmbientOnInteraction();
+    if(event.target?.matches?.('input, textarea') && event.key?.length===1 && !event.repeat && !event.isComposing && !event.ctrlKey && !event.metaKey){
+      const now=Date.now();
+      if(now-lastTypingSound>120){lastTypingSound=now;playEffect('type');}
+    }
+  },true);
+  document.addEventListener('focusin',event=>{
+    if(event.target?.matches?.('input, textarea, select')){
+      enableAmbientOnInteraction();
+      playEffect('focus');
+    }
+  },true);
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden)stopMusic();
     else if(music.ctx){
@@ -523,7 +551,7 @@
       <div class="mode-switch" role="group" aria-label="Modo de jogo"><button class="mode-option ${state.mode==='bots'?'on':''}" data-action="mode-bots" aria-pressed="${state.mode==='bots'}">🤖 Eu contra 3 robôs<small>Teste sozinho pelo celular</small></button><button class="mode-option ${state.mode==='local'?'on':''}" data-action="mode-local" aria-pressed="${state.mode==='local'}">♠ 4 pessoas<small>Revezando o mesmo aparelho</small></button></div>
       <div class="name-grid">${(state.mode==='bots'?[0]:[0,1,2,3]).map(i=>`<label class="field">${state.mode==='bots'?'Seu nome':'Jogador '+(i+1)}<input id="name${i}" maxlength="22" value="${esc(state.names[i])}" autocomplete="off" /></label>`).join('')}</div>
       <div class="intro-actions"><a class="btn primary full online-launch" href="./online.html">🌐 MULTIPLAYER ONLINE · 2 A 4 JOGADORES</a><button class="btn ghost full" data-action="start">Iniciar partida contra robôs / local</button><button class="btn ghost full" data-action="share-game">Compartilhar o jogo</button></div>
-      <p class="note">♫ Música ambiente e efeitos sonoros de cartas ficam ativos durante a partida, sem botões na tela. No modo contra robôs, suas cartas aparecem automaticamente.</p><p class="note">No MULTIPLAYER ONLINE, crie uma sala e escolha jogar em dupla, em grupo ou completar a mesa com robôs. Cada pessoa usa seu próprio celular.</p></section>`;
+      <p class="note">♫ Música e efeitos começam no primeiro toque na tela, inclusive ao preencher seu nome, e continuam durante a partida sem botões de som. No modo contra robôs, suas cartas aparecem automaticamente.</p><p class="note">No MULTIPLAYER ONLINE, crie uma sala e escolha jogar em dupla, em grupo ou completar a mesa com robôs. Cada pessoa usa seu próprio celular.</p></section>`;
   }
   function seatHtml(i) {
     const active = state.phase === 'turn' && state.turn === i || state.phase === 'inspection' && state.inspectionIndex === i;
@@ -901,6 +929,7 @@
     const node = event.target.closest('[data-action]');
     if (!node || node.hasAttribute('disabled')) return;
     const action = node.dataset.action;
+    if (action !== 'select-card' && !document.hidden) playEffect('ui');
     if (action === 'toggle-help') return toggleHelp();
     if (action === 'mode-bots' || action === 'mode-local') {
       const current = document.getElementById('name0')?.value;
