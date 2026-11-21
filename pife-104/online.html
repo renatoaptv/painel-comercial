@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08241b"><meta name="description" content="Pif-Paf / Caxeta do Gael — mesa multiplayer online com quatro celulares e cartas privadas.">
+<title>Pif-Paf / Caxeta do Gael — Multiplayer Online</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;--bg:#061b14;--panel:#11372a;--edge:#416d56;--gold:#f1d28e;--cream:#fff8ea;--text:#eef4ec;--muted:#b0caba}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0;background:radial-gradient(ellipse at 50% 0,#174a34 0,#071e16 56%,#061b14 100%);color:var(--text)}button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.45;cursor:default}.app{width:min(100%,760px);margin:auto;padding:12px 12px max(35px,env(safe-area-inset-bottom))}.top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0 12px}.top h1{font-size:clamp(19px,5vw,29px);line-height:1.18;letter-spacing:-.04em;margin:0}.top h1 span{color:var(--gold)}.top p{color:var(--muted);margin:3px 0;font-size:11px;font-weight:650}.top .back{color:var(--gold);border:1px solid var(--edge);border-radius:11px;padding:9px 10px;font-size:12px;text-decoration:none;white-space:nowrap}.panel{background:linear-gradient(155deg,#174431,#0d2c22);border:1px solid #3f7658;border-radius:20px;padding:17px;margin:10px 0;box-shadow:0 12px 30px #0004}.intro{padding:20px 17px}.kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:850}.panel h2{font-size:22px;line-height:1.2;margin:9px 0}.lead{font-size:13px;line-height:1.55;color:var(--muted)}.label{display:block;font-size:12px;font-weight:750;color:#d5dfd5;margin:14px 0 6px}.input{display:block;width:100%;background:#041c14;color:#fff;border:1px solid #62866f;border-radius:12px;padding:13px;font-weight:700;font-size:16px;min-height:48px;text-transform:none;outline-color:var(--gold)}.code-input{text-transform:uppercase;letter-spacing:.24em;text-align:center;font-size:22px}.btn{background:#244d39;color:#fff;border:1px solid #668472;border-radius:12px;min-height:45px;padding:11px 13px;font-weight:800;font-size:13px}.btn:active{transform:translateY(1px)}.btn.primary{color:#16251a;background:var(--gold);border-color:var(--gold)}.btn.green{background:#2e7752;border-color:#6eba87}.btn.ghost{background:transparent}.btn.danger{background:#a33c43;border-color:#da7372}.btn.full{width:100%}.controls{display:flex;gap:9px;flex-wrap:wrap;margin:13px 0 3px}.controls>.btn{flex:1 1 130px}.divider{display:flex;align-items:center;gap:10px;text-transform:uppercase;color:var(--muted);font-weight:700;font-size:11px;margin:17px 0}.divider:before,.divider:after{content:"";height:1px;background:#47715b;flex:1}.statusbar{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0 9px}.pill{display:inline-flex;gap:5px;align-items:center;border:1px solid #52765c;background:#113f2a;border-radius:30px;font-size:11px;color:#d3e7d4;padding:7px 9px}.pill strong{color:var(--gold)}.notice{background:#574223;color:#ffe9bc;padding:10px 12px;border:1px solid #937642;border-radius:11px;font-size:12px;margin:9px 0}.err{background:#5d2631;border-color:#b45361;color:#ffdedc}.codebox{border:2px dashed #c7a65e;background:#503f1a38;color:#ffdb81;border-radius:16px;text-align:center;font-size:clamp(33px,11vw,50px);font-weight:950;letter-spacing:.12em;padding:18px 6px;margin:15px 0 6px;font-variant-numeric:tabular-nums;user-select:all}.seatlist{display:grid;gap:9px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}.seatitem{border:1px solid #4e795c;background:#0b2a1f;border-radius:12px;padding:10px;min-height:65px}.seatitem .who{font-weight:780;font-size:12px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.seatitem .meta{font-size:10px;margin-top:5px;color:var(--muted)}.seatitem.here{border-color:var(--gold);background:#3e432660}.table{position:relative;display:grid;grid-template-areas:". top ." "left center right" ". bottom .";grid-template-columns:minmax(70px,1fr) minmax(145px,2fr) minmax(70px,1fr);grid-template-rows:64px 126px 64px;background:radial-gradient(ellipse,#246b49,#155039 60%,#093424);border:8px solid #1e4833;outline:1px solid #588869;border-radius:34% / 23%;box-shadow:inset 0 6px 28px #0005,0 13px 20px #0004;align-items:center;gap:2px;padding:5px;margin:13px 0 12px;overflow:hidden}.seat{display:flex;align-items:center;flex-direction:column;justify-content:center;min-width:0;min-height:54px;gap:3px;background:#092a20c9;border:1px solid #61846b8a;border-radius:11px;padding:4px 2px;text-align:center}.seat.top{grid-area:top}.seat.bottom{grid-area:bottom}.seat.left{grid-area:left}.seat.right{grid-area:right}.seat.mine{border:2px solid var(--gold);background:#5a552c84}.seat.turn{box-shadow:0 0 0 2px #f1c96b80}.seat .seatname{font-size:clamp(10px,2.5vw,13px);font-weight:850;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.seat .cards-count{color:#cae2ca;font-size:10px}.center{grid-area:center;display:flex;align-items:center;justify-content:center;gap:clamp(10px,3vw,21px)}.pile{display:flex;align-items:center;flex-direction:column;gap:5px}.pile .caption{font-size:10px;color:#e0e9dc;white-space:nowrap;font-weight:800}.pile button,.pile .empty{height:84px;width:55px;border-radius:8px;display:flex;justify-content:center;align-items:center;flex-direction:column;border:2px solid #e2c576;color:#12271f;font-size:22px;font-weight:900;box-shadow:3px 4px 0 #08271b}.pile button.stock{background:repeating-linear-gradient(42deg,#15392a 0,#15392a 8px,#d5bb75 9px,#d5bb75 10px);color:var(--gold)}.pile button.discard{background:var(--cream)}.pile .empty{background:transparent;border:2px dashed #689576;color:#d0e0ce;box-shadow:none;font-size:12px}.hand-panel{padding:14px 10px}.hand-title{display:flex;gap:7px;align-items:center;justify-content:space-between}.hand-title h2{font-size:15px;margin:4px 0}.hand-title .turn-label{font-size:10px;color:var(--gold);font-weight:800;text-align:right}.hand{display:flex;justify-content:flex-start;align-items:center;flex-wrap:nowrap;touch-action:pan-y;padding:15px 8px 10px 7px;min-height:116px;overflow:visible;position:relative;--count:9}.card{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:relative;flex:0 0 auto;width:calc((min(100vw,760px) - 38px + (var(--count) - 1)*13px) / var(--count));max-width:73px;height:110px;background:#fff9ee;color:#172620;border:1.5px solid #d9d3c2;border-radius:9px;box-shadow:0 6px 11px #0005;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:6px 5px 8px;font-size:20px;font-weight:900;cursor:grab;transition:box-shadow .12s}.card+.card{margin-left:-13px}.card.red{color:#ae3441}.card .corner{font-size:19px;line-height:1;letter-spacing:-.04em}.card .symbol{font-size:clamp(23px,8vw,36px);align-self:center;line-height:1;margin-top:-3px}.card.selected{transform:translateY(-10px);border:2px solid #c99829;box-shadow:0 0 0 2px #f5d77d,0 10px 14px #0006}.card.moving{z-index:30;pointer-events:none;transition:none;box-shadow:0 18px 28px #0009;transform:translate(var(--dx,0px),var(--dy,0px)) scale(1.08)}.card.target{outline:3px solid #8cdb99;outline-offset:1px}.dropzone{border:2px dashed #927d50;color:#f5db9a;background:#4b452331;border-radius:12px;text-align:center;padding:13px 8px;font-weight:900;font-size:12px;letter-spacing:.09em;min-height:49px}.dropzone.over{border-color:#7ee9a6;background:#3773516e;color:white}.tip{color:#bcd2bf;font-size:11px;margin:0 0 12px;line-height:1.5}.groups{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin:11px 0}.groups .group{padding:8px;border-radius:12px;border:1px solid #769778;background:#12402e;font-size:11px;font-weight:800}.groups .group .cards-mini{display:flex;gap:4px;margin-top:6px}.mini-card{display:flex;flex-direction:column;align-items:center;justify-content:center;width:38px;height:52px;background:#fff9ed;color:#1d2720;border-radius:6px;font-weight:900}.mini-card.red{color:#b43d47}.waiting{text-align:center;padding:20px 12px}.waiting .spark{font-size:34px;margin:5px}.loading-dots{font-weight:850;color:var(--gold)}.footer{color:#8cb6a1;font-size:10px;line-height:1.5;text-align:center;padding:12px 4px}.spinner{display:inline-block;width:13px;height:13px;border:2px solid #b6cdb8;border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-right:5px;vertical-align:-2px}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:400px){.app{padding:10px 9px 32px}.panel{padding:14px 12px}.table{grid-template-rows:58px 114px 58px;border-width:6px}.pile button,.pile .empty{width:48px;height:76px}.hand-panel{padding:12px 8px}.card{height:96px;width:calc((100vw - 29px + (var(--count) - 1)*13px) / var(--count));padding:4px;font-size:17px}.card .corner{font-size:17px}.card .symbol{font-size:25px}.hand{min-height:104px;padding-left:3px}.seat{min-height:50px}.seat .cards-count{font-size:9px}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body><div class="app" id="app"></div>
+<script>
+(function(){
+"use strict";
+var API="https://tlzshlerpspgpjaqskdg.supabase.co/functions/v1/pife104-multiplayer";
+var app=document.getElementById("app");
+var game=null,token="",room="",selected="",order=[],busy=false,polling=false,drag=null,ignoreClick=false,errText="",noticeText="",lastRevision=-1;
+var STORAGE_KEY="gael_pifpaf_online_v1";
+var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
+var audio={ctx:null,timer:null,step:0,time:0};
+function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
+function card(c){return '<div class="card '+(c.suit==="H"||c.suit==="D"?"red ":"")+(selected===c.id?"selected":"")+'" role="button" tabindex="0" data-id="'+c.id+'" aria-label="'+esc(cardTitle(c))+'"><span class="corner">'+esc(c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit]+'</span><span class="symbol">'+suits[c.suit]+'</span></div>';}
+function btn(text,action,cls,disabled){return '<button class="btn '+(cls||"")+'" data-action="'+action+'" '+(disabled?"disabled":"")+'>'+text+"</button>";}
+function header(){return '<header class="top"><div><h1>Pif-Paf / <span>Caxeta do Gael</span></h1><p>104 cartas · 4 jogadores · multiplayer online</p></div><a class="back" href="./">← Início</a></header>';}
+function showLanding(){
+ var codeIn=new URLSearchParams(location.search).get("s")||"";
+ var savedName=localStorage.getItem("gael_online_name")||"";
+ app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Mesa online</span><h2>Jogue com amigos, cada um no seu celular.</h2><p class="lead">Crie uma sala para quatro pessoas ou entre com um código. As cartas de cada jogador ficam privadas, e as jogadas são sincronizadas.</p><label class="label" for="playername">Seu nome na mesa</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
+ '<div class="controls">'+btn("Criar sala online","create","primary full",busy)+'</div><div class="divider">ou entre por convite</div><label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
+ '<div class="controls">'+btn("Entrar na sala","join","green full",busy)+'</div><p class="tip">Quatro jogadores reais, em quatro celulares. Para testar sozinho contra robôs, volte à tela inicial.</p></section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · Suas cartas são validadas pelo servidor.</footer>';
+}
+function messageHtml(){return errText?'<div class="notice err">'+esc(errText)+'</div>':noticeText?'<div class="notice">'+esc(noticeText)+'</div>':"";}
+function seatItem(p,i){return '<div class="seatitem '+(p&&p.seat===game.seat?"here":"")+'"><div class="who">'+(p?esc(p.name):"Aguardando jogador...")+'</div><div class="meta">'+(p?(p.seat===game.seat?"Você":p.host?"Dono da sala":"Conectado"):"Posição "+(i+1))+'</div></div>';}
+function renderLobby(){
+ var people=game.players;
+ return '<section class="panel"><span class="kicker">Sua sala privada</span><h2>Convide mais jogadores</h2><p class="lead">Envie o código ou o link abaixo. A partida começa quando os quatro entrarem.</p><div class="codebox">'+esc(game.code)+'</div><div class="controls">'+btn("Compartilhar convite","share","primary")+btn("Copiar código","copy-code","ghost")+'</div><div class="seatlist">'+[0,1,2,3].map(function(i){return seatItem(people[i],i);}).join("")+'</div><div class="controls">'+(game.seat===0?btn(people.length===4?"Iniciar partida":"Aguardando "+(4-people.length)+" jogador(es)","start","green full",people.length!==4):'<div class="pill"><span class="spinner"></span> Aguardando quem criou a sala iniciar...</div>')+'</div></section>';
+}
+function seatAt(index,where){
+ var p=game.players[index];if(!p)return "";
+ var count=game.phase==="lobby"?"":p.cardCount+" cartas";
+ var pos=where;
+ return '<div class="seat '+pos+(index===game.seat?" mine":"")+(index===game.turn?" turn":"")+'"><div class="seatname">'+(index===game.seat?"★ ":"")+esc(p.name)+'</div><div class="cards-count">'+(count||"")+'</div></div>';
+}
+function board(){
+ var rel=function(k){return (game.seat+k)%4;};
+ var topCard=game.discardTop;
+ var canBuy=game.phase==="turn"&&game.turn===game.seat&&game.step==="draw";
+ return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span></div>'+
+ '<section class="table" aria-label="Mesa de quatro jogadores">'+
+ seatAt(rel(2),"top")+seatAt(rel(3),"left")+seatAt(rel(1),"right")+seatAt(rel(0),"bottom")+
+ '<div class="center"><div class="pile"><button class="stock" data-action="draw-stock" '+(canBuy&&game.drawCount?"":"disabled")+' aria-label="Comprar do bolo">♠</button><div class="caption">BOLO</div></div>'+
+ '<div class="pile" data-dropzone="discard">'+(topCard?'<button class="discard" data-action="draw-discard" '+(canBuy?"":"disabled")+'><span>'+esc(cardTitle(topCard).replace(/[♥♦♣♠]/g,""))+'</span><span style="font-size:28px;color:'+(topCard.suit==="H"||topCard.suit==="D"?"#b73443":"#17271e")+'">'+suits[topCard.suit]+'</span></button>':'<div class="empty">VAZIO</div>')+'<div class="caption">DESCARTE</div></div></div></section>';
+}
+function getSortedHand(){
+ if(!game)return [];
+ var data=game.hand.slice();
+ var idx=new Map(order.map(function(id,i){return [id,i];}));
+ data.sort(function(a,b){return (idx.has(a.id)?idx.get(a.id):1000+game.hand.indexOf(a))-(idx.has(b.id)?idx.get(b.id):1000+game.hand.indexOf(b));});
+ order=data.map(function(c){return c.id;});
+ return data;
+}
+function canWin9(h){
+ if(h.length!==9)return false;
+ var memo=new Map();
+ function meld(a){
+  if(a.length<3)return false;
+  if(a.length===3 && a.every(function(x){return x.rank===a[0].rank;}) && new Set(a.map(function(x){return x.suit;})).size===3)return true;
+  if(!a.every(function(x){return x.suit===a[0].suit;}))return false;
+  var ranks=a.map(function(x){return x.rank;});
+  if(new Set(ranks).size!==a.length)return false;
+  function c(ns){ns.sort(function(x,y){return x-y;});return ns.every(function(x,i){return i===0||x===ns[i-1]+1;});}
+  return c(ranks.slice())||(ranks.indexOf(1)>=0&&c(ranks.map(function(x){return x===1?14:x;})));
+ }
+ function solve(mask){
+  if(mask===0)return true;
+  if(memo.has(mask))return memo.get(mask);
+  var first=mask&-mask;
+  for(var sub=mask;sub;sub=(sub-1)&mask){
+   if(!(sub&first))continue;
+   var a=[];for(var i=0;i<9;i++)if(sub&(1<<i))a.push(h[i]);
+   if(meld(a)&&solve(mask^sub)){memo.set(mask,true);return true;}
+  }
+  memo.set(mask,false);return false;
+ }
+ return solve(511);
+}
+function canClaim(){
+ if(!game||game.phase!=="claim"||!game.pending||game.pending.by===game.seat)return false;
+ for(var i=0;i<game.hand.length;i++){
+  var a=game.hand.filter(function(_,j){return i!==j;});a.push(game.pending.card);
+  if(canWin9(a))return true;
+ }
+ return false;
+}
+function handView(){
+ var mine=game.hand||[],ordered=getSortedHand();
+ var ownTurn=game.phase==="turn"&&game.turn===game.seat;
+ var canDiscard=ownTurn&&game.step==="discard"&&mine.length===10;
+ var selection=mine.filter(function(c){return c.id===selected;})[0];
+ var goodWin=!!selection&&canWin9(mine.filter(function(c){return c.id!==selected;}));
+ var canInitial=ownTurn&&game.step==="draw"&&canWin9(mine);
+ var title=ownTurn?"Sua vez de jogar":game.phase==="won"?"Rodada encerrada":"Suas cartas";
+ var content='<section class="panel hand-panel"><div class="hand-title"><h2>'+title+'</h2><span class="turn-label">'+mine.length+' CARTAS · ARRASTE PARA ORGANIZAR</span></div><div class="hand" style="--count:'+Math.max(9,mine.length)+'" aria-label="Sua mão">'+ordered.map(card).join("")+'</div>';
+ if(canDiscard)content+='<div class="dropzone" data-dropzone="discard">↓ SOLTE A CARTA AQUI PARA DESCARTAR ↓</div>';
+ if(!ownTurn){content+='<p class="tip">'+(game.phase==="claim"?"Aguarde a conferência do descarte.":"Enquanto aguarda, você pode organizar suas cartas com o dedo.")+'</p>';}
+ else if(game.step==="draw")content+='<p class="tip">Sua vez: compre do bolo ou do descarte. A compra também funciona tocando na mesa.</p><div class="controls">'+btn("Comprar do bolo","draw-stock","primary",game.drawCount===0)+(game.discardTop?btn("Pegar descarte","draw-discard","ghost"):btn("Sem descarte","x","ghost",true))+(canInitial?btn("BATER COM 9 CARTAS","initial-win","green full"): '')+'</div>';
+ else if(canDiscard)content+='<p class="tip">Arraste a carta até DESCARTAR, ou toque na carta e use o botão abaixo.</p><div class="controls">'+btn("Descartar carta","discard","primary",!selection)+btn("BATER!","win","green",!goodWin)+(game.firstTurn&&game.turn===game.starter&&!game.specialUsed&&game.drawSource==="stock"?btn("Recusar 1ª compra","reject","ghost full"):"")+'</div>';
+ content+='</section>';return content;
+}
+function currentStatus(){
+ if(game.phase==="claim"&&game.pending){
+  var waiting=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000));
+  return '<section class="panel"><span class="kicker">Descarte disponível</span><h2>'+(canClaim()?"Você pode bater nesta carta!":"Conferindo o descarte...")+'</h2><p class="lead">'+esc(game.players[game.pending.by].name)+' descartou '+esc(cardTitle(game.pending.card))+'. Outros jogadores podem bater durante esta janela.</p><div class="statusbar"><span class="pill">Prazo <strong id="claim-timer">'+waiting+'s</strong></span></div>'+(canClaim()?'<div class="controls">'+btn("BATER NO DESCARTE","claim","green full")+'</div>':"")+'</section>';
+ }
+ if(game.phase==="won"&&game.winner){
+  var w=game.winner;var p=game.players[w.seat];
+  var groups=(w.groups||[]).map(function(g){return '<div class="group">'+esc(g.kind)+'<div class="cards-mini">'+g.cards.map(function(c){return '<span class="mini-card '+(c.suit==="H"||c.suit==="D"?"red":"")+'">'+esc(cardTitle(c))+'</span>';}).join("")+'</div></div>';}).join("");
+  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+' bateu!</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+(game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>')+'</section>';
+ }
+ if(game.phase==="exhausted")return '<section class="panel waiting"><h2>Bolo esgotado</h2>'+(game.seat===0?'<div class="controls">'+btn("Nova rodada","next-round","primary full")+'</div>':'<p class="lead">Aguardando nova rodada.</p>')+'</section>';
+ if(game.phase==="turn"&&game.turn!==game.seat)return '<section class="panel waiting"><span class="spinner"></span><strong>Vez de '+esc(game.players[game.turn].name)+'</strong><p class="tip">Sua mão continua visível somente para você.</p></section>';
+ return "";
+}
+function render(){
+ if(drag)return;
+ if(!game)return showLanding();
+ var body=header()+messageHtml();
+ if(game.phase==="lobby")body+=renderLobby();
+ else body+=board()+currentStatus()+handView();
+ body+='<footer class="footer">Mesa online · Quatro celulares · Só você recebe suas cartas · Música e efeitos ativados ao tocar para jogar</footer>';
+ app.innerHTML=body;
+}
+function link(){return new URL("./online.html?s="+encodeURIComponent(room),location.href).href;}
+function showError(msg){errText=String(msg||"Erro de conexão.");noticeText="";render();}
+function setState(state){
+ var old=game;
+ game=state;room=state.code;lastRevision=state.revision;
+ if(!old||old.round!==state.round){order=[];selected="";}
+ else if(old.turn!==state.turn||old.phase!==state.phase){selected="";}
+ if(old && old.revision!==state.revision){
+  if(old.phase!=="won"&&state.phase==="won")sound("win");
+  else if(state.hand.length>old.hand.length)sound("buy");
+  else if(state.discardTop&&(!old.discardTop||state.discardTop.id!==old.discardTop.id))sound("discard");
+  else if(old.phase==="lobby"&&state.phase==="turn")sound("deal");
+ }
+ render();
+}
+function audioStart(){
+ try{
+  if(!audio.ctx){var C=window.AudioContext||window.webkitAudioContext;if(!C)return;audio.ctx=new C();}
+  if(audio.ctx.state==="suspended")audio.ctx.resume().catch(function(){});
+  if(audio.timer)return;
+  audio.time=audio.ctx.currentTime+0.15;
+  audio.timer=setInterval(audioTick,150);
+ }catch(e){}
+}
+function tone(freq,at,duration,vol,wave){
+ if(!audio.ctx)return;
+ var osc=audio.ctx.createOscillator(),g=audio.ctx.createGain();
+ osc.type=wave||"sine";osc.frequency.value=freq;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(vol,at+.03);g.gain.exponentialRampToValueAtTime(.0001,at+duration);
+ osc.connect(g);g.connect(audio.ctx.destination);osc.start(at);osc.stop(at+duration+.03);osc.onended=function(){osc.disconnect();g.disconnect();};
+}
+function audioTick(){
+ if(!audio.ctx||audio.ctx.state!=="running"||document.hidden)return;
+ var notes=[523.25,659.25,784,0,659.25,587.33,493.88,0,440,523.25,659.25,523.25,392,440,493.88,0];
+ var duration=60/88/2;
+ while(audio.time<audio.ctx.currentTime+.35){
+  var i=audio.step%notes.length;
+  if(notes[i])tone(notes[i],audio.time,.25,.018,"sine");
+  if(i%8===0)tone(i===0?261.63:220,audio.time,2.3,.009,"triangle");
+  audio.step++;audio.time+=duration;
+ }
+}
+function sound(kind){if(!audio.ctx||audio.ctx.state!=="running")return;var t=audio.ctx.currentTime+.03;
+ if(kind==="win"){[523,659,783,1046].forEach(function(f,i){tone(f,t+i*.12,.28,.10,"triangle");});}
+ else if(kind==="discard"){tone(440,t,.10,.08,"triangle");tone(280,t+.065,.10,.07,"sine");}
+ else if(kind==="buy"||kind==="deal"){tone(310,t,.075,.055,"triangle");tone(390,t+.045,.08,.03,"sine");}
+}
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&room)audioStart();});
+async function api(action,extra){
+ var body=Object.assign({action:action,code:room,token:token},extra||{});
+ var response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
+ var result=await response.json();
+ if(!result.ok)throw new Error(result.error||"Não foi possível concluir a jogada.");
+ return result;
+}
+async function doAction(action,extra){
+ if(busy)return;busy=true;errText="";
+ try{
+  audioStart();
+  var result=await api(action,extra);
+  if(result.token){token=result.token;room=result.state.code;localStorage.setItem(STORAGE_KEY,JSON.stringify({code:room,token:token}));history.replaceState(null,"",link());}
+  if(result.state)setState(result.state);
+ }catch(e){showError(e.message);}
+ finally{busy=false;render();}
+}
+async function refresh(){
+ if(polling||busy||!room||!token)return;polling=true;
+ try{
+  var result=await api("state");
+  errText="";
+  if(result.state.revision!==lastRevision||!game)setState(result.state);
+ }catch(e){errText=e.message;render();}
+ finally{polling=false;}
+}
+async function shareInvite(){
+ var url=link();
+ try{if(navigator.share)await navigator.share({title:"Pif-Paf / Caxeta do Gael",text:"Entre na minha mesa online. Código: "+room,url:url});
+ else if(navigator.clipboard) {await navigator.clipboard.writeText(url);noticeText="Link copiado para enviar aos amigos.";render();}
+ else window.prompt("Copie o convite:",url);
+ }catch(e){if(e.name!=="AbortError")showError("Não foi possível compartilhar. Copie o código da sala.");}
+}
+function copyCode(){
+ if(navigator.clipboard)navigator.clipboard.writeText(room).then(function(){noticeText="Código copiado: "+room;render();}).catch(function(){window.prompt("Código da sala:",room);});
+ else window.prompt("Código da sala:",room);
+}
+function reorder(from,to){
+ var a=order.indexOf(from),b=order.indexOf(to);
+ if(a<0||b<0||a===b)return;
+ var item=order.splice(a,1)[0];order.splice(b,0,item);render();
+}
+function validDrop(){return game&&game.phase==="turn"&&game.turn===game.seat&&game.step==="discard"&&game.hand.length===10;}
+function targetAt(x,y){
+ var el=document.elementFromPoint(x,y);
+ if(!el)return null;
+ var drop=el.closest("[data-dropzone='discard']");
+ if(drop&&validDrop())return {kind:"discard",node:drop};
+ var c=el.closest(".hand .card[data-id]");
+ return c?{kind:"card",node:c}:null;
+}
+function pointerClean(g){
+ g.node.classList.remove("moving");g.node.style.removeProperty("--dx");g.node.style.removeProperty("--dy");
+ if(g.target)g.target.node.classList.remove("target","over");
+ try{if(g.node.hasPointerCapture(g.pid))g.node.releasePointerCapture(g.pid);}catch(e){}
+}
+app.addEventListener("pointerdown",function(e){
+ if(e.button!==undefined&&e.button!==0)return;
+ var el=e.target.closest(".hand .card[data-id]");if(!el||!game)return;
+ drag={id:el.dataset.id,node:el,x:e.clientX,y:e.clientY,pid:e.pointerId,moved:false,target:null};
+ try{el.setPointerCapture(e.pointerId);}catch(_){}
+});
+app.addEventListener("pointermove",function(e){
+ var g=drag;if(!g||e.pointerId!==g.pid)return;
+ var dx=e.clientX-g.x,dy=e.clientY-g.y;
+ if(!g.moved&&Math.hypot(dx,dy)<9)return;
+ g.moved=true;if(e.cancelable)e.preventDefault();
+ g.node.classList.add("moving");g.node.style.setProperty("--dx",dx+"px");g.node.style.setProperty("--dy",dy+"px");
+ if(g.target)g.target.node.classList.remove("target","over");
+ g.target=targetAt(e.clientX,e.clientY);
+ if(g.target&&g.target.node!==g.node)g.target.node.classList.add(g.target.kind==="discard"?"over":"target");
+});
+app.addEventListener("pointerup",function(e){
+ var g=drag;if(!g||g.pid!==e.pointerId)return;drag=null;
+ var dest=g.moved?targetAt(e.clientX,e.clientY):null;pointerClean(g);
+ if(!g.moved)return;
+ ignoreClick=true;setTimeout(function(){ignoreClick=false;},220);
+ if(dest&&dest.kind==="discard"&&validDrop())doAction("discard",{cardId:g.id});
+ else if(dest&&dest.kind==="card"&&dest.node.dataset.id!==g.id)reorder(g.id,dest.node.dataset.id);
+});
+app.addEventListener("pointercancel",function(e){var g=drag;if(!g||g.pid!==e.pointerId)return;drag=null;pointerClean(g);});
+app.addEventListener("click",function(e){
+ var c=e.target.closest(".hand .card[data-id]");
+ if(c){if(ignoreClick)return;selected=selected===c.dataset.id?"":c.dataset.id;render();return;}
+ var btnNode=e.target.closest("[data-action]");if(!btnNode||btnNode.disabled)return;
+ var action=btnNode.dataset.action;
+ audioStart();
+ if(action==="create"||action==="join"){
+  var name=document.getElementById("playername")?.value.trim()||"Jogador";
+  localStorage.setItem("gael_online_name",name);
+  if(action==="join"){
+   var code=(document.getElementById("roomcode")?.value||"").toUpperCase().trim();
+   if(code.length!==6){showError("Digite o código da sala com seis caracteres.");return;}
+   room=code;
+  }
+  doAction(action,{name:name});return;
+ }
+ if(action==="share"){shareInvite();return;}
+ if(action==="copy-code"){copyCode();return;}
+ if(action==="draw-stock"){doAction("draw",{source:"stock"});return;}
+ if(action==="draw-discard"){doAction("draw",{source:"discard"});return;}
+ if(action==="discard"||action==="win"){if(!selected){showError("Selecione uma carta.");return;}doAction(action,{cardId:selected});return;}
+ if(["start","next-round","initial-win","claim","reject"].indexOf(action)>=0)doAction(action);
+});
+app.addEventListener("keydown",function(e){
+ if((e.key==="Enter"||e.key===" ")&&e.target.matches(".hand .card[data-id]")){e.preventDefault();e.target.click();}
+ if(e.key==="Enter"&&e.target.id==="roomcode"){e.preventDefault();app.querySelector('[data-action="join"]')?.click();}
+});
+try{
+ var saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+ var urlCode=new URLSearchParams(location.search).get("s");
+ if(saved&&saved.code&&saved.token&&(!urlCode||saved.code===urlCode.toUpperCase())){room=saved.code;token=saved.token;}
+}catch(_){}
+if(room&&token){refresh();}
+else showLanding();
+setInterval(function(){if(room&&token)refresh();var timer=document.getElementById("claim-timer");if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";},1200);
+})();
+</script></body></html>
