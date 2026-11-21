@@ -28,6 +28,20 @@
 .voice-note{margin:7px 0 0!important;font-size:10px;line-height:1.3}
 .voice-error{font-size:11px;color:#ffb7aa;margin:6px 0}
 @media(max-width:390px){.voice-panel{padding:9px 10px}.voice-people{gap:4px}.voice-person{padding:4px 6px;font-size:10px;flex-basis:105px}.voice-person small{font-size:9px}.voice-controls>.btn{padding:7px 10px;font-size:11px}}
+
+.public-buttons{display:grid;gap:8px;margin:14px 0 8px}
+.public-buttons .btn{min-height:49px;font-size:14px}
+.public-waiting{padding:17px}
+.public-waiting h2{font-size:19px}
+.match-progress{display:flex;gap:7px;margin:16px 0}
+.match-progress span{height:9px;flex:1;border:1px solid #56745b;border-radius:99px;background:#0a231b}
+.match-progress span.filled{background:#e3c780;border-color:#f4d895}
+.profile-bar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:18px;padding-top:11px;border-top:1px solid #476c55}
+.profile-bar .pill{font-size:10px}
+.profile-bar .btn,.profile-footnote .btn{min-height:30px;font-size:11px;padding:6px 9px}
+.recovery-box{padding:10px;border:1px solid #62846c;border-radius:10px;margin-top:10px;background:#08261d}
+.recovery-box .input{font-size:12px}
+.profile-footnote{text-align:center;color:#94b6a4;font-size:11px;margin:9px 0;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap}
 </style></head>
 <body><div class="app" id="app"></div>
 <script src="./voice-chat.js?v=2"></script>
@@ -38,6 +52,9 @@ var API="https://tlzshlerpspgpjaqskdg.supabase.co/functions/v1/pife104-multiplay
 var app=document.getElementById("app");
 var game=null,token="",room="",selected="",order=[],busy=false,polling=false,drag=null,ignoreClick=false,errText="",noticeText="",lastRevision=-1;
 var STORAGE_KEY="gael_pifpaf_online_v1";
+var PROFILE_KEY="gael_pifpaf_profile_access_v1";
+var profileToken=localStorage.getItem(PROFILE_KEY)||"";
+var playerProfile=null,recoveryOpen=false;
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
 var audio={ctx:null,timer:null,step:0,time:0,resuming:false,unlocked:false};
 var sessionEpoch=0;
@@ -57,9 +74,20 @@ function header(){
 function showLanding(){
  var codeIn=new URLSearchParams(location.search).get("s")||"";
  var savedName=localStorage.getItem("gael_online_name")||"";
- app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Mesa online</span><h2>Jogue em dupla ou numa mesa de quatro, cada um no seu celular.</h2><p class="lead">Crie uma sala ou entre com um código. Com duas pessoas você pode jogar só em dupla ou adicionar dois robôs. Cada pessoa vê apenas suas cartas e as jogadas são sincronizadas.</p><label class="label" for="playername">Seu nome na mesa</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
- '<div class="controls">'+btn("Criar sala online","create","primary full",busy)+'</div><div class="divider">ou entre por convite</div><label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
- '<div class="controls">'+btn("Entrar na sala","join","green full",busy)+'</div><p class="tip">♫ Música suave começa no primeiro toque, inclusive nos campos de nome e código. Sons de cartas e botões continuam ativos.</p><p class="tip">A partir de duas pessoas já pode começar. O dono da sala escolhe jogar em dupla ou com robôs para completar a mesa.</p></section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · Suas cartas são validadas pelo servidor.</footer>';
+ var identity=profileToken?'<span class="pill"><icon class="identity-dot"></icon> Perfil salvo neste celular</span>'+btn("Copiar chave de recuperação","profile-copy","ghost"):'<span class="pill">Perfil gratuito · criado ao começar</span>';
+ var restore=recoveryOpen?'<div class="recovery-box"><label class="label" for="recoverykey">Sua chave de recuperação (é pessoal)</label><input class="input" id="recoverykey" type="password" autocomplete="off" placeholder="Cole a chave do seu perfil">'+
+ '<div class="controls">'+btn("Recuperar meu perfil","profile-restore","green")+btn("Fechar","recovery-close","ghost")+'</div></div>':'';
+ app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Jogue com pessoas reais</span><h2>Encontre adversários agora</h2>'+
+ '<p class="lead">Sem código de sala. Escolha uma partida pública e o jogo encontra outros jogadores automaticamente.</p>'+
+ '<label class="label" for="playername">Seu nome de jogador</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
+ '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy)+'</div>'+
+ '<p class="tip">Somente pessoas reais. A partida inicia automaticamente quando a mesa estiver completa.</p>'+
+ '<div class="divider">ou jogue em sala privada</div>'+
+ '<div class="controls">'+btn("Criar sala com amigos","create","ghost full",busy)+'</div>'+
+ '<label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
+ '<div class="controls">'+btn("Entrar na sala","join","ghost",busy)+btn("Recuperar partida","resume-profile","ghost",busy||!profileToken)+'</div>'+
+ '<div class="profile-bar">'+identity+btn(recoveryOpen?"Fechar recuperação":"Tenho uma chave de acesso",recoveryOpen?"recovery-close":"recovery-open","ghost")+'</div>'+restore+
+ '</section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · 104 cartas · partida salva no servidor · música e efeitos</footer>';
 }
 function messageHtml(){return errText?'<div class="notice err">'+esc(errText)+'</div>':noticeText?'<div class="notice">'+esc(noticeText)+'</div>':"";}
 function seatItem(p,i){
@@ -67,6 +95,15 @@ function seatItem(p,i){
 }
 function renderLobby(){
  var people=game.players,n=people.length,isHost=game.seat===0;
+ if(game.publicMatch){
+  var target=game.target||4;
+  return '<section class="panel public-waiting"><span class="kicker">Partida pública · '+target+' pessoas</span><h2><span class="spinner"></span> Procurando adversários...</h2>'+
+   '<p class="lead">Encontrados <strong>'+n+' de '+target+'</strong> jogadores. A partida começa automaticamente quando todos entrarem.</p>'+
+   '<div class="match-progress">'+Array.from({length:target},function(_,i){return '<span class="'+(i<n?'filled':'')+'"></span>';}).join('')+'</div>'+
+   '<div class="seatlist">'+Array.from({length:target},function(_,i){return seatItem(people[i],i);}).join('')+'</div>'+
+   '<div class="controls">'+btn("Cancelar busca","public-cancel","ghost full")+'</div>'+
+   '<p class="tip">Pode manter a página aberta. Atualizar não apaga sua posição na fila.</p></section>';
+ }
  var choices='';
  if(isHost){
   if(n===1)choices='<p class="tip">Convide pelo menos mais uma pessoa para liberar as opções de partida.</p>';
@@ -173,12 +210,16 @@ function render(){
  if(voiceChat)body+=voiceChat.html();
  else body+='<div class="notice">Chat de voz indisponível. Atualize a página.</div>';
  if(game.phase!=="lobby")body+=currentStatus()+handView();
+ if(profileToken)body+='<div class="profile-footnote">Perfil salvo · '+btn("Copiar chave de recuperação","profile-copy","ghost")+'</div>';
  body+='<footer class="footer">Mesa online · 2 a 4 participantes · Cartas privadas · Conversa por voz opcional</footer>';
  app.innerHTML=body;
 }
 function link(){return new URL("./online.html?s="+encodeURIComponent(room),location.href).href;}
-function leaveRoom(){
+function leaveRoom(cancelSearch=true){
  // Sair do aparelho não encerra a partida dos outros participantes.
+ if(cancelSearch&&game?.publicMatch&&game.phase==="lobby"&&room&&token){
+  api("public-cancel").catch(function(){});
+ }
  if(voiceChat)voiceChat.leave();
  sessionEpoch++;
  localStorage.removeItem(STORAGE_KEY);
@@ -299,6 +340,40 @@ document.addEventListener("visibilitychange",function(){
  else if(audio.ctx)audioStart();
 });
 window.addEventListener("pageshow",function(){if(audio.ctx&&!document.hidden)audioStart();});
+async function ensureProfile(name){
+ if(profileToken){
+  var p=await api("profile-get",{profileToken:profileToken});
+  playerProfile=p.profile;
+  return profileToken;
+ }
+ var created=await api("profile-create",{name:name});
+ profileToken=created.profileToken;playerProfile=created.profile;
+ localStorage.setItem(PROFILE_KEY,profileToken);
+ return profileToken;
+}
+function copyProfileKey(){
+ if(!profileToken){noticeText="Crie seu perfil iniciando uma partida.";render();return;}
+ if(navigator.clipboard?.writeText){
+  navigator.clipboard.writeText(profileToken).then(function(){
+   noticeText="Chave de recuperação copiada. Guarde em local seguro; não compartilhe.";
+   render();
+  }).catch(function(){window.prompt("Copie e guarde sua chave privada:",profileToken);});
+ }else window.prompt("Copie e guarde sua chave privada:",profileToken);
+}
+async function recoverProfile(){
+ var val=(document.getElementById("recoverykey")?.value||"").trim();
+ if(!val){showError("Cole sua chave de recuperação.");return;}
+ if(busy)return;busy=true;
+ try{
+  var result=await api("profile-get",{profileToken:val});
+  profileToken=val;playerProfile=result.profile;
+  localStorage.setItem(PROFILE_KEY,profileToken);
+  localStorage.setItem("gael_online_name",result.profile.name);
+  recoveryOpen=false;errText="";
+  noticeText="Perfil recuperado! Para voltar à partida, informe o código da sala e toque em Recuperar partida.";
+ }catch(e){errText=e.message;}
+ finally{busy=false;render();}
+}
 async function api(action,extra){
  var body=Object.assign({action:action,code:room,token:token},extra||{});
  var response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
@@ -311,8 +386,14 @@ async function doAction(action,extra){
  var epoch=sessionEpoch;
  try{
   audioStart();
+  if(action==="create"||action==="join"||action==="public-find"){
+   var currentName=String(extra?.name||"Jogador");
+   localStorage.setItem("gael_online_name",currentName);
+   extra=Object.assign({},extra,{profileToken:await ensureProfile(currentName)});
+  }
   var result=await api(action,extra);
   if(epoch!==sessionEpoch)return;
+  if(result.cancelled){leaveRoom(false);return;}
   if(result.token){token=result.token;room=result.state.code;localStorage.setItem(STORAGE_KEY,JSON.stringify({code:room,token:token}));history.replaceState(null,"",link());}
   if(result.state)setState(result.state);
  }catch(e){if(epoch===sessionEpoch)showError(e.message);}
@@ -326,7 +407,21 @@ async function refresh(){
   if(epoch!==sessionEpoch)return;
   errText="";
   if(result.state.revision!==lastRevision||!game)setState(result.state);
- }catch(e){if(epoch===sessionEpoch){errText=e.message;render();}}
+ }catch(e){
+  if(epoch===sessionEpoch){
+   var msg=String(e.message||"");
+   if(profileToken&&/acesso a esta sala|Faça login na sala|Seu acesso/.test(msg)){
+    try{
+     var restored=await api("resume-profile",{code:room,profileToken:profileToken});
+     if(epoch===sessionEpoch&&restored.token){
+      token=restored.token;
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({code:room,token:token}));
+      setState(restored.state);errText="";
+     }
+    }catch(recoveryError){errText=recoveryError.message;render();}
+   }else{errText=msg;render();}
+  }
+ }
  finally{if(epoch===sessionEpoch)polling=false;}
 }
 async function shareInvite(){
@@ -393,17 +488,29 @@ app.addEventListener("click",function(e){
  audioStart();
  if(voiceChat&&voiceChat.handle(action))return;
  if(action==="leave-room"){sound("ui");leaveRoom();return;}
+ if(action==="profile-copy"){copyProfileKey();return;}
+ if(action==="recovery-open"){recoveryOpen=true;render();return;}
+ if(action==="recovery-close"){recoveryOpen=false;render();return;}
+ if(action==="profile-restore"){recoverProfile();return;}
  if(!game||game.phase==="lobby"||action==="share"||action==="copy-code")sound("ui");
- if(action==="create"||action==="join"){
+ if(action==="public-two"||action==="public-four"){
   var name=document.getElementById("playername")?.value.trim()||"Jogador";
-  localStorage.setItem("gael_online_name",name);
-  if(action==="join"){
+  doAction("public-find",{name:name,target:action==="public-two"?2:4});return;
+ }
+ if(action==="create"||action==="join"||action==="resume-profile"){
+  var name=document.getElementById("playername")?.value.trim()||"Jogador";
+  if(action==="join"||action==="resume-profile"){
    var code=(document.getElementById("roomcode")?.value||"").toUpperCase().trim();
    if(code.length!==6){showError("Digite o código da sala com seis caracteres.");return;}
    room=code;
   }
+  if(action==="resume-profile"){
+   if(!profileToken){showError("Recupere primeiro sua chave de perfil.");return;}
+   doAction("resume-profile",{code:room,profileToken:profileToken});return;
+  }
   doAction(action,{name:name});return;
  }
+ if(action==="public-cancel"){doAction("public-cancel");return;}
  if(action==="share"){shareInvite();return;}
  if(action==="copy-code"){copyCode();return;}
  if(action==="draw-stock"){doAction("draw",{source:"stock"});return;}
