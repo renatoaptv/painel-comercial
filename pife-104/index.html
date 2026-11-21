@@ -100,11 +100,7 @@
  .cards.hand-cards .card .center-suit{font-size:23px}
 }
 
-.music-button{white-space:nowrap;border-color:#a78d54;color:#f4daa3}
-.music-button[aria-pressed="false"]{opacity:.78;border-color:#486451;color:#bfd0c5}
-@media(max-width:480px){.topbar{flex-wrap:wrap}.top-actions{width:100%;justify-content:flex-end;gap:6px}.music-button{margin-right:auto}.top-actions .btn{font-size:11px;min-height:36px;padding:8px 10px}}
-
-@media(max-width:480px){.top-actions{gap:5px}.top-actions .music-button{font-size:10px;padding:7px 8px;min-height:35px}.top-actions .btn{flex-shrink:0}}
+@media(max-width:480px){.topbar{flex-wrap:wrap}.top-actions{width:100%;justify-content:flex-end;gap:6px}.top-actions .btn{font-size:11px;min-height:36px;padding:8px 10px}}
 @media(max-width:600px){.brand{min-width:0;flex:1 1 100%}.brand h1{font-size:clamp(18px,4.8vw,23px);line-height:1.15;letter-spacing:0}.brand small{font-size:11px}}
 </style>
 </head>
@@ -320,16 +316,6 @@
       });
     }
   }
-  function toggleEffects() {
-    effects.enabled=!effects.enabled;
-    if(effects.enabled) {
-      ensureAudio();
-      if(effects.gain)effects.gain.gain.value=0.24;
-      playEffect('buy');
-    }else if(effects.gain)effects.gain.gain.value=0;
-    render();
-  }
-
   function musicTone(frequency, at, duration, gainAmount, type='sine') {
     const ctx=music.ctx;
     if (!ctx || !music.master) return;
@@ -378,12 +364,6 @@
     if(music.master)music.master.gain.value=0;
     // O canal dos efeitos continua funcionando com a música desligada.
     if(document.hidden && music.ctx && music.ctx.state==='running')music.ctx.suspend().catch(()=>{});
-  }
-  function toggleMusic() {
-    music.enabled=!music.enabled;
-    if(music.enabled)startMusic();
-    else stopMusic();
-    render();
   }
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden)stopMusic();
@@ -535,14 +515,14 @@
     }
   }
   function header() {
-    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>Pif-Paf / Caxeta do Gael</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions"><button class="btn ghost small music-button" data-action="toggle-music" aria-pressed="${music.enabled}" aria-label="${music.enabled?'Desligar':'Ligar'} música de fundo">${music.enabled?'♫ Música ON':'♫ Música OFF'}</button><button class="btn ghost small music-button" data-action="toggle-effects" aria-pressed="${effects.enabled}" aria-label="${effects.enabled?'Desligar':'Ligar'} efeitos sonoros">${effects.enabled?'♪ Efeitos ON':'♪ Efeitos OFF'}</button>${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
+    return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>Pif-Paf / Caxeta do Gael</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions">${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
   }
   function setup() {
     return `<section class="intro"><div class="tagline">Pif-Paf / Caxeta do Gael · 104 cartas</div><h2>Quatro jogadores. Um vencedor.</h2><p>O sistema embaralha e distribui as cartas uma por uma. Escolha como deseja jogar:</p>
       <div class="mode-switch" role="group" aria-label="Modo de jogo"><button class="mode-option ${state.mode==='bots'?'on':''}" data-action="mode-bots" aria-pressed="${state.mode==='bots'}">🤖 Eu contra 3 robôs<small>Teste sozinho pelo celular</small></button><button class="mode-option ${state.mode==='local'?'on':''}" data-action="mode-local" aria-pressed="${state.mode==='local'}">♠ 4 pessoas<small>Revezando o mesmo aparelho</small></button></div>
       <div class="name-grid">${(state.mode==='bots'?[0]:[0,1,2,3]).map(i=>`<label class="field">${state.mode==='bots'?'Seu nome':'Jogador '+(i+1)}<input id="name${i}" maxlength="22" value="${esc(state.names[i])}" autocomplete="off" /></label>`).join('')}</div>
       <div class="intro-actions"><button class="btn primary full" data-action="start">Iniciar partida</button><button class="btn ghost full" data-action="share-game">Compartilhar link do jogo</button></div>
-      <p class="note">♫ Música ambiente e efeitos sonoros para comprar, distribuir, descartar e bater. Os dois sons podem ser ligados ou desligados separadamente no alto da tela.</p><p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
+      <p class="note">♫ Música ambiente e efeitos sonoros de cartas ficam ativos durante a partida, sem botões na tela.</p><p class="note">O jogo pode ser aberto por qualquer pessoa pelo link. Por enquanto cada dispositivo inicia sua própria partida; salas online compartilhadas ainda não estão disponíveis.</p></section>`;
   }
   function seatHtml(i) {
     const active = state.phase === 'turn' && state.turn === i || state.phase === 'inspection' && state.inspectionIndex === i;
@@ -917,8 +897,6 @@
     const node = event.target.closest('[data-action]');
     if (!node || node.hasAttribute('disabled')) return;
     const action = node.dataset.action;
-    if (action === 'toggle-music') return toggleMusic();
-    if (action === 'toggle-effects') return toggleEffects();
     if (action === 'toggle-help') return toggleHelp();
     if (action === 'mode-bots' || action === 'mode-local') {
       const current = document.getElementById('name0')?.value;
