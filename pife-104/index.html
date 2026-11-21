@@ -80,6 +80,25 @@
 @media(max-width:700px){.seat.top{transform:translateY(3px)}.seat.bottom{transform:translateY(-7px)}.board{border-radius:27% / 18%}}
 @media(max-width:360px){.cards.hand-cards .card{height:76px;font-size:16px}.board{grid-template-columns:62px 1fr 62px}.center-table{gap:3px}.pile-box{min-width:45px}}
 
+
+/* Layout compacto da mão: nove ou dez cartas lado a lado, sem quebrar a linha. */
+.quick-discard{display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:9px 10px;margin:8px 0 8px;background:#233f32;border:2px dashed #e6c46f;border-radius:12px;color:#ffe09a;font-weight:850;font-size:12px;letter-spacing:.035em;touch-action:none}
+.quick-discard span{font-size:19px;line-height:1}
+.quick-discard.discard-target{background:#71572c;border-color:#ffe39e;box-shadow:0 0 0 3px #f2c96760}
+@media(max-width:700px){
+ .cards.hand-cards{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:0;overflow:visible;max-width:100%;margin:8px 0 12px;padding:8px 3px 12px;min-height:105px}
+ .cards.hand-cards .card{width:clamp(43px,14vw,57px);min-width:0;max-width:none;flex:0 0 auto;height:94px;font-size:17px;margin:0 0 0 clamp(-20px,-4.7vw,-14px);padding:4px 5px;box-shadow:0 5px 10px #0005}
+ .cards.hand-cards .card:first-child{margin-left:0}
+ .cards.hand-cards .card .center-suit{font-size:26px}
+ .cards.hand-cards .card .corner{align-items:flex-start}
+ .cards.hand-cards .card.selected{z-index:6}
+ .quick-discard{font-size:11px;min-height:39px}
+ .intro h2{font-size:23px}
+}
+@media(max-width:360px){
+ .cards.hand-cards .card{width:43px;height:84px;margin-left:-17px;font-size:15px}
+ .cards.hand-cards .card .center-suit{font-size:23px}
+}
 </style>
 </head>
 <body>
@@ -217,7 +236,8 @@
     return `<p class="arrange-help">Segure e arraste para organizar. Quando tiver 10 cartas, arraste uma até o DESCARTE na mesa para jogar fora.</p><div class="organize-toolbar"><button class="btn ghost small" data-action="sort-rank">Ordenar por valor</button><button class="btn ghost small" data-action="sort-suit">Ordenar por naipe</button></div>`;
   }
   function handHtml(hand, canDiscard=false) {
-    return `<div class="cards hand-cards" aria-label="Suas cartas">${hand.map(c=>cardHtml(c,{clickable:true,selected:canDiscard?state.selectedId:null})).join('')}</div>${organizingTools()}`;
+    const quickDiscard = canDiscard ? `<div class="quick-discard" data-dropzone="discard" aria-label="Solte a carta aqui para descartar"><span>↗</span> ARRASTE AQUI PARA DESCARTAR</div>` : '';
+    return `${quickDiscard}<div class="cards hand-cards" aria-label="Suas cartas">${hand.map(c=>cardHtml(c,{clickable:true,selected:canDiscard?state.selectedId:null})).join('')}</div>${organizingTools()}`;
   }
   function handToOrganize() {
     if (!state.visible || !['inspection','turn'].includes(state.phase)) return null;
@@ -346,7 +366,7 @@
     return `<header class="topbar"><div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>PIFE 104</h1><small>4 jogadores · 104 cartas</small></div></div><div class="top-actions">${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
   }
   function setup() {
-    return `<section class="intro"><div class="tagline">Pife para celular · 104 cartas</div><h2>Quatro jogadores. Um vencedor.</h2><p>O robô embaralha e distribui as cartas uma por uma. Escolha como deseja jogar:</p>
+    return `<section class="intro"><div class="tagline">Pife para celular · 104 cartas</div><h2>Quatro jogadores. Um vencedor.</h2><p>O sistema embaralha e distribui as cartas uma por uma. Escolha como deseja jogar:</p>
       <div class="mode-switch" role="group" aria-label="Modo de jogo"><button class="mode-option ${state.mode==='bots'?'on':''}" data-action="mode-bots" aria-pressed="${state.mode==='bots'}">🤖 Eu contra 3 robôs<small>Teste sozinho pelo celular</small></button><button class="mode-option ${state.mode==='local'?'on':''}" data-action="mode-local" aria-pressed="${state.mode==='local'}">♠ 4 pessoas<small>Revezando o mesmo aparelho</small></button></div>
       <div class="name-grid">${(state.mode==='bots'?[0]:[0,1,2,3]).map(i=>`<label class="field">${state.mode==='bots'?'Seu nome':'Jogador '+(i+1)}<input id="name${i}" maxlength="22" value="${esc(state.names[i])}" autocomplete="off" /></label>`).join('')}</div>
       <div class="intro-actions"><button class="btn primary full" data-action="start">Iniciar partida</button><button class="btn ghost full" data-action="share-game">Compartilhar link do jogo</button></div>
@@ -391,7 +411,7 @@
     if (state.turnStep === 'draw') {
       content += `<div class="draw-box">Você tem <strong>9 cartas</strong>. Compre uma carta do bolo${state.discard.length?' ou pegue a última carta descartada':''}.</div><div class="controls"><button class="btn primary" data-action="buy-stock" ${state.deck.length?'':'disabled'}>Comprar do bolo</button>${state.discard.length?'<button class="btn" data-action="buy-discard">Pegar do descarte</button>':''}<button class="btn ghost" data-action="hide">Ocultar cartas</button></div>`;
     } else {
-      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. <strong>Arraste uma carta até o DESCARTE na mesa</strong>, ou toque nela para selecionar. Para bater, deixe nove cartas válidas.</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls"><button class="btn primary" data-action="win-after-discard" ${selected&&winningGroups?'':'disabled'}>BATER COM 9 CARTAS</button><button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}<button class="btn ghost" data-action="hide">Ocultar</button></div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
+      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. <strong>Arraste uma carta até a faixa DESCARTAR ou até o descarte na mesa</strong>, ou toque nela para selecionar. Para bater, deixe nove cartas válidas.</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls"><button class="btn primary" data-action="win-after-discard" ${selected&&winningGroups?'':'disabled'}>BATER COM 9 CARTAS</button><button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}<button class="btn ghost" data-action="hide">Ocultar</button></div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
     }
     return `<section class="gamepanel"><span class="turn-label">Jogador da vez · ${state.turnStep==='draw'?'Comprar':'Descartar ou bater'}</span><h2 class="phase-title">${esc(state.names[player])}</h2><p class="subheading">${state.turnStep==='draw'?'Compre uma carta para jogar.':'Escolha uma carta para sair, ficando com nove na mão.'}</p>${content}</section>`;
   }
@@ -410,7 +430,7 @@
     return `<section class="gamepanel"><div class="winner"><div class="trophy">♛</div><div class="tagline">Rodada encerrada · Vencedor</div><h2>${esc(state.names[state.winner])}</h2><p class="winner-note"><strong>${esc(state.winType)}</strong>${state.winDetail?' · '+esc(state.winDetail):''}</p><div class="cards">${state.winningCards.map(c=>cardHtml(c)).join('')}</div>${groupDisplay}<p class="note">Na próxima rodada, <strong>${esc(state.names[state.starter])}</strong> dará as cartas, e <strong>${esc(state.names[next(state.starter)])}</strong> será o primeiro a receber e jogar.</p><div class="controls" style="justify-content:center"><button class="btn primary" data-action="next-round">Jogar próxima rodada</button><button class="btn ghost" data-action="new-game">Reiniciar jogo</button></div></div></section>`;
   }
   function helpHtml() {
-    return `<section class="rules-panel"><details ${state.help?'open':''}><summary>Regras da mesa · leia aqui</summary><ol><li>Quatro jogadores individuais, 104 cartas (2 baralhos de 52), 9 cartas para cada um e sem curingas.</li><li>No começo, o sistema sorteia quem começa; o distribuidor fica à direita no sentido de rotação da mesa.</li><li>Na rodada seguinte, o jogador que começou a anterior passa a ser o distribuidor. O próximo no sentido horário recebe a primeira carta e começa.</li><li>As cartas são distribuídas uma por uma, em sentido horário, até que todos tenham nove; as restantes ficam no bolo.</li><li>Trincas: mesmo valor e três naipes diferentes. Sequências: 3 a 9 cartas consecutivas do mesmo naipe; o Ás pode ser baixo (A-2-3) ou alto (Q-K-A).</li><li>Para bater, formam-se combinações válidas com exatamente nove cartas. Pode-se aproveitar o descarte de qualquer jogador para bater.</li><li>Arraste as cartas para organizar sua mão. Depois de comprar e ficar com dez cartas, arraste a carta até a pilha de descarte para jogá-la fora. Um toque rápido também permite selecionar e descartar.</li><li>Apenas quem inicia a rodada pode recusar a primeira carta comprada do bolo: descarta essa carta e recebe outra. Isso vale só no seu primeiro turno.</li><li>No modo contra robôs, as outras três mãos são jogadas automaticamente; cada pessoa que abrir o link terá uma partida própria.</li><li>Ao terminar o bolo, esta versão encerra a rodada sem vencedor. A regra pode ser ajustada depois.</li></ol></details></section>`;
+    return `<section class="rules-panel"><details ${state.help?'open':''}><summary>Regras da mesa · leia aqui</summary><ol><li>Quatro jogadores individuais, 104 cartas (2 baralhos de 52), 9 cartas para cada um e sem curingas.</li><li>No começo, o sistema sorteia quem começa; o distribuidor fica à direita no sentido de rotação da mesa.</li><li>Na rodada seguinte, o jogador que começou a anterior passa a ser o distribuidor. O próximo no sentido horário recebe a primeira carta e começa.</li><li>As cartas são distribuídas uma por uma, em sentido horário, até que todos tenham nove; as restantes ficam no bolo.</li><li>Trincas: mesmo valor e três naipes diferentes. Sequências: 3 a 9 cartas consecutivas do mesmo naipe; o Ás pode ser baixo (A-2-3) ou alto (Q-K-A).</li><li>Para bater, formam-se combinações válidas com exatamente nove cartas. Pode-se aproveitar o descarte de qualquer jogador para bater.</li><li>Arraste as cartas para organizar sua mão. Depois de comprar e ficar com dez cartas, arraste a carta até a faixa DESCARTAR acima da mão ou até a pilha de descarte na mesa. Um toque rápido também permite selecionar e descartar.</li><li>Apenas quem inicia a rodada pode recusar a primeira carta comprada do bolo: descarta essa carta e recebe outra. Isso vale só no seu primeiro turno.</li><li>No modo contra robôs, as outras três mãos são jogadas automaticamente; cada pessoa que abrir o link terá uma partida própria.</li><li>Ao terminar o bolo, esta versão encerra a rodada sem vencedor. A regra pode ser ajustada depois.</li></ol></details></section>`;
   }
   function render() {
     let body = '';
