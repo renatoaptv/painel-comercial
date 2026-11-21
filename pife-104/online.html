@@ -8,6 +8,10 @@
 .lobby-choices{margin:15px 0 9px;padding:13px 11px;background:#082920;border:1px solid #5f8568;border-radius:13px;display:grid;gap:8px}
 .lobby-choices .kicker{margin:0 0 4px}
 .seat-empty{opacity:.35;border-style:dashed}
+.top-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.top-actions .leave{background:#174f38;color:#ffe2a3;border-color:#a58a52}
+.top-actions .back{display:inline-flex;align-items:center;min-height:38px}
+@media(max-width:480px){.top{flex-wrap:wrap;gap:9px}.top-actions{width:100%;justify-content:flex-end}.top-actions .back{font-size:12px;padding:8px 11px}}
 </style></head>
 <body><div class="app" id="app"></div>
 <script>
@@ -18,18 +22,22 @@ var app=document.getElementById("app");
 var game=null,token="",room="",selected="",order=[],busy=false,polling=false,drag=null,ignoreClick=false,errText="",noticeText="",lastRevision=-1;
 var STORAGE_KEY="gael_pifpaf_online_v1";
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
-var audio={ctx:null,timer:null,step:0,time:0};
+var audio={ctx:null,timer:null,step:0,time:0,resuming:false};
+var sessionEpoch=0;
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
 function card(c){return '<div class="card '+(c.suit==="H"||c.suit==="D"?"red ":"")+(selected===c.id?"selected":"")+'" role="button" tabindex="0" data-id="'+c.id+'" aria-label="'+esc(cardTitle(c))+'"><span class="corner">'+esc(c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit]+'</span><span class="symbol">'+suits[c.suit]+'</span></div>';}
 function btn(text,action,cls,disabled){return '<button class="btn '+(cls||"")+'" data-action="'+action+'" '+(disabled?"disabled":"")+'>'+text+"</button>";}
-function header(){return '<header class="top"><div><h1>Pif-Paf / <span>Caxeta do Gael</span></h1><p>104 cartas · 2 a 4 jogadores · multiplayer online</p></div><a class="back" href="./">← Início</a></header>';}
+function header(){
+ var nav=game?'<button class="back leave" type="button" data-action="leave-room">← Trocar sala</button><a class="back" href="./">Início do jogo</a>':'<a class="back" href="./">← Início do jogo</a>';
+ return '<header class="top"><div><h1>Pif-Paf / <span>Caxeta do Gael</span></h1><p>104 cartas · 2 a 4 jogadores · multiplayer online</p></div><div class="top-actions">'+nav+'</div></header>';
+}
 function showLanding(){
  var codeIn=new URLSearchParams(location.search).get("s")||"";
  var savedName=localStorage.getItem("gael_online_name")||"";
  app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Mesa online</span><h2>Jogue em dupla ou numa mesa de quatro, cada um no seu celular.</h2><p class="lead">Crie uma sala ou entre com um código. Com duas pessoas você pode jogar só em dupla ou adicionar dois robôs. Cada pessoa vê apenas suas cartas e as jogadas são sincronizadas.</p><label class="label" for="playername">Seu nome na mesa</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
  '<div class="controls">'+btn("Criar sala online","create","primary full",busy)+'</div><div class="divider">ou entre por convite</div><label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
- '<div class="controls">'+btn("Entrar na sala","join","green full",busy)+'</div><p class="tip">♫ Música e efeitos sonoros começam no primeiro toque, inclusive ao digitar nome ou código.</p><p class="tip">A partir de duas pessoas já pode começar. O dono da sala escolhe jogar em dupla ou com robôs para completar a mesa.</p></section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · Suas cartas são validadas pelo servidor.</footer>';
+ '<div class="controls">'+btn("Entrar na sala","join","green full",busy)+'</div><p class="tip">♫ Música suave começa no primeiro toque, inclusive nos campos de nome e código. Sons de cartas e botões continuam ativos.</p><p class="tip">A partir de duas pessoas já pode começar. O dono da sala escolhe jogar em dupla ou com robôs para completar a mesa.</p></section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · Suas cartas são validadas pelo servidor.</footer>';
 }
 function messageHtml(){return errText?'<div class="notice err">'+esc(errText)+'</div>':noticeText?'<div class="notice">'+esc(noticeText)+'</div>':"";}
 function seatItem(p,i){
@@ -144,6 +152,15 @@ function render(){
  app.innerHTML=body;
 }
 function link(){return new URL("./online.html?s="+encodeURIComponent(room),location.href).href;}
+function leaveRoom(){
+ // Sair do aparelho não encerra a partida dos outros participantes.
+ sessionEpoch++;
+ localStorage.removeItem(STORAGE_KEY);
+ token="";room="";game=null;lastRevision=-1;selected="";order=[];
+ busy=false;polling=false;drag=null;ignoreClick=false;errText="";noticeText="";
+ try{history.replaceState(null,"",new URL("./online.html",location.href).href);}catch(_){}
+ render();
+}
 function showError(msg){errText=String(msg||"Erro de conexão.");noticeText="";render();}
 function setState(state){
  var old=game;
@@ -158,14 +175,33 @@ function setState(state){
  }
  render();
 }
+function beginAudioScheduler(){
+ if(document.hidden||!audio.ctx||audio.ctx.state!=="running"||audio.timer)return;
+ audio.time=audio.ctx.currentTime+0.08;
+ audio.timer=setInterval(audioTick,130);
+ audioTick();
+}
 function audioStart(){
  try{
-  if(!audio.ctx){var C=window.AudioContext||window.webkitAudioContext;if(!C)return;audio.ctx=new C();}
-  if(audio.ctx.state==="suspended")audio.ctx.resume().catch(function(){});
-  if(audio.timer)return;
-  audio.time=audio.ctx.currentTime+0.15;
-  audio.timer=setInterval(audioTick,150);
- }catch(e){}
+  if(document.hidden)return;
+  if(!audio.ctx){
+   var C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+   audio.ctx=new C();
+   audio.ctx.onstatechange=function(){if(audio.ctx&&audio.ctx.state==="running")beginAudioScheduler();};
+  }
+  if(audio.ctx.state==="running"){beginAudioScheduler();return;}
+  if(audio.ctx.state==="suspended"&&!audio.resuming){
+   audio.resuming=true;
+   Promise.resolve(audio.ctx.resume()).then(function(){
+    audio.resuming=false;
+    if(audio.ctx&&audio.ctx.state==="running")beginAudioScheduler();
+   }).catch(function(){audio.resuming=false;});
+  }
+ }catch(e){audio.resuming=false;}
+}
+function audioPause(){
+ if(audio.timer){clearInterval(audio.timer);audio.timer=null;}
+ if(audio.ctx&&audio.ctx.state==="running")audio.ctx.suspend().catch(function(){});
 }
 function tone(freq,at,duration,vol,wave){
  if(!audio.ctx)return;
@@ -175,13 +211,14 @@ function tone(freq,at,duration,vol,wave){
 }
 function audioTick(){
  if(!audio.ctx||audio.ctx.state!=="running"||document.hidden)return;
- if(audio.time<audio.ctx.currentTime-0.8)audio.time=audio.ctx.currentTime+0.04;
+ if(audio.time<audio.ctx.currentTime-0.12||audio.time>audio.ctx.currentTime+2)audio.time=audio.ctx.currentTime+0.04;
  var notes=[523.25,659.25,784,0,659.25,587.33,493.88,0,440,523.25,659.25,523.25,392,440,493.88,0];
  var duration=60/88/2;
- while(audio.time<audio.ctx.currentTime+.35){
+ // Nunca acumular notas ao voltar de outra aba ou durante lentidão do celular.
+ for(var queued=0;queued<3&&audio.time<audio.ctx.currentTime+.26;queued++){
   var i=audio.step%notes.length;
-  if(notes[i])tone(notes[i],audio.time,.25,.018,"sine");
-  if(i%8===0)tone(i===0?261.63:220,audio.time,2.3,.009,"triangle");
+  if(notes[i])tone(notes[i],audio.time,.22,.014,"sine");
+  if(i%8===0)tone(i===0?261.63:220,audio.time,1.8,.006,"triangle");
   audio.step++;audio.time+=duration;
  }
 }
@@ -196,18 +233,15 @@ function sound(kind){if(!audio.ctx||audio.ctx.state!=="running")return;var t=aud
 // Navegadores móveis exigem um toque real para liberar música e efeitos.
 document.addEventListener("pointerdown",audioStart,{capture:true,passive:true});
 document.addEventListener("touchstart",audioStart,{capture:true,passive:true});
-var lastTypedSound=0;
-document.addEventListener("keydown",function(e){
- audioStart();
- if(e.target?.matches?.("input,textarea")&&e.key?.length===1&&!e.repeat&&!e.isComposing&&!e.ctrlKey&&!e.metaKey){
-  var now=Date.now();
-  if(now-lastTypedSound>120){lastTypedSound=now;sound("type");}
- }
-},true);
+document.addEventListener("keydown",function(){audioStart();},true);
 document.addEventListener("focusin",function(e){
  if(e.target?.matches?.("input,textarea,select")){audioStart();sound("focus");}
 },true);
-document.addEventListener("visibilitychange",function(){if(!document.hidden&&audio.ctx)audioStart();});
+document.addEventListener("visibilitychange",function(){
+ if(document.hidden)audioPause();
+ else if(audio.ctx)audioStart();
+});
+window.addEventListener("pageshow",function(){if(audio.ctx&&!document.hidden)audioStart();});
 async function api(action,extra){
  var body=Object.assign({action:action,code:room,token:token},extra||{});
  var response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
@@ -217,22 +251,26 @@ async function api(action,extra){
 }
 async function doAction(action,extra){
  if(busy)return;busy=true;errText="";
+ var epoch=sessionEpoch;
  try{
   audioStart();
   var result=await api(action,extra);
+  if(epoch!==sessionEpoch)return;
   if(result.token){token=result.token;room=result.state.code;localStorage.setItem(STORAGE_KEY,JSON.stringify({code:room,token:token}));history.replaceState(null,"",link());}
   if(result.state)setState(result.state);
- }catch(e){showError(e.message);}
- finally{busy=false;render();}
+ }catch(e){if(epoch===sessionEpoch)showError(e.message);}
+ finally{if(epoch===sessionEpoch){busy=false;render();}}
 }
 async function refresh(){
  if(polling||busy||!room||!token)return;polling=true;
+ var epoch=sessionEpoch;
  try{
   var result=await api("state");
+  if(epoch!==sessionEpoch)return;
   errText="";
   if(result.state.revision!==lastRevision||!game)setState(result.state);
- }catch(e){errText=e.message;render();}
- finally{polling=false;}
+ }catch(e){if(epoch===sessionEpoch){errText=e.message;render();}}
+ finally{if(epoch===sessionEpoch)polling=false;}
 }
 async function shareInvite(){
  var url=link();
@@ -296,6 +334,7 @@ app.addEventListener("click",function(e){
  var btnNode=e.target.closest("[data-action]");if(!btnNode||btnNode.disabled)return;
  var action=btnNode.dataset.action;
  audioStart();
+ if(action==="leave-room"){sound("ui");leaveRoom();return;}
  if(!game||game.phase==="lobby"||action==="share"||action==="copy-code")sound("ui");
  if(action==="create"||action==="join"){
   var name=document.getElementById("playername")?.value.trim()||"Jogador";
