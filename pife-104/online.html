@@ -29,7 +29,7 @@ function showLanding(){
  var savedName=localStorage.getItem("gael_online_name")||"";
  app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Mesa online</span><h2>Jogue em dupla ou numa mesa de quatro, cada um no seu celular.</h2><p class="lead">Crie uma sala ou entre com um código. Com duas pessoas você pode jogar só em dupla ou adicionar dois robôs. Cada pessoa vê apenas suas cartas e as jogadas são sincronizadas.</p><label class="label" for="playername">Seu nome na mesa</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
  '<div class="controls">'+btn("Criar sala online","create","primary full",busy)+'</div><div class="divider">ou entre por convite</div><label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
- '<div class="controls">'+btn("Entrar na sala","join","green full",busy)+'</div><p class="tip">A partir de duas pessoas já pode começar. O dono da sala escolhe jogar em dupla ou com robôs para completar a mesa.</p></section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · Suas cartas são validadas pelo servidor.</footer>';
+ '<div class="controls">'+btn("Entrar na sala","join","green full",busy)+'</div><p class="tip">♫ Música e efeitos sonoros começam no primeiro toque, inclusive ao digitar nome ou código.</p><p class="tip">A partir de duas pessoas já pode começar. O dono da sala escolhe jogar em dupla ou com robôs para completar a mesa.</p></section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · Suas cartas são validadas pelo servidor.</footer>';
 }
 function messageHtml(){return errText?'<div class="notice err">'+esc(errText)+'</div>':noticeText?'<div class="notice">'+esc(noticeText)+'</div>':"";}
 function seatItem(p,i){
@@ -189,8 +189,25 @@ function sound(kind){if(!audio.ctx||audio.ctx.state!=="running")return;var t=aud
  if(kind==="win"){[523,659,783,1046].forEach(function(f,i){tone(f,t+i*.12,.28,.10,"triangle");});}
  else if(kind==="discard"){tone(440,t,.10,.08,"triangle");tone(280,t+.065,.10,.07,"sine");}
  else if(kind==="buy"||kind==="deal"){tone(310,t,.075,.055,"triangle");tone(390,t+.045,.08,.03,"sine");}
+ else if(kind==="ui"){tone(640,t,.070,.029,"sine");tone(790,t+.035,.06,.014,"sine");}
+ else if(kind==="focus"){tone(520,t,.08,.018,"sine");}
+ else if(kind==="type"){tone(720,t,.035,.008,"sine");}
 }
-document.addEventListener("visibilitychange",function(){if(!document.hidden&&room)audioStart();});
+// Navegadores móveis exigem um toque real para liberar música e efeitos.
+document.addEventListener("pointerdown",audioStart,{capture:true,passive:true});
+document.addEventListener("touchstart",audioStart,{capture:true,passive:true});
+var lastTypedSound=0;
+document.addEventListener("keydown",function(e){
+ audioStart();
+ if(e.target?.matches?.("input,textarea")&&e.key?.length===1&&!e.repeat&&!e.isComposing&&!e.ctrlKey&&!e.metaKey){
+  var now=Date.now();
+  if(now-lastTypedSound>120){lastTypedSound=now;sound("type");}
+ }
+},true);
+document.addEventListener("focusin",function(e){
+ if(e.target?.matches?.("input,textarea,select")){audioStart();sound("focus");}
+},true);
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&audio.ctx)audioStart();});
 async function api(action,extra){
  var body=Object.assign({action:action,code:room,token:token},extra||{});
  var response=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
@@ -279,6 +296,7 @@ app.addEventListener("click",function(e){
  var btnNode=e.target.closest("[data-action]");if(!btnNode||btnNode.disabled)return;
  var action=btnNode.dataset.action;
  audioStart();
+ if(!game||game.phase==="lobby"||action==="share"||action==="copy-code")sound("ui");
  if(action==="create"||action==="join"){
   var name=document.getElementById("playername")?.value.trim()||"Jogador";
   localStorage.setItem("gael_online_name",name);
