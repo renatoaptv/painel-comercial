@@ -1,0 +1,31 @@
+name: Importar trilha Pife 104
+on:
+  push:
+    paths:
+      - '.github/workflows/import-pife-music.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar e comprimir faixas CC0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p pife-104/music
+          for track in duru-roomscene-lofi duru-zoneout-05-droopy-socks-blues duru-zoneout-06-sleepy-bossa duru-zoneout-11-warm-milk-nocturne duru-zoneout-13-crumbly-charleston duru-zoneout-10-five-beats-on-a-cloud duru-zoneout-08-tummyrumble-calypso duru-bed-colorkit-template duru-zoneout-04-pillow-waltz duru-zoneout-01-melty-afternoon; do
+            curl --fail --location --retry 2 "https://raw.githubusercontent.com/uncle-sheepsky/duru-ai-cc0-bgm/main/mp3/${track}.mp3" -o "/tmp/${track}.mp3"
+            ffmpeg -nostdin -v error -y -i "/tmp/${track}.mp3" -af "loudnorm=I=-19:TP=-2:LRA=9" -codec:a libmp3lame -b:a 80k "pife-104/music/${track}.mp3"
+          done
+          printf '%s\n' 'Source: https://github.com/uncle-sheepsky/duru-ai-cc0-bgm' 'License: CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/)' > pife-104/music/LICENSE.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pife-104/music
+          if ! git diff --cached --quiet; then
+            git commit -m "Add self-hosted CC0 background music for Pife 104"
+            git push
+          fi
