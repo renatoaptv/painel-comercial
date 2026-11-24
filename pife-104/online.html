@@ -328,12 +328,66 @@ function setState(state){
  }
  render();
 }
-function beginAudioScheduler(){
- if(document.hidden||!audio.ctx||audio.ctx.state!=="running"||audio.timer)return;
- audio.time=audio.ctx.currentTime+0.08;
- audio.timer=setInterval(audioTick,115);
- audioTick();
+// Trilha instrumental CC0, arquivos locais. Sem controles visíveis.
+var playlist={tracks:["duru-roomscene-lofi","duru-zoneout-05-droopy-socks-blues","duru-zoneout-06-sleepy-bossa","duru-zoneout-11-warm-milk-nocturne","duru-zoneout-13-crumbly-charleston","duru-zoneout-10-five-beats-on-a-cloud","duru-zoneout-08-tummyrumble-calypso","duru-bed-colorkit-template","duru-zoneout-04-pillow-waltz","duru-zoneout-01-melty-afternoon"],queue:[],last:"",el:null,started:false,fade:null,failed:0,retryAt:0};
+function musicVolume(){
+ return voiceChat&&voiceChat.isListening()?0.08:0.16;
 }
+function refillPlaylist(){
+ playlist.queue=playlist.tracks.slice();
+ for(var i=playlist.queue.length-1;i>0;i--){
+  var j=Math.floor(Math.random()*(i+1)),tmp=playlist.queue[i];
+  playlist.queue[i]=playlist.queue[j];playlist.queue[j]=tmp;
+ }
+ if(playlist.queue.length>1&&playlist.queue[0]===playlist.last){
+  var tmp=playlist.queue[0];playlist.queue[0]=playlist.queue[1];playlist.queue[1]=tmp;
+ }
+}
+function getMusic(){
+ if(playlist.el)return playlist.el;
+ var p=new Audio();
+ p.preload="auto";p.loop=false;p.setAttribute("playsinline","");p.volume=0;
+ p.addEventListener("ended",function(){playlist.failed=0;nextMusic();});
+ p.addEventListener("error",function(){
+  playlist.failed++;
+  if(playlist.failed<playlist.tracks.length){nextMusic();}
+  else{playlist.retryAt=Date.now()+30000;p.removeAttribute("src");p.load();}
+ });
+ p.addEventListener("playing",function(){playlist.failed=0;});
+ p.addEventListener("timeupdate",function(){
+  if(!Number.isFinite(p.duration))return;
+  var remaining=p.duration-p.currentTime;
+  if(remaining<2.5) p.volume=Math.max(0,musicVolume()*remaining/2.5);
+ });
+ playlist.el=p;return p;
+}
+function fadeMusic(target){
+ var p=playlist.el;if(!p)return;
+ if(playlist.fade)clearInterval(playlist.fade);
+ playlist.fade=setInterval(function(){
+  var delta=target-p.volume;
+  if(Math.abs(delta)<0.008){p.volume=target;clearInterval(playlist.fade);playlist.fade=null;}
+  else p.volume=Math.max(0,Math.min(1,p.volume+delta*0.22));
+ },100);
+}
+function playMusic(){
+ if(document.hidden||Date.now()<playlist.retryAt)return;
+ var p=getMusic();
+ if(!p.getAttribute("src")){nextMusic();return;}
+ if(p.paused){var promise=p.play();if(promise&&promise.catch)promise.catch(function(){});}
+ if(!Number.isFinite(p.duration)||p.duration-p.currentTime>2.5)fadeMusic(musicVolume());
+}
+function nextMusic(){
+ if(document.hidden)return;
+ var p=getMusic();
+ if(!playlist.queue.length)refillPlaylist();
+ playlist.last=playlist.queue.shift();
+ if(playlist.fade){clearInterval(playlist.fade);playlist.fade=null;}
+ p.volume=0;p.src="music/"+playlist.last+".mp3";
+ var promise=p.play();if(promise&&promise.catch)promise.catch(function(){});
+ fadeMusic(musicVolume());
+}
+function beginAudioScheduler(){playMusic();}
 function unlockAudioOnGesture(){
  if(!audio.ctx||audio.unlocked)return;
  // Um oscilador quase inaudível libera a saída Web Audio dentro do toque no iPhone.
@@ -369,6 +423,7 @@ function audioStart(){
    };
   }
   unlockAudioOnGesture();
+  playMusic();
   if(audio.ctx.state==="running"){beginAudioScheduler();return;}
   // iOS usa "interrupted" ao alternar de app, além de "suspended".
   if((audio.ctx.state==="suspended"||audio.ctx.state==="interrupted")&&!audio.resuming){
@@ -382,7 +437,8 @@ function audioStart(){
  }catch(e){audio.resuming=false;}
 }
 function audioPause(){
- if(audio.timer){clearInterval(audio.timer);audio.timer=null;}
+ if(playlist.fade){clearInterval(playlist.fade);playlist.fade=null;}
+ if(playlist.el)playlist.el.pause();
  // Evitar suspend() manual: versões do Safari podem não restabelecer a saída depois.
 }
 function tone(freq,at,duration,vol,wave){
@@ -390,20 +446,6 @@ function tone(freq,at,duration,vol,wave){
  var osc=audio.ctx.createOscillator(),g=audio.ctx.createGain();
  osc.type=wave||"sine";osc.frequency.value=freq;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(vol,at+.03);g.gain.exponentialRampToValueAtTime(.0001,at+duration);
  osc.connect(g);g.connect(audio.ctx.destination);osc.start(at);osc.stop(at+duration+.03);osc.onended=function(){osc.disconnect();g.disconnect();};
-}
-function audioTick(){
- if(!audio.ctx||audio.ctx.state!=="running"||document.hidden)return;
- if(audio.time<audio.ctx.currentTime-0.12||audio.time>audio.ctx.currentTime+2)audio.time=audio.ctx.currentTime+0.04;
- var notes=[523.25,659.25,784,0,659.25,587.33,493.88,0,440,523.25,659.25,523.25,392,440,493.88,0];
- var duration=60/88/2;
- // Nunca acumular notas ao voltar de outra aba ou durante lentidão do celular.
- for(var queued=0;queued<3&&audio.time<audio.ctx.currentTime+.26;queued++){
-  var i=audio.step%notes.length;
-  var mix=voiceChat&&voiceChat.isListening()?0.62:1;
-  if(notes[i])tone(notes[i],audio.time,.28,.068*mix,"triangle");
-  if(i%8===0)tone(i===0?261.63:220,audio.time,1.65,.021*mix,"sine");
-  audio.step++;audio.time+=duration;
- }
 }
 function sound(kind){if(!audio.ctx||audio.ctx.state!=="running")return;var t=audio.ctx.currentTime+.03;
  if(kind==="win"){[523,659,783,1046].forEach(function(f,i){tone(f,t+i*.12,.28,.10,"triangle");});}
