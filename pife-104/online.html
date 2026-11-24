@@ -328,74 +328,90 @@ function setState(state){
  }
  render();
 }
-// Música: DURU-AI CC0 1.0, https://github.com/uncle-sheepsky/duru-ai-cc0-bgm
-// Usa arquivos locais sempre que disponíveis; origem CC0 como fallback durante a publicação.
-var playlist={tracks:["duru-roomscene-lofi","duru-zoneout-05-droopy-socks-blues","duru-zoneout-06-sleepy-bossa","duru-zoneout-11-warm-milk-nocturne","duru-zoneout-13-crumbly-charleston","duru-zoneout-10-five-beats-on-a-cloud","duru-zoneout-08-tummyrumble-calypso","duru-bed-colorkit-template","duru-zoneout-04-pillow-waltz","duru-zoneout-01-melty-afternoon"],queue:[],last:"",el:null,source:null,gain:null,context:null,remote:false,failed:0,retryAt:0,level:0,fade:null};
-function musicVolume(){return voiceChat&&voiceChat.isListening()?0.08:0.16;}
-function refillPlaylist(){
- playlist.queue=playlist.tracks.slice();
- for(var i=playlist.queue.length-1;i>0;i--){
-  var j=Math.floor(Math.random()*(i+1)),tmp=playlist.queue[i];
-  playlist.queue[i]=playlist.queue[j];playlist.queue[j]=tmp;
+// Background music CC0: https://github.com/uncle-sheepsky/duru-ai-cc0-bgm
+// Audio is isolated from gameplay: no oscillator scheduler, no shared AudioContext,
+// no awaited requests in game handlers, and no automatic unbounded retries.
+var bgMusic=(function(){
+ var tracks=["duru-roomscene-lofi","duru-zoneout-05-droopy-socks-blues","duru-zoneout-06-sleepy-bossa","duru-zoneout-11-warm-milk-nocturne","duru-zoneout-13-crumbly-charleston","duru-zoneout-10-five-beats-on-a-cloud","duru-zoneout-08-tummyrumble-calypso","duru-bed-colorkit-template","duru-zoneout-04-pillow-waltz","duru-zoneout-01-melty-afternoon"];
+ var queue=[],last="",p=null,attempt=0,playingPending=false,blocked=false,started=false;
+ var timer=null,serial=0,failures=0,localReady=false,target=.16,mutedByFailure=false;
+ var root="https://raw.githubusercontent.com/uncle-sheepsky/duru-ai-cc0-bgm/main/mp3/";
+ var cdn="https://cdn.jsdelivr.net/gh/uncle-sheepsky/duru-ai-cc0-bgm@main/mp3/";
+ // Detect deployed local files once. Never repeatedly request missing local MP3s.
+ try{fetch(new URL("music/LICENSE.txt",location.href),{cache:"no-store"}).then(function(r){return r.ok?r.text():"";}).then(function(t){localReady=t.indexOf("CC0")!==-1&&t.indexOf("duru-ai-cc0-bgm")!==-1;}).catch(function(){});}catch(e){}
+ function refill(){
+  queue=tracks.slice();for(var i=queue.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),tmp=queue[i];queue[i]=queue[j];queue[j]=tmp;}
+  if(queue.length>1&&queue[0]===last){var t=queue[0];queue[0]=queue[1];queue[1]=t;}
  }
- if(playlist.queue.length>1&&playlist.queue[0]===playlist.last){
-  var tmp=playlist.queue[0];playlist.queue[0]=playlist.queue[1];playlist.queue[1]=tmp;
+ function stopTimer(){if(timer!==null){clearTimeout(timer);timer=null;}}
+ function level(v){try{if(p&&Number.isFinite(v))p.volume=Math.max(0,Math.min(1,v));}catch(e){}}
+ function setVolume(v){target=v; if(!p||!Number.isFinite(p.duration)||p.duration-p.currentTime>2)level(target);}
+ function get(){
+  if(p)return p;
+  p=new Audio();p.preload="metadata";p.loop=false;p.setAttribute("playsinline","");level(target);
+  p.addEventListener("playing",function(){stopTimer();playingPending=false;blocked=false;failures=0;level(target);});
+  p.addEventListener("timeupdate",function(){
+   if(!p||p.paused)return;
+   stopTimer();
+   if(Number.isFinite(p.duration)){var left=p.duration-p.currentTime;level(left<2?target*Math.max(0,left/2):target);}
+  });
+  p.addEventListener("waiting",function(){if(started&&!p.paused&&!document.hidden&&!blocked)watch();});
+  p.addEventListener("stalled",function(){if(started&&!p.paused&&!document.hidden&&!blocked)watch();});
+  p.addEventListener("error",function(){if(started&&!document.hidden&&!mutedByFailure&&p.error)fail(serial);});
+  p.addEventListener("ended",function(){if(started&&!document.hidden){failures=0;next();}});
+  return p;
  }
-}
-function setMusicLevel(value,seconds){
- playlist.level=value;
- var p=playlist.el;if(!p)return;
- if(playlist.gain&&playlist.context===audio.ctx){
-  var g=playlist.gain.gain,t=audio.ctx.currentTime;
-  g.cancelScheduledValues(t);g.setTargetAtTime(value,t,Math.max(.01,seconds/3));
- }else p.volume=value;
-}
-function getMusic(){
- if(playlist.el&&playlist.context!==audio.ctx){
-  playlist.el.pause();playlist.el.removeAttribute("src");playlist.el=null;playlist.source=null;playlist.gain=null;
+ function watch(){
+  if(timer!==null)return;
+  var id=serial;timer=setTimeout(function(){timer=null;if(id===serial&&!document.hidden&&!blocked)fail(id);},18000);
  }
- if(playlist.el)return playlist.el;
- var p=new Audio();p.crossOrigin="anonymous";p.preload="auto";p.loop=false;p.setAttribute("playsinline","");
- playlist.el=p;playlist.context=audio.ctx;
- if(audio.ctx){
-  try{playlist.source=audio.ctx.createMediaElementSource(p);playlist.gain=audio.ctx.createGain();playlist.gain.gain.value=0;playlist.source.connect(playlist.gain);playlist.gain.connect(audio.ctx.destination);}catch(e){playlist.gain=null;p.volume=0;}
+ function play(){
+  if(!p||document.hidden||mutedByFailure||playingPending)return;
+  var id=serial;
+  try{
+   playingPending=true;var promise=p.play();watch();
+   if(promise&&typeof promise.then==="function")promise.then(function(){
+    if(id===serial){playingPending=false;blocked=false;}
+   }).catch(function(err){
+    if(id!==serial)return;playingPending=false;stopTimer();
+    if(err&&err.name==="NotAllowedError"){blocked=true;return;}
+    if(err&&err.name==="AbortError")return;
+    fail(id);
+   });else playingPending=false;
+  }catch(e){playingPending=false;stopTimer();}
  }
- p.addEventListener("ended",function(){if(p===playlist.el)nextMusic();});
- p.addEventListener("error",function(){
-  if(p!==playlist.el||!playlist.last||!p.getAttribute("src"))return;
-  if(!playlist.remote){
-   playlist.remote=true;
-   p.src="https://raw.githubusercontent.com/uncle-sheepsky/duru-ai-cc0-bgm/main/mp3/"+playlist.last+".mp3";
-   requestMusicPlay(p);return;
-  }
-  playlist.failed++;
-  if(playlist.failed<playlist.tracks.length){nextMusic();}
-  else{playlist.retryAt=Date.now()+30000;p.removeAttribute("src");p.load();}
- });
- p.addEventListener("playing",function(){if(p!==playlist.el)return;playlist.failed=0;setMusicLevel(musicVolume(),2);});
- p.addEventListener("timeupdate",function(){
-  if(p!==playlist.el||!Number.isFinite(p.duration))return;
-  var remaining=p.duration-p.currentTime;
-  if(remaining<2.5)setMusicLevel(Math.max(0,musicVolume()*remaining/2.5),.15);
- });
- return p;
-}
-function requestMusicPlay(p){if(!document.hidden){var promise=p.play();if(promise&&promise.catch)promise.catch(function(){});}}
-function playMusic(){
- if(document.hidden||Date.now()<playlist.retryAt)return;
- var p=getMusic();
- if(!p.getAttribute("src")||p.ended){nextMusic();return;}
- if(p.paused)requestMusicPlay(p);
- if((!Number.isFinite(p.duration)||p.duration-p.currentTime>2.5)&&Math.abs(playlist.level-musicVolume())>.005)setMusicLevel(musicVolume(),1);
-}
-function nextMusic(){
- if(document.hidden)return;
- var p=getMusic();
- if(!playlist.queue.length)refillPlaylist();
- playlist.last=playlist.queue.shift();playlist.remote=false;
- setMusicLevel(0,.01);p.src="music/"+playlist.last+".mp3";requestMusicPlay(p);
-}
-function beginAudioScheduler(){playMusic();}
+ function load(){
+  var el=get();serial++;playingPending=false;blocked=false;stopTimer();
+  // Same single native player for all tracks, including iOS.
+  var url=(attempt===0&&localReady?"music/":attempt===(localReady?1:0)?cdn:root)+last+".mp3";
+  el.src=url;level(target);play();
+ }
+ function next(){
+  if(document.hidden||mutedByFailure)return;
+  if(!queue.length)refill();last=queue.shift();attempt=0;load();
+ }
+ function fail(id){
+  if(id!==serial||document.hidden||blocked||mutedByFailure)return;
+  stopTimer();playingPending=false;serial++;
+  if(attempt<(localReady?2:1)){attempt++;load();return;}
+  failures++;
+  // At most two failed songs per session; silence is safer than a failing retry loop.
+  if(failures>=2){mutedByFailure=true;try{p.pause();p.removeAttribute("src");p.load();}catch(e){}return;}
+  next();
+ }
+ function start(){
+  try{
+   if(document.hidden||mutedByFailure)return;
+   started=true;var el=get();
+   if(!el.getAttribute("src")||el.ended){next();return;}
+   if(el.paused){blocked=false;play();}
+  }catch(e){}
+ }
+ function pause(){try{stopTimer();serial++;playingPending=false;if(p)p.pause();}catch(e){}}
+ return {start:start,pause:pause,setVolume:setVolume};
+})();
+function playMusic(){try{bgMusic.setVolume(voiceChat&&voiceChat.isListening()?0.08:0.16);bgMusic.start();}catch(e){}}
+function beginAudioScheduler(){}
 function unlockAudioOnGesture(){
  if(!audio.ctx||audio.unlocked)return;
  // Um oscilador quase inaudível libera a saída Web Audio dentro do toque no iPhone.
@@ -412,6 +428,7 @@ function unlockAudioOnGesture(){
 function audioStart(){
  try{
   if(document.hidden)return;
+  playMusic();
   // O Safari pode silenciar Web Audio no modo silencioso se a sessão ficar em "auto".
   if(window.navigator&&window.navigator.audioSession){
    try{
@@ -427,11 +444,10 @@ function audioStart(){
    audio.ctx.onstatechange=function(){
     if(!audio.ctx)return;
     if(audio.ctx.state==="running")beginAudioScheduler();
-    else {if(audio.ctx.state==="interrupted")audio.unlocked=false;audioPause();}
+    else {if(audio.ctx.state==="interrupted")audio.unlocked=false;}
    };
   }
   unlockAudioOnGesture();
-  playMusic();
   if(audio.ctx.state==="running"){beginAudioScheduler();return;}
   // iOS usa "interrupted" ao alternar de app, além de "suspended".
   if((audio.ctx.state==="suspended"||audio.ctx.state==="interrupted")&&!audio.resuming){
@@ -445,7 +461,7 @@ function audioStart(){
  }catch(e){audio.resuming=false;}
 }
 function audioPause(){
- if(playlist.el){setMusicLevel(0,.1);playlist.el.pause();}
+ try{bgMusic.pause();}catch(e){}
  // Evitar suspend() manual: versões do Safari podem não restabelecer a saída depois.
 }
 function tone(freq,at,duration,vol,wave){
