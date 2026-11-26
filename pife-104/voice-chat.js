@@ -1,4 +1,4 @@
-/* Pif-Paf / Caxeta do Gael — conversa por voz privada entre participantes da sala.
+/* Pif-Paf — conversa por voz privada entre participantes da sala.
  * O microfone é conectado por WebRTC; o servidor só troca SDP e candidatos ICE.
  * Não há gravação, upload de áudio nem transmissão para participantes de outras salas.
  */
@@ -30,36 +30,11 @@ window.GaelVoiceChat=function(config){
   if(!response.ok||!data.ok)throw Error(data.error||"Não foi possível conectar a conversa.");
   return data;
  }
- function status(){
-  if(v.joining)return "Abrindo microfone...";
-  if(!v.joined)return v.error||"Fale com quem está na sua sala.";
-  var active=v.presence.filter(function(p){return p.seat!==credentials()?.seat;});
-  var connected=Array.from(v.peers.values()).filter(function(p){return p.pc.connectionState==="connected";}).length;
-  if(v.muted)return "Microfone mudo · você continua ouvindo.";
-  if(active.length===0)return "Microfone ativo · aguardando amigos.";
-  if(connected===active.length)return "Conectado com "+connected+" "+(connected===1?"jogador":"jogadores")+".";
-  return "Conectando áudio...";
- }
  function html(){
   var a=credentials();if(!a||!a.code||!Array.isArray(a.players))return "";
-  var people=a.players.filter(function(p){return !p.bot;});
-  var roster=people.map(function(p){
-   var here=v.presence.find(function(item){return item.seat===p.seat;});
-   var self=p.seat===a.seat;
-   var label=self?(v.joined?(v.muted?"Mudo":"Você"):"Você"):
-    (here?(here.muted?"Mudo":v.peers.get(p.seat)?.pc.connectionState==="connected"?"Conectado":"No áudio"):"Fora");
-   return '<span class="voice-person '+(here?"voice-in":"")+'">'+(self?"★ ":"")+escapeText(p.name)+' <small>'+escapeText(label)+'</small></span>';
-  }).join("");
-  var controls=v.joined?
-   '<button class="btn '+(v.muted?"green":"ghost")+'" data-action="voice-mute">'+(v.muted?"🎙 Ativar mic":"🔇 Mudo")+'</button>'+
-   '<button class="btn ghost" data-action="voice-leave">Sair</button>':
-   '<button class="btn primary" data-action="voice-join" '+(v.joining?"disabled":"")+'>🎙 '+(v.joining?"Conectando...":"Entrar no áudio")+'</button>';
-  if(v.needsTap&&v.joined)controls+='<button class="btn green" data-action="voice-hear">🔊 Ouvir amigos</button>';
-  return '<section class="panel voice-panel" aria-label="Chat de voz da sala"><div class="voice-heading"><h2>🎧 Áudio da mesa</h2><span class="voice-dot '+(v.joined?"on":"")+'"></span></div>'+
-   '<p class="voice-status">'+escapeText(status())+'</p><div class="voice-people">'+roster+'</div>'+
-   (v.error&&v.joined?'<p class="voice-error">'+escapeText(v.error)+'</p>':"")+
-   '<div class="controls voice-controls">'+controls+'</div>'+
-   '<p class="tip voice-note">Sem gravação · Use fones para evitar eco.</p></section>';
+  var on=v.joined&&!v.needsTap,label=v.joining?"Conectando chat de voz; toque para cancelar":on?"Desativar chat de voz":v.needsTap?"Reativar áudio do chat de voz":"Ativar chat de voz (microfone e áudio)";
+  var icon='<svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/>'+ (on?'<path d="M15 9a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/>':'<path d="m16 9 6 6m0-6-6 6"/>')+'</svg>';
+  return '<button type="button" class="voice-icon '+(on?'voice-on':'')+'" data-action="voice-toggle" aria-label="'+escapeText(label)+'" aria-pressed="'+on+'" title="'+escapeText(v.error||label)+'">'+icon+'</button>'+(v.error?'<span class="voice-sr" role="status">'+escapeText(v.error)+'</span>':'');
  }
  function closePeer(seat){
   var p=v.peers.get(seat);if(!p)return;
@@ -253,6 +228,7 @@ window.GaelVoiceChat=function(config){
   }
  }
  function handle(action){
+  if(action==="voice-toggle"){if(v.joining)leave();else if(v.joined&&v.needsTap)hear();else if(v.joined)leave();else join();return true;}
   if(action==="voice-join"){join();return true;}
   if(action==="voice-leave"){leave();return true;}
   if(action==="voice-mute"){mute();return true;}
