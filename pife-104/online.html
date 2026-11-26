@@ -685,7 +685,7 @@ showLanding();
   if(!identity)throw Error("Abra seu perfil e confirme o cadastro antes de jogar.");
   const data=await api("account-connect",{legacyToken:legacyToken});
   playerProfile=data.profile;accountReady=true;accountLoading=false;
-  legacyToken="";localStorage.removeItem(PROFILE_KEY);
+  if(data.legacyLinked)localStorage.removeItem(PROFILE_KEY);legacyToken="";
   mod.restoreTheme();
   accountClient.auth.onAuthStateChange(function(event,nextSession){
    if(event==="SIGNED_OUT"||nextSession&&nextSession.user.id!==accountId){accountReady=false;accountLoading=false;activeMatches=[];leaveRoom(false);}
