@@ -55,7 +55,7 @@
 .seat.seat-out{opacity:.45;border-style:dashed;box-shadow:none}
 .forfeit-note{font-size:11px;line-height:1.45;border:1px solid #8e733f;border-radius:10px;padding:8px 11px;background:#49381780;color:#f2daab;margin:8px 0}
 .forfeit-note strong{color:#ffe2a3}
-.home-brand{color:var(--gold);font:inherit;font-weight:850;text-decoration:none;background:none;border:0;padding:0;display:inline-block}.home-brand small{font-size:.65em;color:var(--gold)}a.home-brand:focus-visible,button.home-brand:focus-visible{outline:2px solid var(--gold);outline-offset:5px}.voice-icon{display:inline-grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;border:1px solid #527361;color:#b9cec0;background:#12372a;cursor:pointer;padding:0}.voice-icon.voice-on{color:#102d23;background:#e6c78c;border-color:#e6c78c}.voice-icon:focus-visible{outline:2px solid #fff;outline-offset:3px}.voice-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}</style></head>
+.home-brand{color:var(--gold);font:inherit;font-weight:850;text-decoration:none;background:none;border:0;padding:0;display:inline-block}.home-brand small{font-size:.65em;color:var(--gold)}a.home-brand:focus-visible,button.home-brand:focus-visible{outline:2px solid var(--gold);outline-offset:5px}.voice-icon{display:inline-grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;border:1px solid #527361;color:#b9cec0;background:#12372a;cursor:pointer;padding:0}.voice-icon.voice-on{color:#102d23;background:#e6c78c;border-color:#e6c78c}.voice-icon:focus-visible{outline:2px solid #fff;outline-offset:3px}.voice-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.stake-picker{border:1px solid #527361;border-radius:12px;padding:12px;margin:12px 0}.stake-picker select{width:100%;color:#f5f1e7;background:#10291f}.timer-green{color:#a4e3ad!important}.timer-yellow{color:#f6d66a!important}.timer-orange{color:#ffac69!important}.timer-red{color:#ff8b8b!important;border-color:#ee7a75!important}.prize-pill{color:#e6c78c;font-weight:700}</style></head>
 <body><div class="app" id="app"></div>
 <script src="./voice-chat.js?v=3"></script>
 <script src="./fairness.js?v=2"></script>
@@ -69,7 +69,8 @@ var STORAGE_KEY="gael_pifpaf_online_v1";
 var PROFILE_KEY="gael_pifpaf_profile_access_v1";
 var legacyToken=localStorage.getItem(PROFILE_KEY)||"";
 var accountClient=null,accountId="",accountReady=false,accountLoading=true,playerProfile=null;
-var activeMatches=[],loadingActive=false,activeLoaded=false;
+var activeMatches=[],loadingActive=false,activeLoaded=false,freeBalance=null,chosenStake=1,alertedDeadline=null;
+var stakeOptions=[1,5,10,30,60,100,300,600,1000];
 var suits={H:"♥",D:"♦",C:"♣",S:"♠"};
 var audio={ctx:null,timer:null,step:0,time:0,resuming:false,unlocked:false};
 var sessionEpoch=0;
@@ -107,9 +108,11 @@ function showLanding(){
    return '<button class="btn ghost saved-game-btn" data-action="resume-active" data-code="'+esc(r.code)+'">↪ Continuar · '+esc(description)+' · '+esc(r.code)+' <small>'+esc(phase)+'</small></button>';
   }).join('')+'</div>':'';
  var currentName='<p class="pill">Jogando como <strong>'+esc(playerProfile.name)+'</strong></p>';
- var choices= '<span class="kicker">Partidas públicas</span><h2>Jogar online</h2><p class="lead">Encontre outros jogadores automaticamente.</p>'+currentName+
- '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy)+'</div>'+
- '<p class="tip">Somente pessoas reais. A partida inicia automaticamente quando a mesa estiver completa.</p>';
+ var balanceLabel=freeBalance===null?"Consultando saldo…":Number(freeBalance).toLocaleString("pt-BR")+" G-COIN gratuitas";
+ var stakePicker='<div class="stake-picker"><span class="kicker">Saldo: '+esc(balanceLabel)+'</span><label class="label" for="stake-select">Créditos gratuitos por jogador</label><select class="input" id="stake-select">'+stakeOptions.map(function(n){return '<option value="'+n+'" '+(n===chosenStake?'selected':'')+' '+(freeBalance!==null&&n>freeBalance?'disabled':'')+'>'+n.toLocaleString("pt-BR")+' G-COIN</option>';}).join("")+'</select><p class="tip">Premiação: <strong>'+chosenStake*2+'</strong> (2 jogadores) ou <strong>'+chosenStake*4+'</strong> (4 jogadores). Somente créditos gratuitos, sem valor monetário.</p></div>';
+ var choices= '<span class="kicker">Partidas públicas</span><h2>Jogar online</h2><p class="lead">Encontre outros jogadores automaticamente.</p>'+currentName+stakePicker+
+ '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy||freeBalance===null||chosenStake>freeBalance)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy||freeBalance===null||chosenStake>freeBalance)+'</div>'+
+ '<p class="tip">Somente pessoas reais. O débito de créditos gratuitos acontece quando a mesa estiver completa. 2 minutos por jogada.</p>';
  app.innerHTML=header()+'<section class="panel intro">'+choices+
  savedRooms+
  '</section>'+messageHtml()+'<footer class="footer">Pif-Paf · 104 cartas · partida salva no servidor</footer>';
@@ -124,7 +127,7 @@ function renderLobby(){
  if(game.publicMatch){
   var target=game.target||4;
   return '<section class="panel public-waiting"><span class="kicker">Partida pública · '+target+' pessoas</span><h2><span class="spinner"></span> Procurando adversários...</h2>'+
-   '<p class="lead">Encontrados <strong>'+n+' de '+target+'</strong> jogadores. A partida começa automaticamente quando todos entrarem.</p>'+
+   '<p class="lead">Encontrados <strong>'+n+' de '+target+'</strong> jogadores. A partida começa automaticamente quando todos entrarem.</p>'+(game.stakeVersion===1?'<p class="pill">Entrada: '+game.stake+' · Premiação: '+game.pot+' G-COIN gratuitas</p>':'')+
    '<div class="match-progress">'+Array.from({length:target},function(_,i){return '<span class="'+(i<n?'filled':'')+'"></span>';}).join('')+'</div>'+
    '<div class="seatlist">'+Array.from({length:target},function(_,i){return seatItem(people[i],i);}).join('')+'</div>'+
    '<div class="controls">'+btn("Cancelar busca","public-cancel","ghost full")+'</div>'+
@@ -166,13 +169,15 @@ async function verifyFairness(){
  }catch(error){lastFairnessResult={round:audit.round,ok:false,reason:error.message||'Não foi possível conferir o sorteio.'};}
  finally{fairnessBusy=false;render();}
 }
+function timerText(sec){return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');}
+function timerClass(sec){return sec<=10?'timer-red':sec<=30?'timer-orange':sec<=60?'timer-yellow':'timer-green';}
 function board(){
  var n=game.players.length,rel=function(k){return (game.seat+k)%n;};
  var place=function(index,pos){return index===null?'<div class="seat seat-empty '+pos+'"><div class="cards-count">—</div></div>':seatAt(index,pos);};
  var topSeat=n===2?rel(1):rel(2),leftSeat=n===4?rel(3):null,rightSeat=n>=3?rel(1):null;
  var topCard=game.discardTop;
  var canBuy=game.phase==="turn"&&game.turn===game.seat&&game.step==="draw";
- return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+(game.activeCount??n)+' ativos</span><span class="pill">🪙 '+(game.players[game.seat]?.coins??100)+'</span>'+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill">Tempo: <strong id="turn-countdown">'+Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+'s</strong></span>':'')+'</div>'+
+ return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+(game.activeCount??n)+' ativos</span><span class="pill">🪙 '+(game.players[game.seat]?.coins??100)+'</span>'+(game.stakeVersion===1?'<span class="pill prize-pill">🏆 '+game.pot+' G-COIN gratuitas</span>':'')+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill '+timerClass(Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000)))+'" id="timer-pill">'+esc(game.players[game.turn]?.name||'Jogador')+' · <strong id="turn-countdown">'+timerText(Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000)))+'</strong></span>':'')+'</div>'+
  '<section class="table" aria-label="Mesa com '+n+' jogadores">'+
  place(topSeat,"top")+place(leftSeat,"left")+place(rightSeat,"right")+place(rel(0),"bottom")+
  '<div class="center"><div class="pile"><button class="stock" data-action="draw-stock" '+(canBuy&&game.drawCount?"":"disabled")+' aria-label="Comprar do bolo">♠</button><div class="caption">BOLO</div></div>'+
@@ -236,7 +241,7 @@ function handView(){
 }
 function currentStatus(){
  if(game.players[game.seat]?.eliminated){
-  return '<section class="panel waiting"><h2>Você saiu da rodada</h2><p class="lead">Suas moedas virtuais foram distribuídas aos participantes restantes. Suas cartas voltaram ao bolo.</p><div class="controls">'+btn("Buscar nova partida","public-rematch","primary full")+'</div></section>';
+  return '<section class="panel waiting"><h2>Você saiu da rodada</h2><p class="lead">Suas cartas voltaram ao bolo. Seus pontos gratuitos ficam reservados ao vencedor da partida.</p><div class="controls">'+btn("Buscar nova partida","public-rematch","primary full")+'</div></section>';
  }
  if(game.phase==="claim"&&game.pending){
   var waiting=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000));
@@ -245,14 +250,15 @@ function currentStatus(){
  if(game.phase==="won"&&game.winner){
   var w=game.winner;var p=game.players[w.seat];
   var groups=(w.groups||[]).map(function(g){return '<div class="group">'+esc(g.kind)+'<div class="cards-mini">'+g.cards.map(function(c){return '<span class="mini-card '+(c.suit==="H"||c.suit==="D"?"red":"")+'">'+esc(cardTitle(c))+'</span>';}).join("")+'</div></div>';}).join("");
-  var nextControls=game.publicMatch?
+  var nextControls=game.stakeVersion===1?'<div class="controls">'+btn("Escolher nova partida","public-rematch","primary full")+'</div>':game.publicMatch?
    '<p class="lead">'+game.readyCount+' de '+(game.activeCount??game.players.length)+' prontos para a próxima rodada.</p><div class="controls">'+
    (game.activeCount<2?'':(game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary")))+
    btn("Encontrar novos adversários","public-rematch","ghost")+'</div>':
    (game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>');
-  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+(w.type==="Vitória por abandono"?" venceu por abandono!":" bateu!")+'</h2><p class="lead">'+esc(w.type)+'</p><div class="groups">'+groups+'</div>'+nextControls+'</section>';
+  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+(w.type==="Vitória por abandono"?" venceu por abandono!":" bateu!")+'</h2><p class="lead">'+esc(w.type)+'</p>'+(game.stakeVersion===1?'<p class="prize-pill">🏆 '+w.prize+' G-COIN gratuitas para o vencedor</p>':'')+'<div class="groups">'+groups+'</div>'+nextControls+'</section>';
  }
  if(game.phase==="abandoned")return '<section class="panel waiting"><span class="kicker">Partida pública encerrada</span><h2>Jogador ausente</h2><p class="lead">'+esc(game.message||'Tempo de jogada esgotado.')+'</p><p class="tip">Ninguém recebeu vitória por abandono. Você pode encontrar novos adversários.</p><div class="controls">'+btn("Encontrar novos adversários","public-rematch","primary full")+'</div></section>';
+ if(game.phase==="exhausted"&&game.stakeVersion===1)return '<section class="panel waiting"><h2>Bolo esgotado</h2><p class="lead">Sem vencedor. Os créditos gratuitos de entrada foram devolvidos.</p><div class="controls">'+btn("Escolher nova partida","public-rematch","primary full")+'</div></section>';
  if(game.phase==="exhausted")return '<section class="panel waiting"><h2>Bolo esgotado</h2>'+
   (game.publicMatch?'<p class="lead">'+game.readyCount+' de '+(game.activeCount??game.players.length)+' prontos.</p><div class="controls">'+
   (game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary"))+
@@ -270,7 +276,7 @@ function render(){
  if(game.phase!=="lobby"){
   if(game.lastForfeit){
    var ev=game.lastForfeit;
-   body+='<div class="forfeit-note">🪙 <strong>'+esc(game.players[ev.seat]?.name||'Jogador')+' saiu:</strong> '+ev.lost+' moedas distribuídas · '+ev.returned+' cartas voltaram ao bolo.</div>';
+   body+='<div class="forfeit-note">🪙 <strong>'+esc(game.players[ev.seat]?.name||'Jogador')+' saiu:</strong> '+ev.lost+' pontos reservados para o vencedor · '+ev.returned+' cartas voltaram ao bolo.</div>';
   }
   body+=fairnessPanel();
  }
@@ -284,7 +290,7 @@ function link(){return new URL("./online.html?s="+encodeURIComponent(room),locat
 async function leavePublicMatch(){
  if(busy)return;
  var amount=game?.players[game.seat]?.coins??100;
- if(!window.confirm('Abandonar a partida? Você perderá '+amount+' moedas virtuais, que serão divididas entre os jogadores restantes. Suas cartas retornarão ao bolo.'))return;
+ if(!window.confirm('Abandonar a partida? Você perderá '+amount+' pontos gratuitos, reservados para o vencedor. Suas cartas retornarão ao bolo.'))return;
  busy=true;
  try{
   var seat=game.seat,done=false;
@@ -475,6 +481,7 @@ function sound(kind){if(!audio.ctx||audio.ctx.state!=="running")return;var t=aud
  else if(kind==="discard"){tone(440,t,.10,.08,"triangle");tone(280,t+.065,.10,.07,"sine");}
  else if(kind==="buy"||kind==="deal"){tone(310,t,.075,.055,"triangle");tone(390,t+.045,.08,.03,"sine");}
  else if(kind==="ui"){tone(640,t,.070,.029,"sine");tone(790,t+.035,.06,.014,"sine");}
+ else if(kind==="deadline"){tone(840,t,.16,.09,"triangle");tone(840,t+.23,.16,.09,"triangle");}
  else if(kind==="focus"){tone(520,t,.08,.018,"sine");}
  else if(kind==="type"){tone(720,t,.035,.008,"sine");}
 }
@@ -499,6 +506,8 @@ async function loadActiveMatches(silent){
   var data=await api("profile-active");
   if(epoch!==sessionEpoch)return;
   activeMatches=Array.isArray(data.rooms)?data.rooms.filter(function(r){return r&&r.publicMatch===true;}):[];
+  freeBalance=Number.isSafeInteger(data.freeBalance)?data.freeBalance:null;
+  if(freeBalance!==null&&chosenStake>freeBalance)chosenStake=1;
   activeLoaded=true;
  }catch(e){if(epoch===sessionEpoch){activeMatches=[];activeLoaded=true;if(!silent)errText=e.message;}}
  finally{loadingActive=false;if(!game&&epoch===sessionEpoch)render();}
@@ -647,16 +656,15 @@ app.addEventListener("click",function(e){
  if(!game||game.phase==="lobby"||action==="share"||action==="copy-code")sound("ui");
  if(action==="public-two"||action==="public-four"){
   var name=playerProfile?.name||"Jogador";
-  doAction("public-find",{name:name,target:action==="public-two"?2:4});return;
+  if(freeBalance===null||chosenStake>freeBalance){showError("Saldo gratuito insuficiente.");return;}
+  doAction("public-find",{name:name,target:action==="public-two"?2:4,stake:chosenStake});return;
  }
  if(action==="create"||action==="join"){showError("Novas partidas são públicas. Escolha uma mesa de 2 ou 4 jogadores.");return;}
  if(action==="public-cancel"){doAction("public-cancel");return;}
  if(action==="public-rematch"){
   if(!game||!game.publicMatch||!(game.phase==="won"||game.phase==="exhausted"||game.phase==="abandoned"||game.players[game.seat]?.eliminated))return;
-  var nextTarget=game.target||game.players.length;
-  var nextName=game.players[game.seat]?.name||"Jogador";
-  leaveRoom(false);
-  doAction("public-find",{name:nextName,target:nextTarget});
+  if(game.stakeVersion===1)chosenStake=game.stake;
+  freeBalance=null;leaveRoom(false);
   return;
  }
  if(action==="share"){shareInvite();return;}
@@ -669,6 +677,7 @@ app.addEventListener("click",function(e){
  if(action==="start-bots"){doAction("start",{fillBots:true});return;}
  if(["start","next-round","initial-win","claim","reject"].indexOf(action)>=0)doAction(action);
 });
+app.addEventListener("change",function(e){if(e.target.id==="stake-select"){chosenStake=Number(e.target.value);render();}});
 app.addEventListener("keydown",function(e){
  if((e.key==="Enter"||e.key===" ")&&e.target.matches(".hand .card[data-id]")){e.preventDefault();e.target.click();}
  if(e.key==="Enter"&&e.target.id==="roomcode"){e.preventDefault();app.querySelector('[data-action="join"]')?.click();}
@@ -708,7 +717,7 @@ setInterval(function(){
  var timer=document.getElementById("claim-timer");
  if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";
  var turnTimer=document.getElementById("turn-countdown");
- if(turnTimer&&game?.turnDeadline)turnTimer.textContent=Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+"s";
+ if(turnTimer&&game?.turnDeadline){var sec=Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000));turnTimer.textContent=timerText(sec);var pill=document.getElementById("timer-pill");if(pill){pill.classList.remove("timer-red","timer-orange","timer-yellow","timer-green");pill.classList.add(timerClass(sec));}if(sec<=10&&sec>0&&game.turn===game.seat&&alertedDeadline!==game.turnDeadline){alertedDeadline=game.turnDeadline;sound("deadline");}}
 },1200);
 })();
 </script></body></html>
