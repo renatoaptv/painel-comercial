@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#08241b"><meta name="description" content="Pif-Paf / Caxeta do Gael — multiplayer online com 2 a 4 jogadores e robôs opcionais.">
-<title>Pif-Paf / Caxeta do Gael — Multiplayer Online</title>
+<meta name="theme-color" content="#08241b"><meta name="description" content="Pif-Paf — multiplayer online com 2 a 4 jogadores e robôs opcionais.">
+<title>Pif-Paf — Multiplayer Online</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;--bg:#061b14;--panel:#11372a;--edge:#416d56;--gold:#f1d28e;--cream:#fff8ea;--text:#eef4ec;--muted:#b0caba}
 *{box-sizing:border-box}html,body{min-height:100%;margin:0;background:radial-gradient(ellipse at 50% 0,#174a34 0,#071e16 56%,#061b14 100%);color:var(--text)}button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.45;cursor:default}.app{width:min(100%,760px);margin:auto;padding:12px 12px max(35px,env(safe-area-inset-bottom))}.top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0 12px}.top h1{font-size:clamp(19px,5vw,29px);line-height:1.18;letter-spacing:-.04em;margin:0}.top h1 span{color:var(--gold)}.top p{color:var(--muted);margin:3px 0;font-size:11px;font-weight:650}.top .back{color:var(--gold);border:1px solid var(--edge);border-radius:11px;padding:9px 10px;font-size:12px;text-decoration:none;white-space:nowrap}.panel{background:linear-gradient(155deg,#174431,#0d2c22);border:1px solid #3f7658;border-radius:20px;padding:17px;margin:10px 0;box-shadow:0 12px 30px #0004}.intro{padding:20px 17px}.kicker{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:850}.panel h2{font-size:22px;line-height:1.2;margin:9px 0}.lead{font-size:13px;line-height:1.55;color:var(--muted)}.label{display:block;font-size:12px;font-weight:750;color:#d5dfd5;margin:14px 0 6px}.input{display:block;width:100%;background:#041c14;color:#fff;border:1px solid #62866f;border-radius:12px;padding:13px;font-weight:700;font-size:16px;min-height:48px;text-transform:none;outline-color:var(--gold)}.code-input{text-transform:uppercase;letter-spacing:.24em;text-align:center;font-size:22px}.btn{background:#244d39;color:#fff;border:1px solid #668472;border-radius:12px;min-height:45px;padding:11px 13px;font-weight:800;font-size:13px}.btn:active{transform:translateY(1px)}.btn.primary{color:#16251a;background:var(--gold);border-color:var(--gold)}.btn.green{background:#2e7752;border-color:#6eba87}.btn.ghost{background:transparent}.btn.danger{background:#a33c43;border-color:#da7372}.btn.full{width:100%}.controls{display:flex;gap:9px;flex-wrap:wrap;margin:13px 0 3px}.controls>.btn{flex:1 1 130px}.divider{display:flex;align-items:center;gap:10px;text-transform:uppercase;color:var(--muted);font-weight:700;font-size:11px;margin:17px 0}.divider:before,.divider:after{content:"";height:1px;background:#47715b;flex:1}.statusbar{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0 9px}.pill{display:inline-flex;gap:5px;align-items:center;border:1px solid #52765c;background:#113f2a;border-radius:30px;font-size:11px;color:#d3e7d4;padding:7px 9px}.pill strong{color:var(--gold)}.notice{background:#574223;color:#ffe9bc;padding:10px 12px;border:1px solid #937642;border-radius:11px;font-size:12px;margin:9px 0}.err{background:#5d2631;border-color:#b45361;color:#ffdedc}.codebox{border:2px dashed #c7a65e;background:#503f1a38;color:#ffdb81;border-radius:16px;text-align:center;font-size:clamp(33px,11vw,50px);font-weight:950;letter-spacing:.12em;padding:18px 6px;margin:15px 0 6px;font-variant-numeric:tabular-nums;user-select:all}.seatlist{display:grid;gap:9px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}.seatitem{border:1px solid #4e795c;background:#0b2a1f;border-radius:12px;padding:10px;min-height:65px}.seatitem .who{font-weight:780;font-size:12px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.seatitem .meta{font-size:10px;margin-top:5px;color:var(--muted)}.seatitem.here{border-color:var(--gold);background:#3e432660}.table{position:relative;display:grid;grid-template-areas:". top ." "left center right" ". bottom .";grid-template-columns:minmax(70px,1fr) minmax(145px,2fr) minmax(70px,1fr);grid-template-rows:64px 126px 64px;background:radial-gradient(ellipse,#246b49,#155039 60%,#093424);border:8px solid #1e4833;outline:1px solid #588869;border-radius:34% / 23%;box-shadow:inset 0 6px 28px #0005,0 13px 20px #0004;align-items:center;gap:2px;padding:5px;margin:13px 0 12px;overflow:hidden}.seat{display:flex;align-items:center;flex-direction:column;justify-content:center;min-width:0;min-height:54px;gap:3px;background:#092a20c9;border:1px solid #61846b8a;border-radius:11px;padding:4px 2px;text-align:center}.seat.top{grid-area:top}.seat.bottom{grid-area:bottom}.seat.left{grid-area:left}.seat.right{grid-area:right}.seat.mine{border:2px solid var(--gold);background:#5a552c84}.seat.turn{box-shadow:0 0 0 2px #f1c96b80}.seat .seatname{font-size:clamp(10px,2.5vw,13px);font-weight:850;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.seat .cards-count{color:#cae2ca;font-size:10px}.center{grid-area:center;display:flex;align-items:center;justify-content:center;gap:clamp(10px,3vw,21px)}.pile{display:flex;align-items:center;flex-direction:column;gap:5px}.pile .caption{font-size:10px;color:#e0e9dc;white-space:nowrap;font-weight:800}.pile button,.pile .empty{height:84px;width:55px;border-radius:8px;display:flex;justify-content:center;align-items:center;flex-direction:column;border:2px solid #e2c576;color:#12271f;font-size:22px;font-weight:900;box-shadow:3px 4px 0 #08271b}.pile button.stock{background:repeating-linear-gradient(42deg,#15392a 0,#15392a 8px,#d5bb75 9px,#d5bb75 10px);color:var(--gold)}.pile button.discard{background:var(--cream)}.pile .empty{background:transparent;border:2px dashed #689576;color:#d0e0ce;box-shadow:none;font-size:12px}.hand-panel{padding:14px 10px}.hand-title{display:flex;gap:7px;align-items:center;justify-content:space-between}.hand-title h2{font-size:15px;margin:4px 0}.hand-title .turn-label{font-size:10px;color:var(--gold);font-weight:800;text-align:right}.hand{display:flex;justify-content:flex-start;align-items:center;flex-wrap:nowrap;touch-action:pan-y;padding:15px 8px 10px 7px;min-height:116px;overflow:visible;position:relative;--count:9}.card{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;position:relative;flex:0 0 auto;width:var(--card-width,50px);max-width:73px;height:110px;background:#fff9ee;color:#172620;border:1.5px solid #d9d3c2;border-radius:9px;box-shadow:0 6px 11px #0005;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;padding:6px 5px 8px;font-size:20px;font-weight:900;cursor:grab;transition:box-shadow .12s}.card+.card{margin-left:-13px}.card.red{color:#ae3441}.card .corner{font-size:19px;line-height:1;letter-spacing:-.04em}.card .symbol{font-size:clamp(23px,8vw,36px);align-self:center;line-height:1;margin-top:-3px}.card.selected{transform:translateY(-10px);border:2px solid #c99829;box-shadow:0 0 0 2px #f5d77d,0 10px 14px #0006}.card.moving{z-index:30;pointer-events:none;transition:none;box-shadow:0 18px 28px #0009;transform:translate(var(--dx,0px),var(--dy,0px)) scale(1.08)}.card.target{outline:3px solid #8cdb99;outline-offset:1px}.dropzone{border:2px dashed #927d50;color:#f5db9a;background:#4b452331;border-radius:12px;text-align:center;padding:13px 8px;font-weight:900;font-size:12px;letter-spacing:.09em;min-height:49px}.dropzone.over{border-color:#7ee9a6;background:#3773516e;color:white}.tip{color:#bcd2bf;font-size:11px;margin:0 0 12px;line-height:1.5}.groups{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin:11px 0}.groups .group{padding:8px;border-radius:12px;border:1px solid #769778;background:#12402e;font-size:11px;font-weight:800}.groups .group .cards-mini{display:flex;gap:4px;margin-top:6px}.mini-card{display:flex;flex-direction:column;align-items:center;justify-content:center;width:38px;height:52px;background:#fff9ed;color:#1d2720;border-radius:6px;font-weight:900}.mini-card.red{color:#b43d47}.waiting{text-align:center;padding:20px 12px}.waiting .spark{font-size:34px;margin:5px}.loading-dots{font-weight:850;color:var(--gold)}.footer{color:#8cb6a1;font-size:10px;line-height:1.5;text-align:center;padding:12px 4px}.spinner{display:inline-block;width:13px;height:13px;border:2px solid #b6cdb8;border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-right:5px;vertical-align:-2px}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:400px){.app{padding:10px 9px 32px}.panel{padding:14px 12px}.table{grid-template-rows:58px 114px 58px;border-width:6px}.pile button,.pile .empty{width:48px;height:76px}.hand-panel{padding:12px 8px}.card{height:96px;width:var(--card-width,44px);padding:4px;font-size:17px}.card .corner{font-size:17px}.card .symbol{font-size:25px}.hand{min-height:104px;padding-left:3px}.seat{min-height:50px}.seat .cards-count{font-size:9px}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -55,7 +55,7 @@
 .seat.seat-out{opacity:.45;border-style:dashed;box-shadow:none}
 .forfeit-note{font-size:11px;line-height:1.45;border:1px solid #8e733f;border-radius:10px;padding:8px 11px;background:#49381780;color:#f2daab;margin:8px 0}
 .forfeit-note strong{color:#ffe2a3}
-</style></head>
+.home-brand{color:var(--gold);font:inherit;font-weight:850;text-decoration:none;background:none;border:0;padding:0;display:inline-block}.home-brand small{font-size:.65em;color:var(--gold)}a.home-brand:focus-visible,button.home-brand:focus-visible{outline:2px solid var(--gold);outline-offset:5px}</style></head>
 <body><div class="app" id="app"></div>
 <script src="./voice-chat.js?v=2"></script>
 <script src="./fairness.js?v=2"></script>
@@ -83,15 +83,19 @@ function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){retur
 function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
 function card(c){return '<div class="card '+(c.suit==="H"||c.suit==="D"?"red ":"")+(selected===c.id?"selected":"")+'" role="button" tabindex="0" data-id="'+c.id+'" aria-label="'+esc(cardTitle(c))+'"><span class="corner">'+esc(c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit]+'</span><span class="symbol">'+suits[c.suit]+'</span></div>';}
 function btn(text,action,cls,disabled){return '<button class="btn '+(cls||"")+'" data-action="'+action+'" '+(disabled?"disabled":"")+'>'+text+"</button>";}
+var entryMode=new URLSearchParams(location.search).get("s")?"friends":new URLSearchParams(location.search).get("mode")==="friends"?"friends":"public";
+var homeUrl="../pife-104-v2/";
 function header(){
- var playing=game?.publicMatch&&['turn','claim'].includes(game.phase)&&!game.players[game.seat]?.eliminated;
- var label=playing?'Abandonar':'← Trocar sala';
- var nav=game?'<button class="back leave" type="button" data-action="leave-room">'+label+'</button>'+(playing?'':'<a class="back" href="./">Início do jogo</a>'):'<a class="back" href="./">← Início do jogo</a>';
- return '<header class="top"><div><h1>Pif-Paf / <span>Caxeta do Gael</span></h1><p>104 cartas · 2 a 4 jogadores · multiplayer online</p></div><div class="top-actions">'+nav+'</div></header>';
+ var ended=game&&['won','exhausted','abandoned'].includes(game.phase);
+ var playing=game&&game.phase!=="lobby"&&!ended&&!game.players[game.seat]?.eliminated;
+ var label=playing?(game.publicMatch?'Abandonar':'Sair da mesa'):'← Trocar sala';
+ var brand=playing?'<span class="home-brand">♠ Pif-Paf</span>':game?'<button class="home-brand" data-action="home" type="button" aria-label="Voltar ao início">♠ Pif-Paf <small>⌂</small></button>':'<a class="home-brand" href="'+homeUrl+'" aria-label="Voltar ao início">♠ Pif-Paf <small>⌂</small></a>';
+ var nav=game?'<button class="back leave" type="button" data-action="leave-room">'+label+'</button>':'';
+ return '<header class="top"><div><h1>'+brand+'</h1><p>104 cartas · 2 a 4 jogadores · online</p></div><div class="top-actions">'+nav+'</div></header>';
 }
 function showLanding(){
  var codeIn=new URLSearchParams(location.search).get("s")||"";
- var savedName=localStorage.getItem("gael_online_name")||"";
+ var savedName=window.pifPafNickname||localStorage.getItem("gael_online_name")||"";
  var identity=profileToken?'<span class="pill"><icon class="identity-dot"></icon> Perfil salvo neste celular</span>'+btn("Copiar chave de recuperação","profile-copy","ghost"):'<span class="pill">Perfil gratuito · criado ao começar</span>';
  var restore=recoveryOpen?'<div class="recovery-box"><label class="label" for="recoverykey">Sua chave de recuperação (é pessoal)</label><input class="input" id="recoverykey" type="password" autocomplete="off" placeholder="Cole a chave do seu perfil">'+
  '<div class="controls">'+btn("Recuperar meu perfil","profile-restore","green")+btn("Fechar","recovery-close","ghost")+'</div></div>':'';
@@ -103,17 +107,18 @@ function showLanding(){
    var phase=r.phase==="lobby"?"Aguardando jogadores":r.phase==="won"||r.phase==="exhausted"?"Rodada encerrada":"Em andamento";
    return '<button class="btn ghost saved-game-btn" data-action="resume-active" data-code="'+esc(r.code)+'">↪ Continuar · '+esc(description)+' · '+esc(r.code)+' <small>'+esc(phase)+'</small></button>';
   }).join('')+'</div>':'';
- app.innerHTML=header()+'<section class="panel intro"><span class="kicker">Jogue com pessoas reais</span><h2>Encontre adversários agora</h2>'+
- '<p class="lead">Sem código de sala. Escolha uma partida pública e o jogo encontra outros jogadores automaticamente.</p>'+
- '<label class="label" for="playername">Seu nome de jogador</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu nome" value="'+esc(savedName)+'">'+
- '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy)+'</div>'+
- '<p class="tip">Somente pessoas reais. A partida inicia automaticamente quando a mesa estiver completa.</p>'+
- '<div class="divider">ou jogue em sala privada</div>'+
- '<div class="controls">'+btn("Criar sala com amigos","create","ghost full",busy)+'</div>'+
+ var currentName='<label class="label" for="playername">Seu apelido</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu apelido" value="'+esc(savedName)+'" '+(window.pifPafNickname?'readonly':'')+'>';
+ var choices=entryMode==="friends"?'<span class="kicker">Salas privadas</span><h2>Jogar com amigos</h2><p class="lead">Crie uma sala e compartilhe o convite ou entre usando um código.</p>'+currentName+
+ '<div class="controls">'+btn("Criar sala com amigos","create","primary full",busy)+'</div>'+
  '<label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
- '<div class="controls">'+btn("Entrar na sala","join","ghost",busy)+btn("Recuperar partida","resume-profile","ghost",busy||!profileToken)+'</div>'+
+ '<div class="controls">'+btn("Entrar na sala","join","green",busy)+btn("Recuperar partida","resume-profile","ghost",busy||!profileToken)+'</div>':
+ '<span class="kicker">Partidas públicas</span><h2>Jogar online</h2><p class="lead">Encontre outros jogadores automaticamente.</p>'+currentName+
+ '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy)+'</div>'+
+ '<p class="tip">Somente pessoas reais. A partida inicia automaticamente quando a mesa estiver completa.</p>';
+ app.innerHTML=header()+'<section class="panel intro">'+choices+
  '<div class="profile-bar">'+identity+btn(recoveryOpen?"Fechar recuperação":"Tenho uma chave de acesso",recoveryOpen?"recovery-close":"recovery-open","ghost")+'</div>'+savedRooms+restore+
- '</section>'+messageHtml()+'<footer class="footer">Pif-Paf / Caxeta do Gael · 104 cartas · partida salva no servidor · música e efeitos</footer>';
+ '</section>'+messageHtml()+'<footer class="footer">Pif-Paf · 104 cartas · partida salva no servidor</footer>';
+
 }
 function messageHtml(){return errText?'<div class="notice err">'+esc(errText)+'</div>':noticeText?'<div class="notice">'+esc(noticeText)+'</div>':"";}
 function seatItem(p,i){
@@ -310,7 +315,7 @@ function leaveRoom(cancelSearch=true){
  localStorage.removeItem(STORAGE_KEY);
  token="";room="";game=null;lastRevision=-1;selected="";order=[];
  busy=false;polling=false;drag=null;ignoreClick=false;errText="";noticeText="";
- try{history.replaceState(null,"",new URL("./online.html",location.href).href);}catch(_){}
+ try{history.replaceState(null,"",new URL("./online.html?mode="+entryMode,location.href).href);}catch(_){}
  render();
  if(profileToken)loadActiveMatches(true);
 }
@@ -603,7 +608,7 @@ async function refresh(){
 }
 async function shareInvite(){
  var url=link();
- try{if(navigator.share)await navigator.share({title:"Pif-Paf / Caxeta do Gael",text:"Entre na minha mesa online. Código: "+room,url:url});
+ try{if(navigator.share)await navigator.share({title:"Pif-Paf",text:"Entre na minha mesa online. Código: "+room,url:url});
  else if(navigator.clipboard) {await navigator.clipboard.writeText(url);noticeText="Link copiado para enviar aos amigos.";render();}
  else window.prompt("Copie o convite:",url);
  }catch(e){if(e.name!=="AbortError")showError("Não foi possível compartilhar. Copie o código da sala.");}
@@ -665,6 +670,14 @@ app.addEventListener("click",function(e){
  audioStart();
  if(action==="verify-fairness"){verifyFairness();return;}
  if(voiceChat&&voiceChat.handle(action))return;
+ if(action==="home"){
+  if(!game){location.assign(homeUrl);return;}
+  if(game.phase==="lobby"){
+   if(!window.confirm("Voltar ao início e sair da sala de espera?"))return;
+   if(game.publicMatch){if(busy)return;busy=true;api("public-cancel").then(function(){leaveRoom(false);location.assign(homeUrl);}).catch(function(e){busy=false;showError(e.message);});return;}
+  }else if(!['won','exhausted','abandoned'].includes(game.phase)&&!game.players[game.seat]?.eliminated)return;
+  leaveRoom(false);location.assign(homeUrl);return;
+ }
  if(action==="leave-room"){
   sound("ui");
   if(game?.publicMatch&&['turn','claim'].includes(game.phase)&&!game.players[game.seat]?.eliminated){leavePublicMatch();return;}
@@ -728,6 +741,7 @@ try{
 }catch(_){}
 if(room&&token){refresh();}
 else{showLanding();if(profileToken)loadActiveMatches(true);}
+window.addEventListener("pif-paf-profile",function(){if(!game&&!busy){var input=document.getElementById("playername");if(input&&window.pifPafNickname){input.value=window.pifPafNickname;input.readOnly=true;}}});
 window.addEventListener("resize",function(){if(game)render();});
 window.addEventListener("online",function(){if(room&&token)refresh();});
 window.addEventListener("offline",function(){if(game){errText="Sem internet. A partida continua salva; tentando reconectar...";render();}});
@@ -740,4 +754,4 @@ setInterval(function(){
  if(turnTimer&&game?.turnDeadline)turnTimer.textContent=Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000))+"s";
 },1200);
 })();
-</script><script type="module">import {restoreTheme} from '../pife-104-v2/shop-api.js';restoreTheme();</script></body></html>
+</script><script type="module">import {restoreTheme,loadPlayerIdentity} from '../pife-104-v2/shop-api.js';restoreTheme();loadPlayerIdentity();</script></body></html>
