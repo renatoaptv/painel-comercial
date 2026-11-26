@@ -5,3 +5,11 @@ export async function shop(action,params={}){const {data:{session}}=await sb.aut
 export function applyTheme(sku){document.getElementById('gael-theme-style')?.remove();const t=themes[sku];if(!t)return;const st=document.createElement('style');st.id='gael-theme-style';st.textContent='html,body{background:radial-gradient(ellipse at 50% 10%,'+t.light+','+t.bg+' 75%) !important} .panel,.table,.topbar,.top{border-color:'+t.border+' !important} .table{box-shadow:inset 0 0 45px #0006,0 0 20px '+t.border+'55 !important}';document.head.append(st);}
 export async function restoreTheme(){try{const {data:{session}}=await sb.auth.getSession();if(!session)return;const key='gael-theme-'+session.user.id;const sku=localStorage.getItem(key);if(sku&&(await shop('status')).owned.includes(sku))applyTheme(sku);}catch{}}
 export async function selectTheme(sku,owned){const {data:{session}}=await sb.auth.getSession();if(!session||sku&&!owned.includes(sku))throw Error('Tema não desbloqueado.');const key='gael-theme-'+session.user.id;if(sku)localStorage.setItem(key,sku);else localStorage.removeItem(key);applyTheme(sku);}
+
+export async function loadPlayerIdentity(){
+try{const {data:{user},error}=await sb.auth.getUser();if(error||!user?.email_confirmed_at)return null;
+const name=String(user.user_metadata?.gael_nickname||'').trim().slice(0,24);if(name.length<2)return null;
+const {data,error:err}=await sb.rpc('gael_v2_account',{p_nickname:name});if(err||!data?.nickname)return null;
+window.pifPafNickname=data.nickname;window.dispatchEvent(new Event('pif-paf-profile'));return data;
+}catch{return null;}
+}
