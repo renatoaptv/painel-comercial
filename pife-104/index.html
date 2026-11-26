@@ -606,12 +606,13 @@ var bgMusic=(function(){
     const selected = hand.find(c => c.id === state.selectedId);
     const nineAfter = selected ? hand.filter(c => c.id !== selected.id) : null;
     const winningGroups = nineAfter ? rules.winningPartition(nineAfter) : null;
+    const autoWin = state.turnStep==='discard' && rules.winningDiscardFromTen(hand).length>0;
     const canSpecial = state.openingTurn && player === state.starter && !state.specialUsed && state.turnStep === 'discard' && state.drawSource === 'stock' && state.drawnId !== null && hand.some(c=>c.id===state.drawnId);
     let content = handHtml(hand,state.turnStep==='discard');
     if (state.turnStep === 'draw') {
       content += `<div class="draw-box">Você tem <strong>9 cartas</strong>. Compre uma carta do bolo${state.discard.length?' ou pegue a última carta descartada':''}.</div><div class="controls"><button class="btn primary" data-action="buy-stock" ${state.deck.length?'':'disabled'}>Comprar do bolo</button>${state.discard.length?'<button class="btn" data-action="buy-discard">Pegar do descarte</button>':''}</div>`;
     } else {
-      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. <strong>Arraste uma carta até a faixa DESCARTAR ou até o descarte na mesa</strong>, ou toque nela para selecionar. Para bater, deixe nove cartas válidas.</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls"><button class="btn primary" data-action="win-after-discard" ${selected&&winningGroups?'':'disabled'}>BATER COM 9 CARTAS</button><button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}</div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
+      content += `<div class="draw-box">Você está com <strong>10 cartas</strong>. <strong>Arraste uma carta até a faixa DESCARTAR ou até o descarte na mesa</strong>, ou toque nela para selecionar. ${autoWin?"Você pode bater! A carta excedente será descartada automaticamente.":"Para bater, deixe nove cartas válidas."}</div>${selected?`<p class="note">Carta selecionada para sair: <strong>${esc(selected.label)} ${selected.symbol}</strong> ${winningGroups? '· As outras 9 formam uma batida válida!':'· Ainda não forma uma batida com as outras 9.'}</p>`:'<p class="note">Selecione uma carta da sua mão acima.</p>'}<div class="controls">${autoWin?'<button class="btn primary" data-action="win-after-discard">BATER!</button>':''}<button class="btn" data-action="discard" ${selected?'':'disabled'}>Descartar e passar</button>${canSpecial?'<button class="btn danger" data-action="reject-first">Recusar a 1ª carta e comprar outra</button>':''}</div>${canSpecial?'<p class="actions-info">Regra especial: só quem começou esta rodada pode recusar a primeira carta comprada. Ela vai ao descarte; em seguida, você recebe outra carta.</p>':''}`;
     }
     return `<section class="gamepanel"><span class="turn-label">Jogador da vez · ${state.turnStep==='draw'?'Comprar':'Descartar ou bater'}</span><h2 class="phase-title">${esc(state.names[player])}</h2><p class="subheading">${state.turnStep==='draw'?'Compre uma carta para jogar.':'Escolha uma carta para sair, ficando com nove na mão.'}</p>${content}</section>`;
   }
@@ -997,7 +998,14 @@ var bgMusic=(function(){
       return;
     }
     if (action === 'discard') return discardCard(false);
-    if (action === 'win-after-discard') return discardCard(true);
+    if (action === 'win-after-discard') {
+      if(state.phase!=='turn'||state.turnStep!=='discard'||!state.visible||isBot(state.turn))return;
+      const choices=rules.winningDiscardFromTen(state.hands[state.turn]);
+      const result=choices.find(x=>x.removed.id!==state.drawnId)||choices[0];
+      if(!result)return notice('As cartas não formam uma batida válida.');
+      state.selectedId=result.removed.id;
+      return discardCard(true);
+    }
     if (action === 'reject-first') return rejectFirst();
     if (action === 'claim') return claim();
     if (action === 'pass-claim') return passClaim();
