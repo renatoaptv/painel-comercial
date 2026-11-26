@@ -712,12 +712,17 @@ window.addEventListener("resize",function(){if(game)render();});
 window.addEventListener("online",function(){if(room&&token)refresh();});
 window.addEventListener("offline",function(){if(game){errText="Sem internet. A partida continua salva; tentando reconectar...";render();}});
 window.addEventListener("pagehide",function(){if(voiceChat)voiceChat.leave();});
+var nextPollAt=0;
 setInterval(function(){
- if(room&&token)refresh();
+ var now=Date.now();
+ if(room&&token&&now>=nextPollAt){
+  nextPollAt=now+(game&&["turn","claim"].includes(game.phase)?400:1200);
+  refresh();
+ }
  var timer=document.getElementById("claim-timer");
  if(timer&&game&&game.pending)timer.textContent=Math.max(0,Math.ceil((game.pending.until-Date.now())/1000))+"s";
  var turnTimer=document.getElementById("turn-countdown");
  if(turnTimer&&game?.turnDeadline){var sec=Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000));turnTimer.textContent=timerText(sec);var pill=document.getElementById("timer-pill");if(pill){pill.classList.remove("timer-red","timer-orange","timer-yellow","timer-green");pill.classList.add(timerClass(sec));}if(sec<=10&&sec>0&&game.turn===game.seat&&alertedDeadline!==game.turnDeadline){alertedDeadline=game.turnDeadline;sound("deadline");}}
-},1200);
+},400);
 })();
 </script></body></html>
