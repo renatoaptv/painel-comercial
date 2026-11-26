@@ -55,9 +55,9 @@
 .seat.seat-out{opacity:.45;border-style:dashed;box-shadow:none}
 .forfeit-note{font-size:11px;line-height:1.45;border:1px solid #8e733f;border-radius:10px;padding:8px 11px;background:#49381780;color:#f2daab;margin:8px 0}
 .forfeit-note strong{color:#ffe2a3}
-.home-brand{color:var(--gold);font:inherit;font-weight:850;text-decoration:none;background:none;border:0;padding:0;display:inline-block}.home-brand small{font-size:.65em;color:var(--gold)}a.home-brand:focus-visible,button.home-brand:focus-visible{outline:2px solid var(--gold);outline-offset:5px}</style></head>
+.home-brand{color:var(--gold);font:inherit;font-weight:850;text-decoration:none;background:none;border:0;padding:0;display:inline-block}.home-brand small{font-size:.65em;color:var(--gold)}a.home-brand:focus-visible,button.home-brand:focus-visible{outline:2px solid var(--gold);outline-offset:5px}.voice-icon{display:inline-grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;border:1px solid #527361;color:#b9cec0;background:#12372a;cursor:pointer;padding:0}.voice-icon.voice-on{color:#102d23;background:#e6c78c;border-color:#e6c78c}.voice-icon:focus-visible{outline:2px solid #fff;outline-offset:3px}.voice-sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}</style></head>
 <body><div class="app" id="app"></div>
-<script src="./voice-chat.js?v=2"></script>
+<script src="./voice-chat.js?v=3"></script>
 <script src="./fairness.js?v=2"></script>
 <script>
 (function(){
@@ -90,7 +90,7 @@ function header(){
  var playing=game&&game.phase!=="lobby"&&!ended&&!game.players[game.seat]?.eliminated;
  var label=playing?(game.publicMatch?'Abandonar':'Sair da mesa'):'← Trocar sala';
  var brand=playing?'<span class="home-brand">♠ Pif-Paf</span>':game?'<button class="home-brand" data-action="home" type="button" aria-label="Voltar ao início">♠ Pif-Paf <small>⌂</small></button>':'<a class="home-brand" href="'+homeUrl+'" aria-label="Voltar ao início">♠ Pif-Paf <small>⌂</small></a>';
- var nav=game?'<button class="back leave" type="button" data-action="leave-room">'+label+'</button>':'';
+ var nav=game?(voiceChat?voiceChat.html():'')+'<button class="back leave" type="button" data-action="leave-room">'+label+'</button>':'';
  return '<header class="top"><div><h1>'+brand+'</h1><p>104 cartas · 2 a 4 jogadores · online</p></div><div class="top-actions">'+nav+'</div></header>';
 }
 function showLanding(){
@@ -224,14 +224,14 @@ function handView(){
  var ownTurn=game.phase==="turn"&&game.turn===game.seat;
  var canDiscard=ownTurn&&game.step==="discard"&&mine.length===10;
  var selection=mine.filter(function(c){return c.id===selected;})[0];
- var goodWin=!!selection&&canWin9(mine.filter(function(c){return c.id!==selected;}));
+ var goodWin=canDiscard&&game.canAutoWin===true;
  var canInitial=ownTurn&&game.step==="draw"&&canWin9(mine);
  var title=ownTurn?"Sua vez de jogar":game.phase==="won"?"Rodada encerrada":"Suas cartas";
  var count=Math.max(9,mine.length);var cardWidth=Math.max(34,Math.min(73,Math.floor((Math.min(window.innerWidth,760)-38+(count-1)*13)/count)));var content='<section class="panel hand-panel"><div class="hand-title"><h2>'+title+'</h2><span class="turn-label">'+mine.length+' CARTAS · ARRASTE PARA ORGANIZAR</span></div><div class="hand" style="--count:'+count+';--card-width:'+cardWidth+'px" aria-label="Sua mão">'+ordered.map(card).join("")+'</div>';
  if(canDiscard)content+='<div class="dropzone" data-dropzone="discard">↓ SOLTE A CARTA AQUI PARA DESCARTAR ↓</div>';
  if(!ownTurn){content+='<p class="tip">'+(game.phase==="claim"?"Aguarde a conferência do descarte.":"Enquanto aguarda, você pode organizar suas cartas com o dedo.")+'</p>';}
  else if(game.step==="draw")content+='<p class="tip">Sua vez: compre do bolo ou do descarte. A compra também funciona tocando na mesa.</p><div class="controls">'+btn("Comprar do bolo","draw-stock","primary",game.drawCount===0)+(game.discardTop?btn("Pegar descarte","draw-discard","ghost"):btn("Sem descarte","x","ghost",true))+(canInitial?btn("BATER COM 9 CARTAS","initial-win","green full"): '')+'</div>';
- else if(canDiscard)content+='<p class="tip">Arraste a carta até DESCARTAR, ou toque na carta e use o botão abaixo.</p><div class="controls">'+btn("Descartar carta","discard","primary",!selection)+btn("BATER!","win","green",!goodWin)+(game.firstTurn&&game.turn===game.starter&&!game.specialUsed&&game.drawSource==="stock"?btn("Recusar 1ª compra","reject","ghost full"):"")+'</div>';
+ else if(canDiscard)content+='<p class="tip">'+(goodWin?"Você pode bater! O sistema descarta automaticamente a carta excedente.":"Arraste uma carta até DESCARTAR, ou toque nela e use o botão abaixo.")+'</p><div class="controls">'+btn("Descartar carta","discard","primary",!selection)+(goodWin?btn("BATER!","win-auto","green full",busy):"")+(game.firstTurn&&game.turn===game.starter&&!game.specialUsed&&game.drawSource==="stock"?btn("Recusar 1ª compra","reject","ghost full"):"")+'</div>';
  content+='</section>';return content;
 }
 function currentStatus(){
@@ -274,8 +274,7 @@ function render(){
   }
   body+=fairnessPanel();
  }
- if(voiceChat)body+=voiceChat.html();
- else body+='<div class="notice">Chat de voz indisponível. Atualize a página.</div>';
+ 
  if(game.phase!=="lobby")body+=currentStatus()+(game.players[game.seat]?.eliminated?'':handView());
 
  body+='<footer class="footer">Mesa online · 2 a 4 participantes · Cartas privadas · Conversa por voz opcional</footer>';
@@ -664,6 +663,7 @@ app.addEventListener("click",function(e){
  if(action==="copy-code"){copyCode();return;}
  if(action==="draw-stock"){doAction("draw",{source:"stock"});return;}
  if(action==="draw-discard"){doAction("draw",{source:"discard"});return;}
+ if(action==="win-auto"){if(game?.canAutoWin===true)doAction("win-auto");return;}
  if(action==="discard"||action==="win"){if(!selected){showError("Selecione uma carta.");return;}doAction(action,{cardId:selected});return;}
  if(action==="start-only"){doAction("start",{fillBots:false});return;}
  if(action==="start-bots"){doAction("start",{fillBots:true});return;}
