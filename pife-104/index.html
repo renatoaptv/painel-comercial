@@ -560,7 +560,7 @@ var bgMusic=(function(){
       if(nextEligibleClaim()!==0)autoTimer=setTimeout(botClaimOrAdvance,570);
     }
   }
-  const trainingMode=new URLSearchParams(location.search).get('mode')==='training';
+  const trainingMode=true;
   function header() {
     return `<header class="topbar">${['setup','won','exhausted'].includes(state.phase)?'<a class="brand home-brand" href="../pife-104-v2/" aria-label="Voltar ao início"><div class="logo">♠</div><div><h1>Pif-Paf ⌂</h1><small>4 jogadores · 104 cartas</small></div></a>':'<div class="brand"><div class="logo" aria-hidden="true">♠</div><div><h1>Pif-Paf</h1><small>4 jogadores · 104 cartas</small></div></div>'}<div class="top-actions">${state.phase !== 'setup' ? '<button class="btn ghost small" data-action="new-game">Novo jogo</button>' : ''}<button class="btn ghost small" data-action="toggle-help">Regras</button></div></header>`;
   }
@@ -1015,7 +1015,7 @@ var bgMusic=(function(){
   },true);
   // Status de inspeção e regras disponível para testes automatizados em navegador.
   window.Pife104Debug = { state, rules };
-  if(trainingMode)state.mode='bots';else if(new URLSearchParams(location.search).get('mode')==='local'){state.mode='local';state.names=['Jogador 1','Jogador 2','Jogador 3','Jogador 4'];}
+  state.mode='bots';
   window.addEventListener('pif-paf-profile',()=>{if(state.phase==='setup'&&state.mode==='bots'){const input=document.getElementById('name0');if(input&&window.pifPafNickname){input.value=window.pifPafNickname;input.readOnly=true;}}});
   render();
 })();
