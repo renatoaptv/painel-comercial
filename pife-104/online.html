@@ -83,7 +83,7 @@ function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){retur
 function cardTitle(c){return (c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit];}
 function card(c){return '<div class="card '+(c.suit==="H"||c.suit==="D"?"red ":"")+(selected===c.id?"selected":"")+'" role="button" tabindex="0" data-id="'+c.id+'" aria-label="'+esc(cardTitle(c))+'"><span class="corner">'+esc(c.rank===1?"A":c.rank===11?"J":c.rank===12?"Q":c.rank===13?"K":c.rank)+suits[c.suit]+'</span><span class="symbol">'+suits[c.suit]+'</span></div>';}
 function btn(text,action,cls,disabled){return '<button class="btn '+(cls||"")+'" data-action="'+action+'" '+(disabled?"disabled":"")+'>'+text+"</button>";}
-var entryMode=new URLSearchParams(location.search).get("s")?"friends":new URLSearchParams(location.search).get("mode")==="friends"?"friends":"public";
+var entryMode="public";
 var homeUrl="../pife-104-v2/";
 function header(){
  var ended=game&&['won','exhausted','abandoned'].includes(game.phase);
@@ -108,11 +108,7 @@ function showLanding(){
    return '<button class="btn ghost saved-game-btn" data-action="resume-active" data-code="'+esc(r.code)+'">↪ Continuar · '+esc(description)+' · '+esc(r.code)+' <small>'+esc(phase)+'</small></button>';
   }).join('')+'</div>':'';
  var currentName='<label class="label" for="playername">Seu apelido</label><input class="input" id="playername" maxlength="24" placeholder="Digite seu apelido" value="'+esc(savedName)+'" '+(window.pifPafNickname?'readonly':'')+'>';
- var choices=entryMode==="friends"?'<span class="kicker">Salas privadas</span><h2>Jogar com amigos</h2><p class="lead">Crie uma sala e compartilhe o convite ou entre usando um código.</p>'+currentName+
- '<div class="controls">'+btn("Criar sala com amigos","create","primary full",busy)+'</div>'+
- '<label class="label" for="roomcode">Código da sala</label><input class="input code-input" id="roomcode" maxlength="6" placeholder="ABC234" value="'+esc(codeIn)+'" autocapitalize="characters" autocomplete="off">'+
- '<div class="controls">'+btn("Entrar na sala","join","green",busy)+btn("Recuperar partida","resume-profile","ghost",busy||!profileToken)+'</div>':
- '<span class="kicker">Partidas públicas</span><h2>Jogar online</h2><p class="lead">Encontre outros jogadores automaticamente.</p>'+currentName+
+ var choices= '<span class="kicker">Partidas públicas</span><h2>Jogar online</h2><p class="lead">Encontre outros jogadores automaticamente.</p>'+currentName+
  '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy)+'</div>'+
  '<p class="tip">Somente pessoas reais. A partida inicia automaticamente quando a mesa estiver completa.</p>';
  app.innerHTML=header()+'<section class="panel intro">'+choices+
@@ -699,7 +695,8 @@ app.addEventListener("click",function(e){
   var name=document.getElementById("playername")?.value.trim()||"Jogador";
   doAction("public-find",{name:name,target:action==="public-two"?2:4});return;
  }
- if(action==="create"||action==="join"||action==="resume-profile"){
+ if(action==="create"||action==="join"){showError("Novas partidas são públicas. Escolha uma mesa de 2 ou 4 jogadores.");return;}
+ if(action==="resume-profile"){
   var name=document.getElementById("playername")?.value.trim()||"Jogador";
   if(action==="join"||action==="resume-profile"){
    var code=(document.getElementById("roomcode")?.value||"").toUpperCase().trim();
