@@ -699,6 +699,8 @@ showLanding();
   accountClient.auth.onAuthStateChange(function(event,nextSession){
    if(event==="SIGNED_OUT"||nextSession&&nextSession.user.id!==accountId){accountReady=false;accountLoading=false;activeMatches=[];leaveRoom(false);}
   });
+  var friendInvite=new URLSearchParams(location.search).get("invite");
+  if(friendInvite){await doAction("friend-join",{invite:friendInvite});if(game)return;render();return;}
   await loadActiveMatches(true);
   var saved=null;try{saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");}catch(_){}
   var code=new URLSearchParams(location.search).get("s")||saved?.code;
