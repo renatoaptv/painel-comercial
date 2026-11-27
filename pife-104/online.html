@@ -334,6 +334,8 @@ function leaveRoom(cancelSearch=true){
 function showError(msg){errText=String(msg||"Erro de conexão.");noticeText="";render();}
 function setState(state){
  if(state?.publicMatch!==true){leaveRoom(false);return;}
+ // Responses may arrive out of order; never roll back a more recent server state.
+ if(game&&state.code===game.code&&Number(state.revision)<Number(lastRevision))return;
  var old=game;
  game=state;room=state.code;lastRevision=state.revision;loadRoomPhotos(state);
  if(!old||old.round!==state.round){order=[];selected="";lastFairnessResult=null;}
