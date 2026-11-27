@@ -1,0 +1,5 @@
+// Cache only a generic offline notice; never cache authenticated pages, API data or checkout.
+const CACHE='pif-paf-v2-offline-1';
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.add(new URL('offline.html',self.registration.scope).href)).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('pif-paf-v2-offline-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET'||req.mode!=='navigate'||new URL(req.url).origin!==self.location.origin)return;event.respondWith(fetch(req).catch(()=>caches.match(new URL('offline.html',self.registration.scope).href)));});
