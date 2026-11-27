@@ -67,6 +67,7 @@ var API="https://tlzshlerpspgpjaqskdg.supabase.co/functions/v1/pife104-multiplay
 var app=document.getElementById("app");
 var game=null,token="",room="",selected="",order=[],busy=false,polling=false,drag=null,ignoreClick=false,errText="",noticeText="",lastRevision=-1;
 var STORAGE_KEY="gael_pifpaf_online_v1";
+var deviceId=null;try{deviceId=localStorage.getItem("pif-paf-installation-id");if(!/^[a-f0-9-]{36}$/i.test(deviceId||"")){deviceId=crypto.randomUUID();localStorage.setItem("pif-paf-installation-id",deviceId);}}catch(_){}
 var PROFILE_KEY="gael_pifpaf_profile_access_v1";
 var legacyToken=localStorage.getItem(PROFILE_KEY)||"";
 var accountClient=null,accountId="",accountReady=false,accountLoading=true,playerProfile=null;
@@ -121,7 +122,7 @@ function showLanding(){
   }).join('')+'</div>':'';
  var currentName='<p class="pill">Jogando como <strong>'+esc(playerProfile.name)+'</strong></p>';
  var balanceLabel=freeBalance===null?"Consultando saldo…":Number(freeBalance).toLocaleString("pt-BR")+" G-COIN gratuitas";
- var stakePicker='<div class="stake-picker"><span class="kicker">Saldo: '+esc(balanceLabel)+'</span><label class="label" for="stake-select">Créditos gratuitos por jogador</label><select class="input" id="stake-select">'+stakeOptions.map(function(n){return '<option value="'+n+'" '+(n===chosenStake?'selected':'')+' '+(freeBalance!==null&&n>freeBalance?'disabled':'')+'>'+n.toLocaleString("pt-BR")+' G-COIN</option>';}).join("")+'</select><p class="tip">Premiação: <strong>'+chosenStake*2+'</strong> (2 jogadores) ou <strong>'+chosenStake*4+'</strong> (4 jogadores). Somente créditos gratuitos, sem valor monetário.</p></div>';
+ var stakePicker='<div class="stake-picker"><span class="kicker">Saldo: '+esc(balanceLabel)+'</span><label class="label" for="stake-select">Créditos gratuitos por jogador</label><select class="input" id="stake-select">'+stakeOptions.map(function(n){return '<option value="'+n+'" '+(n===chosenStake?'selected':'')+' '+(freeBalance!==null&&n>freeBalance?'disabled':'')+'>'+n.toLocaleString("pt-BR")+' G-COIN</option>';}).join("")+'</select><p class="tip">Premiação: <strong>'+chosenStake*2+'</strong> (2 jogadores) ou <strong>'+chosenStake*4+'</strong> (4 jogadores). Somente créditos gratuitos, sem valor monetário. Mesas públicas não permitem a mesma rede ou aparelho na mesma mesa.</p></div>';
  var choices= '<span class="kicker">Partidas públicas</span><h2>Jogar online</h2><p class="lead">Encontre outros jogadores automaticamente.</p>'+currentName+stakePicker+
  '<div class="public-buttons">'+btn("👥 Partida rápida · 2 jogadores","public-two","primary full",busy||freeBalance===null||chosenStake>freeBalance)+btn("♠ Mesa completa · 4 jogadores","public-four","green full",busy||freeBalance===null||chosenStake>freeBalance)+'</div>'+
  '<p class="tip">Somente pessoas reais. O débito de créditos gratuitos acontece quando a mesa estiver completa. 2 minutos por jogada.</p>';
@@ -138,8 +139,8 @@ function renderLobby(){
  var people=game.players,n=people.length,isHost=game.seat===0;
  if(game.publicMatch){
   var target=game.target||4;
-  return '<section class="panel public-waiting"><span class="kicker">Partida pública · '+target+' pessoas</span><h2><span class="spinner"></span> Procurando adversários...</h2>'+
-   '<p class="lead">Encontrados <strong>'+n+' de '+target+'</strong> jogadores. A partida começa automaticamente quando todos entrarem.</p>'+(game.stakeVersion===1?'<p class="pill">Entrada: '+game.stake+' · Premiação: '+game.pot+' G-COIN gratuitas</p>':'')+
+  return '<section class="panel public-waiting"><span class="kicker">'+(game.friendlyPractice?'Mesa entre amigos':'Partida pública')+' · '+target+' pessoas</span><h2><span class="spinner"></span> Procurando adversários...</h2>'+
+   '<p class="lead">Encontrados <strong>'+n+' de '+target+'</strong> jogadores. A partida começa automaticamente quando todos entrarem.</p>'+(game.friendlyPractice?'<p class="pill">Recreativa · sem créditos ou ranking</p>':game.stakeVersion===1?'<p class="pill">Entrada: '+game.stake+' · Premiação: '+game.pot+' G-COIN gratuitas</p>':'')+
    '<div class="match-progress">'+Array.from({length:target},function(_,i){return '<span class="'+(i<n?'filled':'')+'"></span>';}).join('')+'</div>'+
    '<div class="seatlist">'+Array.from({length:target},function(_,i){return seatItem(people[i],i);}).join('')+'</div>'+
    '<div class="controls">'+btn("Cancelar busca","public-cancel","ghost full")+'</div>'+
@@ -189,7 +190,7 @@ function board(){
  var topSeat=n===2?rel(1):rel(2),leftSeat=n===4?rel(3):null,rightSeat=n>=3?rel(1):null;
  var topCard=game.discardTop;
  var canBuy=game.phase==="turn"&&game.turn===game.seat&&game.step==="draw";
- return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+(game.activeCount??n)+' ativos</span><span class="pill">🪙 '+(game.players[game.seat]?.coins??100)+'</span>'+(game.stakeVersion===1?'<span class="pill prize-pill">🏆 '+game.pot+' G-COIN gratuitas</span>':'')+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill '+timerClass(Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000)))+'" id="timer-pill">'+esc(game.players[game.turn]?.name||'Jogador')+' · <strong id="turn-countdown">'+timerText(Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000)))+'</strong></span>':'')+'</div>'+
+ return '<div class="statusbar"><span class="pill">Sala <strong>'+esc(game.code)+'</strong></span><span class="pill">Rodada <strong>'+game.round+'</strong></span><span class="pill">Bolo <strong>'+game.drawCount+'</strong></span><span class="pill">'+(game.activeCount??n)+' ativos</span><span class="pill">🪙 '+(game.players[game.seat]?.coins??100)+'</span>'+(game.friendlyPractice?'<span class="pill">Recreativa</span>':game.stakeVersion===1?'<span class="pill prize-pill">🏆 '+game.pot+' G-COIN gratuitas</span>':'')+(game.publicMatch&&game.phase==="turn"&&game.turnDeadline?'<span class="pill '+timerClass(Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000)))+'" id="timer-pill">'+esc(game.players[game.turn]?.name||'Jogador')+' · <strong id="turn-countdown">'+timerText(Math.max(0,Math.ceil((game.turnDeadline-Date.now())/1000)))+'</strong></span>':'')+'</div>'+
  '<section class="table" aria-label="Mesa com '+n+' jogadores">'+
  place(topSeat,"top")+place(leftSeat,"left")+place(rightSeat,"right")+place(rel(0),"bottom")+
  '<div class="center"><div class="pile"><button class="stock" data-action="draw-stock" '+(canBuy&&game.drawCount?"":"disabled")+' aria-label="Comprar do bolo">♠</button><div class="caption">BOLO</div></div>'+
@@ -267,7 +268,7 @@ function currentStatus(){
    (game.activeCount<2?'':(game.readyMe?'<span class="pill">✓ Você está pronto</span>':btn("Pronto para próxima rodada","next-round","primary")))+
    btn("Encontrar novos adversários","public-rematch","ghost")+'</div>':
    (game.seat===0?'<div class="controls">'+btn("Jogar próxima rodada","next-round","primary full")+'</div>':'<p class="lead">Aguarde o dono da sala iniciar a próxima rodada.</p>');
-  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+(w.type==="Vitória por abandono"?" venceu por abandono!":" bateu!")+'</h2><p class="lead">'+esc(w.type)+'</p>'+(game.stakeVersion===1?'<p class="prize-pill">🏆 '+w.prize+' G-COIN gratuitas para o vencedor</p>':'')+'<div class="groups">'+groups+'</div>'+nextControls+'</section>';
+  return '<section class="panel waiting"><div class="spark">🏆</div><span class="kicker">Temos um vencedor!</span><h2>'+esc(p.name)+(w.type==="Vitória por abandono"?" venceu por abandono!":" bateu!")+'</h2><p class="lead">'+esc(w.type)+'</p>'+(game.friendlyPractice?'<p>Partida recreativa · sem movimentação de créditos</p>':game.stakeVersion===1?'<p class="prize-pill">🏆 '+w.prize+' G-COIN gratuitas para o vencedor</p>':'')+'<div class="groups">'+groups+'</div>'+nextControls+'</section>';
  }
  if(game.phase==="abandoned")return '<section class="panel waiting"><span class="kicker">Partida pública encerrada</span><h2>Jogador ausente</h2><p class="lead">'+esc(game.message||'Tempo de jogada esgotado.')+'</p><p class="tip">Ninguém recebeu vitória por abandono. Você pode encontrar novos adversários.</p><div class="controls">'+btn("Encontrar novos adversários","public-rematch","primary full")+'</div></section>';
  if(game.phase==="exhausted"&&game.stakeVersion===1)return '<section class="panel waiting"><h2>Bolo esgotado</h2><p class="lead">Sem vencedor. Os créditos gratuitos de entrada foram devolvidos.</p><div class="controls">'+btn("Escolher nova partida","public-rematch","primary full")+'</div></section>';
@@ -527,7 +528,7 @@ async function loadActiveMatches(silent){
  finally{loadingActive=false;if(!game&&epoch===sessionEpoch)render();}
 }
 async function api(action,extra){
- var body=Object.assign({action:action,code:room,token:token},extra||{});
+ var body=Object.assign({action:action,code:room,token:token},extra||{});if(deviceId&&(action==="public-find"||action==="state"))body.deviceId=deviceId;
  if(!accountClient)throw Error("Entre na sua conta.");
  var auth=await accountClient.auth.getSession(),session=auth.data.session;
  if(!session||session.user.id!==accountId)throw Error("Sessão encerrada. Entre novamente.");
