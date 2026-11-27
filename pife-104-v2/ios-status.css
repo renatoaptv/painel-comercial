@@ -1,0 +1,10 @@
+/* iOS standalone: let WebKit sample an explicit opaque status-bar surface.
+   Empty text clipping avoids painting over the game's controls. */
+.pif-status-surface{display:none}
+@media (display-mode:standalone){
+ @supports (-webkit-touch-callout:none) and (-webkit-background-clip:text){
+  html{background-color:var(--pif-status-color,#102d23)}
+  body{background-color:var(--pif-status-color,#102d23)}
+  .pif-status-surface{display:block;position:fixed;top:0;left:0;right:0;height:12px;min-width:100%;background-color:var(--pif-status-color,#102d23);-webkit-background-clip:text;background-clip:text;pointer-events:none;z-index:2147483647;overflow:hidden}
+ }
+}
